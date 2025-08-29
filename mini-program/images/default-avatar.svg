@@ -1,0 +1,51 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="avatarBg" cx="0.5" cy="0.3">
+      <stop offset="0%" stop-color="#E3F2FD"/>
+      <stop offset="100%" stop-color="#BBDEFB"/>
+    </radialGradient>
+    <linearGradient id="faceGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFCCBC"/>
+      <stop offset="100%" stop-color="#FFB74D"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- 背景圆形 -->
+  <circle cx="100" cy="100" r="100" fill="url(#avatarBg)"/>
+  
+  <!-- 人物剪影背景 -->
+  <circle cx="100" cy="100" r="85" fill="white" fill-opacity="0.2"/>
+  
+  <!-- 头部 -->
+  <circle cx="100" cy="75" r="35" fill="url(#faceGrad)"/>
+  
+  <!-- 头发 -->
+  <path d="M65 60 Q80 40 100 45 Q120 40 135 60 Q135 80 120 85 Q100 90 80 85 Q65 80 65 60" fill="#8D6E63"/>
+  
+  <!-- 眼睛 -->
+  <circle cx="88" cy="70" r="4" fill="#333"/>
+  <circle cx="112" cy="70" r="4" fill="#333"/>
+  <circle cx="89" cy="69" r="1.5" fill="white"/>
+  <circle cx="113" cy="69" r="1.5" fill="white"/>
+  
+  <!-- 鼻子 -->
+  <ellipse cx="100" cy="80" rx="2" ry="3" fill="#FFB74D"/>
+  
+  <!-- 嘴巴 -->
+  <path d="M92 88 Q100 95 108 88" stroke="#D32F2F" stroke-width="2" fill="none" stroke-linecap="round"/>
+  
+  <!-- 身体轮廓 -->
+  <ellipse cx="100" cy="150" rx="50" ry="60" fill="#2196F3" fill-opacity="0.8"/>
+  
+  <!-- 衣领 -->
+  <path d="M75 120 Q100 115 125 120 L125 140 Q100 135 75 140 Z" fill="#1976D2"/>
+  
+  <!-- 装饰性元素 -->
+  <circle cx="100" cy="100" r="95" fill="none" stroke="white" stroke-width="2" stroke-opacity="0.5"/>
+  
+  <!-- 友好标识 -->
+  <g transform="translate(140, 40)">
+    <circle cx="0" cy="0" r="12" fill="#4CAF50"/>
+    <path d="-6 0 L-2 4 L6 -4" stroke="white" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

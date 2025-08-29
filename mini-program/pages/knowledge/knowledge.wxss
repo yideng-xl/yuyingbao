@@ -1,0 +1,352 @@
+/* 搜索栏 */
+.search-bar {
+  background: #FFFFFF;
+  padding: 20rpx;
+  margin-bottom: 20rpx;
+  border-radius: 16rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.1);
+}
+
+.search-input {
+  display: flex;
+  align-items: center;
+  background: #F8F9FA;
+  border-radius: 12rpx;
+  padding: 16rpx 20rpx;
+}
+
+.search-icon {
+  font-size: 28rpx;
+  margin-right: 12rpx;
+  color: #999999;
+}
+
+.search-input input {
+  flex: 1;
+  font-size: 28rpx;
+  color: #333333;
+  background: transparent;
+  border: none;
+}
+
+/* 年龄选择器 */
+.age-selector {
+  background: #FFFFFF;
+  padding: 20rpx;
+  margin-bottom: 20rpx;
+  border-radius: 16rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.1);
+}
+
+.age-tabs {
+  display: flex;
+  gap: 10rpx;
+}
+
+.age-tab {
+  flex: 1;
+  text-align: center;
+  padding: 16rpx;
+  font-size: 28rpx;
+  color: #666666;
+  background: #F8F9FA;
+  border-radius: 12rpx;
+  transition: all 0.3s ease;
+}
+
+.age-tab.active {
+  background: #4A90E2;
+  color: #FFFFFF;
+}
+
+/* 推荐值卡片 */
+.recommendation-card {
+  background: linear-gradient(135deg, #4A90E2 0%, #7ED321 100%);
+  color: #FFFFFF;
+}
+
+.recommendation-card .card-title,
+.recommendation-card .card-subtitle {
+  color: #FFFFFF;
+}
+
+.recommendation-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20rpx;
+}
+
+.recommendation-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 20rpx;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 12rpx;
+}
+
+.recommendation-icon {
+  font-size: 48rpx;
+  margin-bottom: 12rpx;
+}
+
+.recommendation-label {
+  display: block;
+  font-size: 24rpx;
+  margin-bottom: 8rpx;
+  opacity: 0.9;
+}
+
+.recommendation-value {
+  display: block;
+  font-size: 28rpx;
+  font-weight: bold;
+}
+
+/* 知识文章列表 */
+.knowledge-list {
+  margin-bottom: 20rpx;
+}
+
+.section-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333333;
+  margin-bottom: 20rpx;
+  padding: 0 20rpx;
+}
+
+.article-item {
+  display: flex;
+  background: #FFFFFF;
+  border-radius: 16rpx;
+  padding: 20rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.article-item:active {
+  transform: scale(0.98);
+}
+
+.article-image {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 12rpx;
+  overflow: hidden;
+  margin-right: 20rpx;
+  flex-shrink: 0;
+}
+
+.article-image image {
+  width: 100%;
+  height: 100%;
+}
+
+.article-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.article-title {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #333333;
+  margin-bottom: 8rpx;
+  line-height: 1.4;
+}
+
+.article-summary {
+  font-size: 24rpx;
+  color: #666666;
+  line-height: 1.5;
+  margin-bottom: 16rpx;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.article-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: auto;
+}
+
+.article-category {
+  font-size: 22rpx;
+  color: #4A90E2;
+  background: rgba(74, 144, 226, 0.1);
+  padding: 4rpx 12rpx;
+  border-radius: 12rpx;
+}
+
+.article-date {
+  font-size: 22rpx;
+  color: #999999;
+}
+
+/* FAQ卡片 */
+.faq-card {
+  margin-bottom: 20rpx;
+}
+
+.faq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.faq-item {
+  border-bottom: 1rpx solid #F0F0F0;
+  padding-bottom: 16rpx;
+}
+
+.faq-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.faq-question {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.faq-text {
+  font-size: 28rpx;
+  color: #333333;
+  font-weight: bold;
+  flex: 1;
+  margin-right: 16rpx;
+}
+
+.faq-arrow {
+  font-size: 24rpx;
+  color: #999999;
+  transition: transform 0.3s ease;
+}
+
+.faq-arrow.expanded {
+  transform: rotate(180deg);
+}
+
+.faq-answer {
+  max-height: 0;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  margin-top: 0;
+}
+
+.faq-answer.expanded {
+  max-height: 200rpx;
+  margin-top: 16rpx;
+}
+
+.faq-answer text {
+  font-size: 26rpx;
+  color: #666666;
+  line-height: 1.6;
+}
+
+/* 文章详情弹窗 */
+.article-modal {
+  width: 95%;
+  max-width: 700rpx;
+  max-height: 90vh;
+}
+
+.article-header {
+  margin-bottom: 24rpx;
+}
+
+.article-banner {
+  width: 100%;
+  height: 200rpx;
+  border-radius: 12rpx;
+  margin-bottom: 16rpx;
+}
+
+.article-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.article-content {
+  line-height: 1.8;
+}
+
+.article-content text {
+  display: block;
+  font-size: 28rpx;
+  color: #333333;
+  margin-bottom: 16rpx;
+}
+
+.article-content text:last-child {
+  margin-bottom: 0;
+}
+
+/* 响应式设计 */
+@media (max-width: 750rpx) {
+  .recommendation-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .age-tabs {
+    flex-direction: column;
+  }
+  
+  .article-item {
+    flex-direction: column;
+  }
+  
+  .article-image {
+    width: 100%;
+    height: 200rpx;
+    margin-right: 0;
+    margin-bottom: 16rpx;
+  }
+  
+  .article-meta {
+    margin-top: 16rpx;
+  }
+}
+
+/* 动画效果 */
+.article-item {
+  animation: slideIn 0.4s ease-out;
+}
+
+.faq-item {
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

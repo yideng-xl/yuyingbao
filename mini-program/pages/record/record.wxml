@@ -1,0 +1,203 @@
+<view class="container">
+  <!-- 筛选栏 -->
+  <view class="filter-bar">
+    <view class="filter-tabs">
+      <view class="filter-tab {{currentFilter === 'all' ? 'active' : ''}}" bindtap="setFilter" data-filter="all">
+        全部
+      </view>
+      <view class="filter-tab {{currentFilter === 'feeding' ? 'active' : ''}}" bindtap="setFilter" data-filter="feeding">
+        喂养
+      </view>
+      <view class="filter-tab {{currentFilter === 'diaper' ? 'active' : ''}}" bindtap="setFilter" data-filter="diaper">
+        大便
+      </view>
+      <view class="filter-tab {{currentFilter === 'growth' ? 'active' : ''}}" bindtap="setFilter" data-filter="growth">
+        成长
+      </view>
+    </view>
+    
+    <view class="date-picker">
+      <picker mode="date" value="{{selectedDate}}" bindchange="onDateChange">
+        <view class="date-display">
+          <text>{{selectedDate}}</text>
+          <text class="date-icon">📅</text>
+        </view>
+      </picker>
+    </view>
+  </view>
+
+  <!-- 时间轴视图 -->
+  <view class="timeline-container">
+    <view class="timeline" wx:if="{{filteredRecords.length > 0}}">
+      <view class="timeline-item" wx:for="{{filteredRecords}}" wx:key="id">
+        <view class="timeline-dot {{item.type}}"></view>
+        <view class="timeline-line" wx:if="{{index < filteredRecords.length - 1}}"></view>
+        
+        <view class="timeline-content">
+          <view class="record-card">
+            <view class="record-header">
+              <view class="record-type">
+                <text class="record-icon">{{item.icon}}</text>
+                <text class="record-title">{{item.title}}</text>
+              </view>
+              <view class="record-time">{{item.time}}</view>
+            </view>
+            
+            <view class="record-body">
+              <view class="record-details">
+                <view class="detail-item" wx:for="{{item.details}}" wx:key="*this" wx:for-item="detail">
+                  <text class="detail-label">{{detail.label}}:</text>
+                  <text class="detail-value">{{detail.value}}</text>
+                </view>
+              </view>
+              
+              <view class="record-actions">
+                <view class="action-btn" bindtap="editRecord" data-id="{{item.id}}">
+                  <text class="action-icon">✏️</text>
+                  <text class="action-text">编辑</text>
+                </view>
+                <view class="action-btn delete" bindtap="deleteRecord" data-id="{{item.id}}">
+                  <text class="action-icon">🗑️</text>
+                  <text class="action-text">删除</text>
+                </view>
+              </view>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+    
+    <!-- 空状态 -->
+    <view class="empty-state" wx:else>
+      <view class="empty-icon">📝</view>
+      <text class="empty-text">暂无记录</text>
+      <text class="empty-subtext">开始记录宝宝的成长吧</text>
+    </view>
+  </view>
+</view>
+
+<!-- 编辑记录弹窗 -->
+<view class="modal-overlay" wx:if="{{showEditModal}}" bindtap="hideEditModal">
+  <view class="modal-content" catchtap="stopPropagation">
+    <view class="modal-header">
+      <text class="text-medium text-bold">编辑记录</text>
+      <view class="modal-close" bindtap="hideEditModal">×</view>
+    </view>
+    
+    <view class="modal-body">
+      <!-- 根据记录类型显示不同的编辑表单 -->
+      <view wx:if="{{editingRecord.type === 'breastfeeding'}}">
+        <view class="form-item">
+          <text class="form-label">开始时间</text>
+          <picker mode="time" value="{{editingRecord.startTime}}" bindchange="onEditTimeChange">
+            <view class="picker">{{editingRecord.startTime}}</view>
+          </picker>
+        </view>
+        
+        <view class="form-item">
+          <text class="form-label">时长（分钟）</text>
+          <input type="number" value="{{editingRecord.duration}}" bindinput="onEditDurationChange" />
+        </view>
+        
+        <view class="form-item">
+          <text class="form-label">选择乳房</text>
+          <view class="breast-selector">
+            <view class="breast-option {{editingRecord.breast === 'left' ? 'active' : ''}}" bindtap="selectEditBreast" data-breast="left">
+              左侧
+            </view>
+            <view class="breast-option {{editingRecord.breast === 'right' ? 'active' : ''}}" bindtap="selectEditBreast" data-breast="right">
+              右侧
+            </view>
+          </view>
+        </view>
+      </view>
+      
+      <view wx:if="{{editingRecord.type === 'bottle' || editingRecord.type === 'formula'}}">
+        <view class="form-item">
+          <text class="form-label">开始时间</text>
+          <picker mode="time" value="{{editingRecord.startTime}}" bindchange="onEditTimeChange">
+            <view class="picker">{{editingRecord.startTime}}</view>
+          </picker>
+        </view>
+        
+        <view class="form-item">
+          <text class="form-label">喂奶量（ml）</text>
+          <input type="number" value="{{editingRecord.amount}}" bindinput="onEditAmountChange" />
+        </view>
+      </view>
+      
+      <view wx:if="{{editingRecord.type === 'solid'}}">
+        <view class="form-item">
+          <text class="form-label">开始时间</text>
+          <picker mode="time" value="{{editingRecord.startTime}}" bindchange="onEditTimeChange">
+            <view class="picker">{{editingRecord.startTime}}</view>
+          </picker>
+        </view>
+        
+        <view class="form-item">
+          <text class="form-label">辅食类型</text>
+          <picker range="{{solidTypes}}" value="{{editingRecord.solidTypeIndex}}" bindchange="onEditSolidTypeChange">
+            <view class="picker">{{solidTypes[editingRecord.solidTypeIndex]}}</view>
+          </picker>
+        </view>
+        
+        <view class="form-item">
+          <text class="form-label">喂食量</text>
+          <input type="text" value="{{editingRecord.solidAmount}}" bindinput="onEditSolidAmountChange" />
+        </view>
+      </view>
+      
+      <view wx:if="{{editingRecord.type === 'diaper'}}">
+        <view class="form-item">
+          <text class="form-label">时间</text>
+          <picker mode="time" value="{{editingRecord.startTime}}" bindchange="onEditTimeChange">
+            <view class="picker">{{editingRecord.startTime}}</view>
+          </picker>
+        </view>
+        
+        <view class="form-item">
+          <text class="form-label">性状</text>
+          <picker range="{{diaperTextures}}" value="{{editingRecord.textureIndex}}" bindchange="onEditTextureChange">
+            <view class="picker">{{diaperTextures[editingRecord.textureIndex]}}</view>
+          </picker>
+        </view>
+        
+        <view class="form-item">
+          <text class="form-label">颜色</text>
+          <picker range="{{diaperColors}}" value="{{editingRecord.colorIndex}}" bindchange="onEditColorChange">
+            <view class="picker">{{diaperColors[editingRecord.colorIndex]}}</view>
+          </picker>
+        </view>
+        
+        <view class="form-item">
+          <text class="form-label">备注</text>
+          <input type="text" value="{{editingRecord.note}}" bindinput="onEditNoteChange" />
+        </view>
+      </view>
+      
+      <view wx:if="{{editingRecord.type === 'growth'}}">
+        <view class="form-item">
+          <text class="form-label">日期</text>
+          <picker mode="date" value="{{editingRecord.date}}" bindchange="onEditDateChange">
+            <view class="picker">{{editingRecord.date}}</view>
+          </picker>
+        </view>
+        
+        <view class="form-item">
+          <text class="form-label">身高（cm）</text>
+          <input type="digit" value="{{editingRecord.height}}" bindinput="onEditHeightChange" />
+        </view>
+        
+        <view class="form-item">
+          <text class="form-label">体重（kg）</text>
+          <input type="digit" value="{{editingRecord.weight}}" bindinput="onEditWeightChange" />
+        </view>
+      </view>
+    </view>
+    
+    <view class="modal-footer">
+      <button class="btn btn-outline" bindtap="hideEditModal">取消</button>
+      <button class="btn btn-primary" bindtap="saveEdit">保存</button>
+    </view>
+  </view>
+</view>

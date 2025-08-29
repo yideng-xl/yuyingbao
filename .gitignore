@@ -1,0 +1,72 @@
+# 编译和构建文件
+target/
+build/
+out/
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+
+# IDE文件
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.project
+.classpath
+.settings/
+
+# 系统文件
+.DS_Store
+Thumbs.db
+*.log
+
+# 环境配置文件（保留示例文件）
+.env
+application-local.properties
+application-dev.properties
+
+# 依赖目录
+node_modules/
+.npm/
+
+# 运行时文件
+*.pid
+*.tmp
+*.temp
+
+# 数据库文件
+*.db
+*.sqlite
+
+# Docker相关
+.docker/
+
+# 微信小程序
+mini-program/.vscode/
+mini-program/unpackage/
+mini-program/node_modules/
+
+# Maven
+.m2/
+!.mvn/wrapper/maven-wrapper.jar
+
+# Spring Boot
+spring-boot-*.log
+
+# 测试覆盖率报告
+coverage/
+*.lcov
+
+# 临时文件
+*.swp
+*.swo
+*~
+
+# 密钥和敏感信息
+*.pem
+*.key
+secrets/
+.env.production

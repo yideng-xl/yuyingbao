@@ -1,0 +1,334 @@
+/* 欢迎区域 */
+.welcome-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 30rpx 20rpx;
+  background: linear-gradient(135deg, #4A90E2 0%, #7ED321 100%);
+  color: white;
+  border-radius: 0 0 20rpx 20rpx;
+  margin-bottom: 20rpx;
+}
+
+.welcome-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.baby-avatar {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 4rpx solid rgba(255, 255, 255, 0.3);
+}
+
+.avatar {
+  width: 100%;
+  height: 100%;
+}
+
+/* 今日概览 */
+.today-overview {
+  background: linear-gradient(135deg, #FFFFFF 0%, #F8F9FA 100%);
+}
+
+.overview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20rpx;
+}
+
+.overview-stats {
+  display: flex;
+  justify-content: space-around;
+  margin-bottom: 20rpx;
+}
+
+.stat-item {
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 36rpx;
+  font-weight: bold;
+  margin-bottom: 8rpx;
+}
+
+.stat-label {
+  font-size: 24rpx;
+  color: #666666;
+}
+
+/* 智能建议 */
+.suggestion {
+  display: flex;
+  align-items: center;
+  background: rgba(74, 144, 226, 0.1);
+  padding: 16rpx;
+  border-radius: 12rpx;
+  border-left: 4rpx solid #4A90E2;
+}
+
+.suggestion-icon {
+  font-size: 32rpx;
+  margin-right: 12rpx;
+}
+
+.suggestion-text {
+  font-size: 26rpx;
+  color: #4A90E2;
+  flex: 1;
+}
+
+/* 快捷记录 */
+.quick-record-header {
+  margin-bottom: 20rpx;
+}
+
+.record-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20rpx;
+}
+
+.record-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24rpx 16rpx;
+  background: #FFFFFF;
+  border: 2rpx solid #E5E5E5;
+  border-radius: 16rpx;
+  transition: all 0.3s ease;
+}
+
+.record-btn:active {
+  background: #F0F0F0;
+  transform: scale(0.95);
+}
+
+.btn-icon {
+  font-size: 48rpx;
+  margin-bottom: 12rpx;
+}
+
+.btn-text {
+  font-size: 24rpx;
+  color: #333333;
+  text-align: center;
+}
+
+/* 最近记录 */
+.recent-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20rpx;
+}
+
+.records-list {
+  max-height: 400rpx;
+  overflow-y: auto;
+}
+
+.record-item {
+  display: flex;
+  align-items: center;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid #F0F0F0;
+}
+
+.record-item:last-child {
+  border-bottom: none;
+}
+
+.record-icon {
+  width: 60rpx;
+  height: 60rpx;
+  background: #F8F9FA;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32rpx;
+  margin-right: 16rpx;
+}
+
+.record-content {
+  flex: 1;
+}
+
+.record-title {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #333333;
+  margin-bottom: 4rpx;
+}
+
+.record-detail {
+  font-size: 24rpx;
+  color: #666666;
+}
+
+.record-time {
+  font-size: 22rpx;
+  color: #999999;
+}
+
+/* 弹窗样式 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  width: 90%;
+  max-width: 600rpx;
+  background: #FFFFFF;
+  border-radius: 20rpx;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24rpx;
+  border-bottom: 1rpx solid #E5E5E5;
+}
+
+.modal-close {
+  width: 40rpx;
+  height: 40rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32rpx;
+  color: #999999;
+  background: #F0F0F0;
+  border-radius: 50%;
+}
+
+.modal-body {
+  padding: 24rpx;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: space-between;
+  padding: 24rpx;
+  border-top: 1rpx solid #E5E5E5;
+  gap: 20rpx;
+}
+
+.modal-footer .btn {
+  flex: 1;
+}
+
+/* 表单样式 */
+.form-item {
+  margin-bottom: 24rpx;
+}
+
+.form-label {
+  display: block;
+  font-size: 28rpx;
+  color: #333333;
+  margin-bottom: 12rpx;
+  font-weight: bold;
+}
+
+.picker {
+  padding: 20rpx;
+  background: #F8F9FA;
+  border: 2rpx solid #E5E5E5;
+  border-radius: 12rpx;
+  font-size: 28rpx;
+  color: #333333;
+}
+
+input {
+  padding: 20rpx;
+  background: #F8F9FA;
+  border: 2rpx solid #E5E5E5;
+  border-radius: 12rpx;
+  font-size: 28rpx;
+  color: #333333;
+}
+
+/* 乳房选择器 */
+.breast-selector {
+  display: flex;
+  gap: 20rpx;
+}
+
+.breast-option {
+  flex: 1;
+  padding: 20rpx;
+  text-align: center;
+  background: #F8F9FA;
+  border: 2rpx solid #E5E5E5;
+  border-radius: 12rpx;
+  font-size: 28rpx;
+  color: #333333;
+  transition: all 0.3s ease;
+}
+
+.breast-option.active {
+  background: #4A90E2;
+  color: #FFFFFF;
+  border-color: #4A90E2;
+}
+
+/* 宝宝年龄信息 */
+.baby-age-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20rpx 0;
+  margin-bottom: 20rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.baby-age-info .baby-name {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.baby-age-info .baby-age {
+  font-size: 28rpx;
+  color: #666;
+  background: #f8f9fa;
+  padding: 8rpx 16rpx;
+  border-radius: 20rpx;
+}
+
+/* 响应式设计 */
+@media (max-width: 750rpx) {
+  .record-buttons {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .overview-stats {
+    flex-direction: column;
+    gap: 20rpx;
+  }
+  
+  .stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+}

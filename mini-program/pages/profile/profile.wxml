@@ -1,0 +1,198 @@
+<view class="container">
+  <!-- 用户信息卡片 -->
+  <view class="user-card">
+    <!-- 需要授权提示 -->
+    <view class="auth-notice" wx:if="{{needUserAuth}}">
+      <view class="auth-icon">🔐</view>
+      <view class="auth-content">
+        <text class="auth-title">完善用户信息</text>
+        <text class="auth-desc">获取您的微信昵称和头像，提供更好的服务</text>
+      </view>
+      <button class="btn btn-primary btn-small" bindtap="authorizeUserInfo">立即授权</button>
+    </view>
+    
+    <view class="user-info">
+      <image src="{{userInfo.avatarUrl || '/images/default-avatar.svg'}}" class="user-avatar"></image>
+      <view class="user-details">
+        <text class="user-name">{{userInfo.nickname || '用户'}}</text>
+        <text class="user-role">{{isCreator ? '家庭创建者' : '家庭成员'}}</text>
+      </view>
+      <!-- 如果用户信息不完整，显示编辑按钮 -->
+      <button wx:if="{{!needUserAuth && userInfo.nickname === '育婴宝用户'}}" 
+              class="btn btn-outline btn-small" 
+              bindtap="authorizeUserInfo">
+        完善信息
+      </button>
+    </view>
+    
+    <view class="family-info" wx:if="{{familyInfo}}">
+      <text class="family-name">{{familyInfo.name}}</text>
+      <text class="member-count">{{familyInfo.members ? familyInfo.members.length : 1}}位成员</text>
+    </view>
+  </view>
+
+  <!-- 家庭管理 -->
+  <view class="card family-card">
+    <view class="card-header">
+      <text class="card-title">家庭管理</text>
+    </view>
+    
+    <!-- 邀请码 -->
+    <view class="invite-section" wx:if="{{isCreator}}">
+      <view class="invite-code">
+        <text class="invite-label">邀请码</text>
+        <text class="invite-value">{{familyInfo.inviteCode}}</text>
+        <button class="btn btn-small" bindtap="copyInviteCode">复制</button>
+      </view>
+      <view class="invite-actions">
+        <button class="btn btn-outline" bindtap="shareInvite">分享邀请</button>
+        <button class="btn btn-outline" bindtap="generateNewCode">重新生成</button>
+      </view>
+    </view>
+    
+    <!-- 成员列表 -->
+    <view class="members-section">
+      <view class="section-title">家庭成员</view>
+      <view class="members-list">
+        <view class="member-item" wx:for="{{familyInfo.members}}" wx:key="id">
+          <image src="{{item.avatarUrl || '/images/default-avatar.png'}}" class="member-avatar"></image>
+          <view class="member-info">
+            <text class="member-name">{{item.nickName}}</text>
+            <text class="member-role">{{item.id === familyInfo.creator.id ? '创建者' : '成员'}}</text>
+          </view>
+          <view class="member-actions" wx:if="{{isCreator && item.id !== userInfo.id}}">
+            <button class="btn btn-small danger" bindtap="removeMember" data-id="{{item.id}}">移除</button>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 宝宝信息 -->
+  <view class="card baby-card">
+    <view class="card-header">
+      <text class="card-title">宝宝信息</text>
+      <button class="btn btn-small" bindtap="editBabyInfo">编辑</button>
+    </view>
+    
+    <view class="baby-info" wx:if="{{babyInfo}}">
+      <view class="baby-avatar-section">
+        <image src="{{babyInfo.avatar || '/images/baby-default.png'}}" class="baby-avatar"></image>
+        <view class="baby-details">
+          <text class="baby-name">{{babyInfo.name}}</text>
+          <text class="baby-age">{{babyInfo.age}}</text>
+        </view>
+      </view>
+      
+      <view class="baby-stats">
+        <view class="stat-item">
+          <text class="stat-value">{{babyInfo.height || '--'}}cm</text>
+          <text class="stat-label">身高</text>
+        </view>
+        <view class="stat-item">
+          <text class="stat-value">{{babyInfo.weight || '--'}}kg</text>
+          <text class="stat-label">体重</text>
+        </view>
+        <view class="stat-item">
+          <text class="stat-value">{{babyInfo.birthDate || '--'}}</text>
+          <text class="stat-label">出生日期</text>
+        </view>
+      </view>
+    </view>
+    
+    <view class="empty-baby" wx:else>
+      <view class="empty-icon">👶</view>
+      <text class="empty-text">还没有添加宝宝信息</text>
+      <button class="btn btn-primary" bindtap="addBabyInfo">添加宝宝</button>
+    </view>
+  </view>
+
+  <!-- 功能设置 -->
+  <view class="card settings-card">
+    <view class="card-header">
+      <text class="card-title">功能设置</text>
+    </view>
+    
+    <view class="settings-list">
+      <view class="setting-item" bindtap="goToDataExport">
+        <view class="setting-icon">📊</view>
+        <text class="setting-text">数据导出</text>
+        <text class="setting-arrow">></text>
+      </view>
+      
+      <view class="setting-item" bindtap="goToNotifications">
+        <view class="setting-icon">🔔</view>
+        <text class="setting-text">消息通知</text>
+        <text class="setting-arrow">></text>
+      </view>
+      
+      <view class="setting-item" bindtap="goToPrivacy">
+        <view class="setting-icon">🔒</view>
+        <text class="setting-text">隐私设置</text>
+        <text class="setting-arrow">></text>
+      </view>
+      
+      <view class="setting-item" bindtap="goToAbout">
+        <view class="setting-icon">ℹ️</view>
+        <text class="setting-text">关于我们</text>
+        <text class="setting-arrow">></text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 退出登录 -->
+  <view class="logout-section">
+    <button class="btn btn-outline danger" bindtap="logout">退出登录</button>
+  </view>
+</view>
+
+<!-- 编辑宝宝信息弹窗 -->
+<view class="modal-overlay" wx:if="{{showBabyModal}}" bindtap="hideBabyModal">
+  <view class="modal-content" catchtap="stopPropagation">
+    <view class="modal-header">
+      <text class="text-medium text-bold">{{babyInfo ? '编辑宝宝信息' : '添加宝宝信息'}}</text>
+      <view class="modal-close" bindtap="hideBabyModal">×</view>
+    </view>
+    
+    <view class="modal-body">
+      <view class="form-item">
+        <text class="form-label">宝宝姓名</text>
+        <input type="text" placeholder="请输入宝宝姓名" value="{{babyForm.name}}" bindinput="onBabyNameChange" />
+      </view>
+      
+      <view class="form-item">
+        <text class="form-label">出生日期</text>
+        <picker mode="date" value="{{babyForm.birthDate}}" bindchange="onBirthDateChange">
+          <view class="picker">{{babyForm.birthDate || '请选择出生日期'}}</view>
+        </picker>
+      </view>
+      
+      <view class="form-item">
+        <text class="form-label">性别</text>
+        <view class="gender-selector">
+          <view class="gender-option {{babyForm.gender === 'boy' ? 'active' : ''}}" bindtap="selectGender" data-gender="boy">
+            👦 男宝宝
+          </view>
+          <view class="gender-option {{babyForm.gender === 'girl' ? 'active' : ''}}" bindtap="selectGender" data-gender="girl">
+            👧 女宝宝
+          </view>
+        </view>
+      </view>
+      
+      <view class="form-item">
+        <text class="form-label">出生身高（cm）</text>
+        <input type="digit" placeholder="请输入出生身高" value="{{babyForm.birthHeight}}" bindinput="onBirthHeightChange" />
+      </view>
+      
+      <view class="form-item">
+        <text class="form-label">出生体重（kg）</text>
+        <input type="digit" placeholder="请输入出生体重" value="{{babyForm.birthWeight}}" bindinput="onBirthWeightChange" />
+      </view>
+    </view>
+    
+    <view class="modal-footer">
+      <button class="btn btn-outline" bindtap="hideBabyModal">取消</button>
+      <button class="btn btn-primary" bindtap="saveBabyInfo">保存</button>
+    </view>
+  </view>
+</view>

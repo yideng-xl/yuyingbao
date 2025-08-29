@@ -1,0 +1,81 @@
+<svg width="400" height="300" viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="bgGradient" cx="0.5" cy="0.3">
+      <stop offset="0%" stop-color="#FFF8E1"/>
+      <stop offset="100%" stop-color="#FFE0B2"/>
+    </radialGradient>
+    <linearGradient id="skinGradient" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFCCBC"/>
+      <stop offset="100%" stop-color="#FFB74D"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- 背景 -->
+  <rect width="400" height="300" fill="url(#bgGradient)"/>
+  
+  <!-- 柔和的光晕 -->
+  <circle cx="200" cy="120" r="80" fill="#FFF3E0" fill-opacity="0.4"/>
+  
+  <!-- 妈妈的身体轮廓 -->
+  <ellipse cx="200" cy="180" rx="60" ry="80" fill="#E1F5FE"/>
+  
+  <!-- 妈妈的头部 -->
+  <circle cx="200" cy="80" r="35" fill="url(#skinGradient)"/>
+  
+  <!-- 妈妈的头发 -->
+  <path d="M165 70 Q180 50 200 55 Q220 50 235 70 Q235 85 220 95 Q200 100 180 95 Q165 85 165 70" fill="#8D6E63"/>
+  
+  <!-- 妈妈的眼睛 -->
+  <circle cx="190" cy="75" r="3" fill="#333"/>
+  <circle cx="210" cy="75" r="3" fill="#333"/>
+  <circle cx="191" cy="74" r="1" fill="white"/>
+  <circle cx="211" cy="74" r="1" fill="white"/>
+  
+  <!-- 妈妈的嘴巴（温馨微笑）-->
+  <path d="M195 85 Q200 90 205 85" stroke="#D32F2F" stroke-width="2" fill="none" stroke-linecap="round"/>
+  
+  <!-- 妈妈的手臂 -->
+  <ellipse cx="160" cy="140" rx="20" ry="40" fill="url(#skinGradient)" transform="rotate(-20 160 140)"/>
+  <ellipse cx="240" cy="140" rx="20" ry="40" fill="url(#skinGradient)" transform="rotate(20 240 140)"/>
+  
+  <!-- 宝宝 -->
+  <ellipse cx="200" cy="140" rx="25" ry="35" fill="#FFF3E0"/>
+  
+  <!-- 宝宝的头 -->
+  <circle cx="200" cy="120" r="18" fill="url(#skinGradient)"/>
+  
+  <!-- 宝宝的头发（稀疏） -->
+  <path d="M185 108 Q200 100 215 108" stroke="#8D6E63" stroke-width="2" fill="none"/>
+  
+  <!-- 宝宝的眼睛（闭着的） -->
+  <path d="M190 118 Q193 120 196 118" stroke="#333" stroke-width="1.5" fill="none"/>
+  <path d="M204 118 Q207 120 210 118" stroke="#333" stroke-width="1.5" fill="none"/>
+  
+  <!-- 小包被 -->
+  <ellipse cx="200" cy="155" rx="22" ry="30" fill="#E8F5E8"/>
+  <path d="M178 140 Q200 135 222 140 L222 175 Q200 180 178 175 Z" fill="#C8E6C9"/>
+  
+  <!-- 爱心装饰 -->
+  <path d="M120 60 Q125 50 135 55 Q145 50 150 60 Q145 70 135 80 Q125 70 120 60" fill="#E91E63" fill-opacity="0.6"/>
+  <path d="M300 80 Q305 70 315 75 Q325 70 330 80 Q325 90 315 100 Q305 90 300 80" fill="#E91E63" fill-opacity="0.6"/>
+  
+  <!-- 温馨文字背景 -->
+  <rect x="50" y="220" width="300" height="60" rx="10" fill="white" fill-opacity="0.8"/>
+  
+  <!-- 温馨提示文字 -->
+  <text x="200" y="240" font-family="Arial, sans-serif" font-size="18" text-anchor="middle" fill="#4A90E2" font-weight="bold">新生儿喂养指南</text>
+  <text x="200" y="260" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#666">母乳是宝宝最好的食物，含有丰富营养和抗体</text>
+  
+  <!-- 装饰性奶瓶图标 -->
+  <g transform="translate(320, 40) scale(0.8)">
+    <rect x="0" y="0" width="20" height="35" rx="3" fill="#4A90E2" fill-opacity="0.3"/>
+    <circle cx="10" cy="-5" r="4" fill="#FFB74D"/>
+    <rect x="2" y="5" width="16" height="25" fill="#FFF8E1"/>
+  </g>
+  
+  <!-- 装饰性星星 -->
+  <g fill="#FFD54F" fill-opacity="0.7">
+    <path d="M80 120 L82 126 L88 126 L83 130 L85 136 L80 132 L75 136 L77 130 L72 126 L78 126 Z"/>
+    <path d="M340 140 L342 146 L348 146 L343 150 L345 156 L340 152 L335 156 L337 150 L332 146 L338 146 Z"/>
+  </g>
+</svg>

@@ -1,0 +1,33 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+
+spring:
+  datasource:
+    url: jdbc:postgresql://192.168.100.100:15432/yuyingbao
+    username: yuyingbao
+    password: YuyingBao!@#
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+        default_schema: app
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+    open-in-view: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    schemas: app
+    default-schema: app
+    create-schemas: true
+
+app:
+  jwt:
+    secret: change-this-super-secret-key-please
+    issuer: yuyingbao
+    expiration-minutes: 43200 # 30 days

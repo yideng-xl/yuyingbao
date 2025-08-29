@@ -1,0 +1,261 @@
+<view class="container">
+  <!-- 未登录授权提示 -->
+  <view wx:if="{{!userInfo || !userInfo.nickName}}" style="margin: 20rpx 0;">
+    <button type="primary" bindtap="onTapLogin">授权登录</button>
+  </view>
+  <!-- 顶部欢迎区域 -->
+  <view class="welcome-section">
+    <view class="welcome-text">
+      <text class="text-large text-bold">欢迎回来</text>
+      <text class="text-medium text-muted mt-10">{{userInfo.nickName}}</text>
+    </view>
+    <view class="baby-avatar">
+      <image src="{{babyInfo.avatar || '/images/baby-default.png'}}" class="avatar"></image>
+    </view>
+  </view>
+
+  <!-- 今日概览卡片 -->
+  <view class="card today-overview">
+    <view class="overview-header">
+      <text class="text-medium text-bold">今日概览</text>
+      <text class="text-small text-muted">{{today}}</text>
+    </view>
+    
+    <!-- 宝宝年龄信息 -->
+    <view class="baby-age-info" wx:if="{{babyInfo && babyInfo.name}}">
+      <text class="baby-name">{{babyInfo.name}}</text>
+      <text class="baby-age">{{babyInfo.age}}</text>
+    </view>
+    
+    <view class="overview-stats">
+      <view class="stat-item">
+        <view class="stat-value primary-color">{{todayStats.feedingTotal}}ml</view>
+        <view class="stat-label">喂养总量</view>
+      </view>
+      <view class="stat-item">
+        <view class="stat-value secondary-color">{{todayStats.feedingCount}}次</view>
+        <view class="stat-label">喂养次数</view>
+      </view>
+      <view class="stat-item">
+        <view class="stat-value warning-color">{{todayStats.diaperCount}}次</view>
+        <view class="stat-label">大便次数</view>
+      </view>
+    </view>
+
+    <!-- 智能建议 -->
+    <view class="suggestion" wx:if="{{suggestion}}">
+      <view class="suggestion-icon">💡</view>
+      <text class="suggestion-text">{{suggestion}}</text>
+    </view>
+  </view>
+
+  <!-- 快捷记录按钮 -->
+  <view class="card quick-record">
+    <view class="quick-record-header">
+      <text class="text-medium text-bold">快速记录</text>
+    </view>
+    
+    <view class="record-buttons">
+      <view class="record-btn" bindtap="showRecordModal" data-type="breastfeeding">
+        <view class="btn-icon">🤱</view>
+        <text class="btn-text">母乳亲喂</text>
+      </view>
+      
+      <view class="record-btn" bindtap="showRecordModal" data-type="bottle">
+        <view class="btn-icon">🍼</view>
+        <text class="btn-text">瓶喂</text>
+      </view>
+      
+      <view class="record-btn" bindtap="showRecordModal" data-type="formula">
+        <view class="btn-icon">🥛</view>
+        <text class="btn-text">配方奶</text>
+      </view>
+      
+      <view class="record-btn" bindtap="showRecordModal" data-type="solid">
+        <view class="btn-icon">🥣</view>
+        <text class="btn-text">辅食</text>
+      </view>
+      
+      <view class="record-btn" bindtap="showRecordModal" data-type="diaper">
+        <view class="btn-icon">💩</view>
+        <text class="btn-text">大便</text>
+      </view>
+      
+      <view class="record-btn" bindtap="showRecordModal" data-type="growth">
+        <view class="btn-icon">📏</view>
+        <text class="btn-text">成长</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 最近记录 -->
+  <view class="card recent-records">
+    <view class="recent-header">
+      <text class="text-medium text-bold">最近记录</text>
+      <text class="text-small text-primary" bindtap="goToRecords">查看全部</text>
+    </view>
+    
+    <view class="records-list" wx:if="{{recentRecords.length > 0}}">
+      <view class="record-item" wx:for="{{recentRecords}}" wx:key="id">
+        <view class="record-icon">
+          <text>{{item.icon}}</text>
+        </view>
+        <view class="record-content">
+          <view class="record-title">{{item.title}}</view>
+          <view class="record-detail">{{item.detail}}</view>
+        </view>
+        <view class="record-time">{{item.time}}</view>
+      </view>
+    </view>
+    
+    <view class="empty" wx:else>
+      <view class="empty-icon">📝</view>
+      <text class="text-muted">还没有记录，开始记录宝宝的成长吧</text>
+    </view>
+  </view>
+</view>
+
+<!-- 记录弹窗 -->
+<view class="modal-overlay" wx:if="{{showModal}}" bindtap="hideModal">
+  <view class="modal-content" catchtap="stopPropagation">
+    <view class="modal-header">
+      <text class="text-medium text-bold">{{modalTitle}}</text>
+      <view class="modal-close" bindtap="hideModal">×</view>
+    </view>
+    
+    <view class="modal-body">
+      <!-- 母乳亲喂 -->
+      <view wx:if="{{recordType === 'breastfeeding'}}">
+        <view class="form-item">
+          <text class="form-label">开始时间</text>
+          <picker mode="time" value="{{recordData.startTime}}" bindchange="onTimeChange">
+            <view class="picker">{{recordData.startTime || '请选择时间'}}</view>
+          </picker>
+        </view>
+        
+        <view class="form-item">
+          <text class="form-label">时长（分钟）</text>
+          <input type="number" placeholder="请输入时长" value="{{recordData.duration}}" bindinput="onDurationChange" />
+        </view>
+        
+        <view class="form-item">
+          <text class="form-label">选择乳房</text>
+          <view class="breast-selector">
+            <view class="breast-option {{recordData.breast === 'left' ? 'active' : ''}}" bindtap="selectBreast" data-breast="left">
+              左侧
+            </view>
+            <view class="breast-option {{recordData.breast === 'right' ? 'active' : ''}}" bindtap="selectBreast" data-breast="right">
+              右侧
+            </view>
+          </view>
+        </view>
+      </view>
+      
+      <!-- 瓶喂 -->
+      <view wx:if="{{recordType === 'bottle'}}">
+        <view class="form-item">
+          <text class="form-label">开始时间</text>
+          <picker mode="time" value="{{recordData.startTime}}" bindchange="onTimeChange">
+            <view class="picker">{{recordData.startTime || '请选择时间'}}</view>
+          </picker>
+        </view>
+        
+        <view class="form-item">
+          <text class="form-label">喂奶量（ml）</text>
+          <input type="number" placeholder="请输入喂奶量" value="{{recordData.amount}}" bindinput="onAmountChange" />
+        </view>
+      </view>
+      
+      <!-- 配方奶 -->
+      <view wx:if="{{recordType === 'formula'}}">
+        <view class="form-item">
+          <text class="form-label">开始时间</text>
+          <picker mode="time" value="{{recordData.startTime}}" bindchange="onTimeChange">
+            <view class="picker">{{recordData.startTime || '请选择时间'}}</view>
+          </picker>
+        </view>
+        
+        <view class="form-item">
+          <text class="form-label">喂奶量（ml）</text>
+          <input type="number" placeholder="请输入喂奶量" value="{{recordData.amount}}" bindinput="onAmountChange" />
+        </view>
+      </view>
+      
+      <!-- 辅食 -->
+      <view wx:if="{{recordType === 'solid'}}">
+        <view class="form-item">
+          <text class="form-label">开始时间</text>
+          <picker mode="time" value="{{recordData.startTime}}" bindchange="onTimeChange">
+            <view class="picker">{{recordData.startTime || '请选择时间'}}</view>
+          </picker>
+        </view>
+        
+        <view class="form-item">
+          <text class="form-label">辅食类型</text>
+          <picker range="{{solidTypes}}" value="{{recordData.solidTypeIndex}}" bindchange="onSolidTypeChange">
+            <view class="picker">{{solidTypes[recordData.solidTypeIndex] || '请选择类型'}}</view>
+          </picker>
+        </view>
+        
+        <view class="form-item">
+          <text class="form-label">喂食量</text>
+          <input type="text" placeholder="请输入喂食量" value="{{recordData.solidAmount}}" bindinput="onSolidAmountChange" />
+        </view>
+      </view>
+      
+      <!-- 大便 -->
+      <view wx:if="{{recordType === 'diaper'}}">
+        <view class="form-item">
+          <text class="form-label">时间</text>
+          <picker mode="time" value="{{recordData.startTime}}" bindchange="onTimeChange">
+            <view class="picker">{{recordData.startTime || '请选择时间'}}</view>
+          </picker>
+        </view>
+        
+        <view class="form-item">
+          <text class="form-label">性状</text>
+          <picker range="{{diaperTextures}}" value="{{recordData.textureIndex}}" bindchange="onTextureChange">
+            <view class="picker">{{diaperTextures[recordData.textureIndex] || '请选择性状'}}</view>
+          </picker>
+        </view>
+        
+        <view class="form-item">
+          <text class="form-label">颜色</text>
+          <picker range="{{diaperColors}}" value="{{recordData.colorIndex}}" bindchange="onColorChange">
+            <view class="picker">{{diaperColors[recordData.colorIndex] || '请选择颜色'}}</view>
+          </picker>
+        </view>
+        
+        <view class="form-item">
+          <text class="form-label">备注</text>
+          <input type="text" placeholder="请输入备注" value="{{recordData.note}}" bindinput="onNoteChange" />
+        </view>
+      </view>
+      
+      <!-- 成长 -->
+      <view wx:if="{{recordType === 'growth'}}">
+        <view class="form-item">
+          <text class="form-label">日期</text>
+          <picker mode="date" value="{{recordData.date}}" bindchange="onDateChange">
+            <view class="picker">{{recordData.date || '请选择日期'}}</view>
+          </picker>
+        </view>
+        
+        <view class="form-item">
+          <text class="form-label">身高（cm）</text>
+          <input type="digit" placeholder="请输入身高" value="{{recordData.height}}" bindinput="onHeightChange" />
+        </view>
+        
+        <view class="form-item">
+          <text class="form-label">体重（kg）</text>
+          <input type="digit" placeholder="请输入体重" value="{{recordData.weight}}" bindinput="onWeightChange" />
+        </view>
+      </view>
+    </view>
+    
+    <view class="modal-footer">
+      <button class="btn btn-outline" bindtap="hideModal">取消</button>
+      <button class="btn btn-primary" bindtap="saveRecord">保存</button>
+    </view>
+  </view>
+</view>

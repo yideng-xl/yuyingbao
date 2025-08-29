@@ -1,0 +1,120 @@
+<view class="container">
+  <!-- 搜索栏 -->
+  <view class="search-bar">
+    <view class="search-input">
+      <text class="search-icon">🔍</text>
+      <input placeholder="搜索育儿知识" value="{{searchKeyword}}" bindinput="onSearchInput" />
+    </view>
+  </view>
+
+  <!-- 年龄选择器 -->
+  <view class="age-selector">
+    <view class="age-tabs">
+      <view class="age-tab {{currentAge === '0-6' ? 'active' : ''}}" bindtap="setAge" data-age="0-6">
+        0-6个月
+      </view>
+      <view class="age-tab {{currentAge === '6-12' ? 'active' : ''}}" bindtap="setAge" data-age="6-12">
+        6-12个月
+      </view>
+      <view class="age-tab {{currentAge === '12-24' ? 'active' : ''}}" bindtap="setAge" data-age="12-24">
+        1-2岁
+      </view>
+    </view>
+  </view>
+
+  <!-- 推荐值卡片 -->
+  <view class="card recommendation-card">
+    <view class="card-header">
+      <text class="card-title">喂养推荐值</text>
+      <text class="card-subtitle">{{currentAge}}月龄</text>
+    </view>
+    
+    <view class="recommendation-grid">
+      <view class="recommendation-item">
+        <view class="recommendation-icon">🍼</view>
+        <view class="recommendation-content">
+          <text class="recommendation-label">每日喂养量</text>
+          <text class="recommendation-value">{{recommendations.feeding.min}}-{{recommendations.feeding.max}}ml</text>
+        </view>
+      </view>
+      
+      <view class="recommendation-item">
+        <view class="recommendation-icon">⏰</view>
+        <view class="recommendation-content">
+          <text class="recommendation-label">喂养频率</text>
+          <text class="recommendation-value">{{recommendations.feeding.frequency}}次/天</text>
+        </view>
+      </view>
+      
+      <view class="recommendation-item">
+        <view class="recommendation-icon">📏</view>
+        <view class="recommendation-content">
+          <text class="recommendation-label">月增重</text>
+          <text class="recommendation-value">{{recommendations.growth.weightGain.min}}-{{recommendations.growth.weightGain.max}}kg</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 知识文章列表 -->
+  <view class="knowledge-list">
+    <view class="section-title">育儿知识</view>
+    
+    <view class="article-item" wx:for="{{filteredArticles}}" wx:key="id" bindtap="viewArticle" data-id="{{item.id}}">
+      <view class="article-image">
+        <image src="{{item.image}}" mode="aspectFill"></image>
+      </view>
+      <view class="article-content">
+        <text class="article-title">{{item.title}}</text>
+        <text class="article-summary">{{item.summary}}</text>
+        <view class="article-meta">
+          <text class="article-category">{{item.category}}</text>
+          <text class="article-date">{{item.date}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 常见问题 -->
+  <view class="card faq-card">
+    <view class="card-header">
+      <text class="card-title">常见问题</text>
+    </view>
+    
+    <view class="faq-list">
+      <view class="faq-item" wx:for="{{faqs}}" wx:key="id" bindtap="toggleFaq" data-id="{{item.id}}">
+        <view class="faq-question">
+          <text class="faq-text">{{item.question}}</text>
+          <text class="faq-arrow {{item.expanded ? 'expanded' : ''}}">▼</text>
+        </view>
+        <view class="faq-answer {{item.expanded ? 'expanded' : ''}}">
+          <text>{{item.answer}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>
+
+<!-- 文章详情弹窗 -->
+<view class="modal-overlay" wx:if="{{showArticleModal}}" bindtap="hideArticleModal">
+  <view class="modal-content article-modal" catchtap="stopPropagation">
+    <view class="modal-header">
+      <text class="text-medium text-bold">{{currentArticle.title}}</text>
+      <view class="modal-close" bindtap="hideArticleModal">×</view>
+    </view>
+    
+    <view class="modal-body">
+      <view class="article-header">
+        <image src="{{currentArticle.image}}" mode="aspectFill" class="article-banner"></image>
+        <view class="article-info">
+          <text class="article-category">{{currentArticle.category}}</text>
+          <text class="article-date">{{currentArticle.date}}</text>
+        </view>
+      </view>
+      
+      <view class="article-content">
+        <text wx:for="{{currentArticle.content}}" wx:key="*this">{{item}}</text>
+      </view>
+    </view>
+  </view>
+</view>

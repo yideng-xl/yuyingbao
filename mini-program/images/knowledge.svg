@@ -1,0 +1,21 @@
+<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- 书本外壳 -->
+  <path d="M12 8C10.8954 8 10 8.89543 10 10V38C10 39.1046 10.8954 40 12 40H36C37.1046 40 38 39.1046 38 38V10C38 8.89543 37.1046 8 36 8H12Z" stroke="#999999" stroke-width="2" fill="none"/>
+  
+  <!-- 书脊 -->
+  <line x1="14" y1="8" x2="14" y2="40" stroke="#999999" stroke-width="2"/>
+  
+  <!-- 书页 -->
+  <line x1="18" y1="16" x2="32" y2="16" stroke="#999999" stroke-width="1" stroke-opacity="0.5"/>
+  <line x1="18" y1="20" x2="34" y2="20" stroke="#999999" stroke-width="1" stroke-opacity="0.5"/>
+  <line x1="18" y1="24" x2="30" y2="24" stroke="#999999" stroke-width="1" stroke-opacity="0.5"/>
+  <line x1="18" y1="28" x2="33" y2="28" stroke="#999999" stroke-width="1" stroke-opacity="0.5"/>
+  <line x1="18" y1="32" x2="31" y2="32" stroke="#999999" stroke-width="1" stroke-opacity="0.5"/>
+  
+  <!-- 书签 -->
+  <path d="M30 8V18L33 15L36 18V8" stroke="#999999" stroke-width="1.5" fill="#999999" fill-opacity="0.3"/>
+  
+  <!-- 灯泡图标 (知识象征) -->
+  <circle cx="24" cy="12" r="3" stroke="#999999" stroke-width="1.5" fill="none"/>
+  <path d="M22.5 15C22.5 15 23 15.5 24 15.5C25 15.5 25.5 15 25.5 15" stroke="#999999" stroke-width="1.5" stroke-linecap="round"/>
+</svg>
