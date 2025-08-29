@@ -57,15 +57,15 @@ RUN chown -R appuser:appgroup /app
 # 切换到非root用户
 USER appuser
 
-# 健康检查
-HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
+# 健康检查 - 针对低配置服务器调整
+HEALTHCHECK --interval=45s --timeout=10s --start-period=90s --retries=3 \
   CMD curl -f http://localhost:8080/actuator/health || exit 1
 
 # 暴露端口
 EXPOSE 8080
 
-# JVM优化参数
-ENV JAVA_OPTS="-Xms512m -Xmx1024m -Djava.security.egd=file:/dev/./urandom"
+# JVM优化参数 - 针对2G内存服务器优化
+ENV JAVA_OPTS="-Xms256m -Xmx768m -XX:+UseG1GC -XX:MaxGCPauseMillis=100 -XX:+UseStringDeduplication -XX:+OptimizeStringConcat -Djava.awt.headless=true -Djava.security.egd=file:/dev/./urandom -Dspring.jmx.enabled=false"
 
 # 启动命令
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]

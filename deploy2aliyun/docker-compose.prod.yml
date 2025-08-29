@@ -1,0 +1,120 @@
+# Docker Compose 生产环境配置 - 2CPU 2G内存服务器优化
+version: '3.8'
+
+services:
+  # 育婴宝后端服务
+  yuyingbao-server:
+    image: crpi-zyq1wc1umfuictwx.cn-shanghai.personal.cr.aliyuncs.com/aires-docker/yuyingbao:latest
+    container_name: yuyingbao-server
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      # Spring Boot 生产环境配置
+      SPRING_PROFILES_ACTIVE: prod
+      SERVER_PORT: 8080
+      
+      # 性能优化 - 2G内存服务器
+      SERVER_TOMCAT_THREADS_MAX: 50
+      SERVER_TOMCAT_ACCEPT_COUNT: 100
+      SERVER_TOMCAT_MAX_CONNECTIONS: 200
+      
+      # JVM 优化参数
+      JAVA_OPTS: "-Xms256m -Xmx768m -XX:+UseG1GC -XX:MaxGCPauseMillis=100 -XX:+UseStringDeduplication"
+      
+      # 数据库连接池优化
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 10
+      SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: 2
+      SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT: 30000
+      SPRING_DATASOURCE_HIKARI_IDLE_TIMEOUT: 300000
+      SPRING_DATASOURCE_HIKARI_MAX_LIFETIME: 600000
+      
+      # 数据库配置 (需要根据实际情况修改)
+      DB_HOST: ${DB_HOST:-localhost}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_NAME: ${DB_NAME:-yuyingbao}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      
+      # JWT配置
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
+      
+      # 微信小程序配置
+      WECHAT_APP_ID: ${WECHAT_APP_ID}
+      WECHAT_APP_SECRET: ${WECHAT_APP_SECRET}
+      
+      # 日志配置
+      LOGGING_LEVEL_ROOT: INFO
+      LOGGING_LEVEL_COM_YUYINGBAO: INFO
+      LOGGING_PATTERN_CONSOLE: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+      
+    # 资源限制 - 2G内存服务器
+    deploy:
+      resources:
+        limits:
+          memory: 1.5G
+          cpus: '1.5'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+    
+    # 健康检查
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 45s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+    
+    # 网络配置
+    networks:
+      - yuyingbao-network
+    
+    # 日志配置
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Nginx 反向代理 (可选)
+  nginx:
+    image: nginx:alpine
+    container_name: yuyingbao-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - /etc/ssl/certs:/etc/ssl/certs:ro  # SSL证书目录
+    depends_on:
+      - yuyingbao-server
+    networks:
+      - yuyingbao-network
+    
+    # 资源限制
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.2'
+        reservations:
+          memory: 32M
+          cpus: '0.1'
+
+networks:
+  yuyingbao-network:
+    driver: bridge
+    name: yuyingbao-prod-network
+
+# 环境变量配置文件示例
+# 创建 .env 文件并配置以下变量:
+# DB_HOST=your-rds-host
+# DB_USERNAME=your-db-user
+# DB_PASSWORD=your-db-password
+# JWT_SECRET=your-jwt-secret-key
+# WECHAT_APP_ID=your-wechat-app-id
+# WECHAT_APP_SECRET=your-wechat-app-secret

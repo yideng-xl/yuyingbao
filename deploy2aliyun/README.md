@@ -2,46 +2,98 @@
 
 ## 概述
 
-本目录包含了将育婴宝后端服务部署到阿里云的完整配置和脚本。
+本目录包含了将育婴宝后端服务部署到阿里云的完整配置和脚本，针对2CPU 2G内存服务器进行了专门优化。
 
 ## 📁 文件结构
 
 ```
 deploy2aliyun/
-├── Dockerfile                 # 优化的多阶段构建Docker文件
-├── build-and-push.sh         # 自动化构建和推送脚本
-├── docker-compose.test.yml   # 本地测试配置
-├── test-local.sh             # 本地测试脚本
-└── README.md                 # 本文档
+├── Dockerfile                   # 多阶段构建Docker文件 (2G内存优化)
+├── build-and-push.sh           # 自动化构建和推送脚本
+├── docker-compose.test.yml     # 本地测试配置
+├── docker-compose.prod.yml     # 生产环境配置 (2G内存优化)
+├── test-local.sh               # 本地测试脚本
+├── deploy-to-server.sh         # 阿里云服务器部署脚本
+└── README.md                   # 本文档
 ```
 
 ## 🚀 快速开始
 
 ### 1. 准备阿里云环境
 
-#### 开通容器镜像服务
-1. 登录阿里云控制台
-2. 开通 **容器镜像服务ACR** (免费版即可)
-3. 创建命名空间 (如: `yuyingbao-prod`)
-4. 创建镜像仓库 `yuyingbao-server`
+#### 阿里云个人镜像仓库信息
+- **镜像仓库地址**: `crpi-zyq1wc1umfuictwx.cn-shanghai.personal.cr.aliyuncs.com`
+- **命名空间**: `aires-docker`
+- **仓库名称**: `yuyingbao`
+- **用户名**: `xulei0331@126.com`
+- **完整镜像地址**: `crpi-zyq1wc1umfuictwx.cn-shanghai.personal.cr.aliyuncs.com/aires-docker/yuyingbao`
 
-#### 获取访问凭证
-1. 进入容器镜像服务控制台
-2. 访问凭证 → 设置Registry登录密码
-3. 记录用户名和密码
+### 2. 2G内存服务器优化配置
 
-### 2. 配置部署脚本
+本部署方案专门针对2CPU 2G内存的阿里云ECS进行了优化：
 
-编辑 `build-and-push.sh` 文件，修改以下配置：
+#### JVM参数优化
+```bash
+-Xms256m          # 初始堆内存256MB
+-Xmx768m          # 最大堆内存768MB (预留系统内存)
+-XX:+UseG1GC      # 使用G1垃圾收集器
+-XX:MaxGCPauseMillis=100  # 最大GC暂停时间
+```
+
+#### 连接池优化
+```yaml
+spring:
+  datasource:
+    hikari:
+      maximum-pool-size: 10    # 最大连接池大小
+      minimum-idle: 2          # 最小空闲连接
+      connection-timeout: 30000
+      idle-timeout: 300000
+```
+
+#### Tomcat优化
+```yaml
+server:
+  tomcat:
+    threads:
+      max: 50              # 最大线程数
+    accept-count: 100      # 最大等待队列
+    max-connections: 200   # 最大连接数
+```
+
+编辑 `build-and-push.sh` 文件，配置已经更新为：
 
 ```bash
 # 阿里云镜像仓库配置
-ALIYUN_REGISTRY="registry.cn-hangzhou.aliyuncs.com"  # 选择就近地域
-ALIYUN_NAMESPACE="your-namespace"                    # 替换为您的命名空间
-ALIYUN_REPO="yuyingbao-server"                      # 镜像仓库名称
+ALIYUN_REGISTRY="crpi-zyq1wc1umfuictwx.cn-shanghai.personal.cr.aliyuncs.com"
+ALIYUN_NAMESPACE="aires-docker"
+ALIYUN_REPO="yuyingbao"
+ALIYUN_USERNAME="xulei0331@126.com"
 ```
 
-### 3. 本地测试（推荐）
+### 3. 一键部署到阿里云服务器
+
+使用专门的服务器部署脚本：
+
+```bash
+# 上传部署脚本到服务器
+scp deploy-to-server.sh user@your-server:/home/user/
+
+# 在服务器上执行部署
+ssh user@your-server
+chmod +x deploy-to-server.sh
+./deploy-to-server.sh deploy
+```
+
+部署脚本会自动完成：
+1. ✅ 检查系统资源和Docker环境
+2. ✅ 安装Docker (如果未安装)
+3. ✅ 登录阿里云镜像仓库
+4. ✅ 拉取最新镜像
+5. ✅ 停止旧容器
+6. ✅ 启动优化后的新容器
+7. ✅ 执行健康检查
+8. ✅ 显示部署信息
 
 在推送到阿里云之前，建议先进行本地测试：
 
@@ -68,7 +120,7 @@ chmod +x test-local.sh
 ./test-local.sh cleanup
 ```
 
-### 4. 构建和推送到阿里云
+### 5. 手动构建和推送
 
 ```bash
 # 添加执行权限
@@ -89,7 +141,18 @@ chmod +x build-and-push.sh
 
 ## 🐳 Docker镜像特性
 
-### 多阶段构建
+### 2G内存服务器特殊优化
+
+#### 内存分配策略
+- **应用内存**: 1.5GB (JVM堆768MB + 非堆512MB + 缓冲区256MB)
+- **系统内存**: 500MB (操作系统 + Docker + 其他进程)
+- **总计**: 2GB
+
+#### 性能调优
+- 使用G1垃圾收集器，减少GC暂停时间
+- 限制数据库连接池大小，避免连接过多
+- 优化Tomcat线程池，平衡并发和资源使用
+- 启用字符串去重，减少内存占用
 - **构建阶段**: 使用Maven编译Java应用
 - **运行阶段**: 使用轻量级JRE镜像
 
@@ -131,25 +194,35 @@ chmod +x build-and-push.sh
 
 ## 🌐 部署到阿里云
 
-### 1. 云服务器ECS部署
+### 1. 2G内存服务器直接部署
 
 ```bash
 # 拉取镜像
-docker pull registry.cn-hangzhou.aliyuncs.com/your-namespace/yuyingbao-server:v0.5.0
+docker pull crpi-zyq1wc1umfuictwx.cn-shanghai.personal.cr.aliyuncs.com/aires-docker/yuyingbao:latest
 
-# 运行容器
+# 运行容器 (2G内存优化)
 docker run -d \
   --name yuyingbao-server \
   --restart unless-stopped \
   -p 8080:8080 \
+  --memory=1.5g \
+  --cpus=1.5 \
   -e SPRING_PROFILES_ACTIVE=prod \
-  -e DB_HOST=your-rds-host \
+  -e SERVER_TOMCAT_THREADS_MAX=50 \
+  -e SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=10 \
+  -e SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE=2 \
+  -e DB_HOST=your-db-host \
   -e DB_USERNAME=your-db-user \
   -e DB_PASSWORD=your-db-password \
-  registry.cn-hangzhou.aliyuncs.com/your-namespace/yuyingbao-server:v0.5.0
+  crpi-zyq1wc1umfuictwx.cn-shanghai.personal.cr.aliyuncs.com/aires-docker/yuyingbao:latest
 ```
 
-### 2. 容器服务ACK部署
+### 2. Docker Compose部署 (推荐)
+
+```bash
+# 使用优化的生产环境配置
+docker-compose -f docker-compose.prod.yml up -d
+```
 
 创建Kubernetes部署配置：
 
@@ -170,7 +243,7 @@ spec:
     spec:
       containers:
       - name: yuyingbao-server
-        image: registry.cn-hangzhou.aliyuncs.com/your-namespace/yuyingbao-server:v0.5.0
+        image: crpi-zyq1wc1umfuictwx.cn-shanghai.personal.cr.aliyuncs.com/aires-docker/yuyingbao:latest
         ports:
         - containerPort: 8080
         env:
@@ -186,8 +259,8 @@ spec:
             memory: "512Mi"
             cpu: "250m"
           limits:
-            memory: "1Gi"
-            cpu: "500m"
+            memory: "1.5Gi"
+            cpu: "1.5"
         livenessProbe:
           httpGet:
             path: /actuator/health
@@ -202,7 +275,7 @@ spec:
           periodSeconds: 10
 ```
 
-### 3. Serverless应用引擎SAE部署
+### 4. Serverless应用引擎SAE部署
 
 1. 创建SAE应用
 2. 选择镜像部署
@@ -267,24 +340,25 @@ docker inspect yuyingbao-server
 
 ### 性能优化
 
-#### JVM参数调优
+#### JVM参数调优 (2G内存优化)
 ```bash
--Xms512m -Xmx1024m
+-Xms256m -Xmx768m
 -XX:+UseG1GC
 -XX:MaxGCPauseMillis=100
--XX:+HeapDumpOnOutOfMemoryError
+-XX:+UseStringDeduplication
+-XX:+OptimizeStringConcat
 ```
 
-#### 数据库连接池
+#### 数据库连接池 (2G内存优化)
 ```yaml
 spring:
   datasource:
     hikari:
-      maximum-pool-size: 20
-      minimum-idle: 5
+      maximum-pool-size: 10
+      minimum-idle: 2
       connection-timeout: 30000
-      idle-timeout: 600000
-      max-lifetime: 1800000
+      idle-timeout: 300000
+      max-lifetime: 600000
 ```
 
 ## 📋 部署检查清单

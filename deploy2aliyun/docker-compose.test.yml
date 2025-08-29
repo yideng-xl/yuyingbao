@@ -13,16 +13,25 @@ services:
     ports:
       - "8080:8080"
     environment:
-      # Spring Boot 配置
+      # Spring Boot 配置 - 2G内存优化
       SPRING_PROFILES_ACTIVE: test
       SERVER_PORT: 8080
+      SERVER_TOMCAT_THREADS_MAX: 50
+      SERVER_TOMCAT_ACCEPT_COUNT: 100
       
-      # 数据库配置
+      # JVM优化参数
+      JAVA_OPTS: "-Xms256m -Xmx768m -XX:+UseG1GC -XX:MaxGCPauseMillis=100"
+      
+      # 数据库连接池优化 - 2G内存服务器
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: yuyingbao
       DB_USERNAME: yuyingbao
       DB_PASSWORD: password123
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 10
+      SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: 2
+      SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT: 30000
+      SPRING_DATASOURCE_HIKARI_IDLE_TIMEOUT: 300000
       
       # JWT配置
       JWT_SECRET: test-secret-key-for-development-only
@@ -36,6 +45,14 @@ services:
       LOGGING_LEVEL_COM_YUYINGBAO: DEBUG
       LOGGING_LEVEL_SQL: DEBUG
       
+    deploy:
+      resources:
+        limits:
+          memory: 1.5G
+          cpus: '1.5'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
     depends_on:
       - postgres
     networks:

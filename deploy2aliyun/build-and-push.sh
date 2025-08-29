@@ -18,10 +18,11 @@ VERSION="v0.5.0"
 BUILD_DATE=$(date +"%Y%m%d%H%M%S")
 GIT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 
-# 阿里云镜像仓库配置（需要用户配置）
-ALIYUN_REGISTRY="registry.cn-hangzhou.aliyuncs.com"
-ALIYUN_NAMESPACE="your-namespace"  # 请替换为您的命名空间
-ALIYUN_REPO="yuyingbao-server"
+# 阿里云镜像仓库配置
+ALIYUN_REGISTRY="crpi-zyq1wc1umfuictwx.cn-shanghai.personal.cr.aliyuncs.com"
+ALIYUN_NAMESPACE="aires-docker"  # 命名空间
+ALIYUN_REPO="yuyingbao"
+ALIYUN_USERNAME="xulei0331@126.com"
 
 # 完整镜像名称
 FULL_IMAGE_NAME="${ALIYUN_REGISTRY}/${ALIYUN_NAMESPACE}/${ALIYUN_REPO}"
@@ -51,17 +52,12 @@ check_docker() {
     echo -e "${GREEN}✅ Docker 环境正常${NC}"
 }
 
-# 检查阿里云配置
 check_aliyun_config() {
     echo -e "${BLUE}🔍 检查阿里云配置...${NC}"
     
-    if [[ "${ALIYUN_NAMESPACE}" == "your-namespace" ]]; then
-        echo -e "${RED}❌ 请先配置阿里云命名空间${NC}"
-        echo -e "${YELLOW}💡 修改脚本中的 ALIYUN_NAMESPACE 变量${NC}"
-        exit 1
-    fi
-    
-    echo -e "${GREEN}✅ 阿里云配置检查通过${NC}"
+    echo -e "${GREEN}✅ 阿里云镜像仓库配置检查通过${NC}"
+    echo -e "${YELLOW}镜像仓库: ${FULL_IMAGE_NAME}${NC}"
+    echo -e "${YELLOW}用户名: ${ALIYUN_USERNAME}${NC}"
 }
 
 # 构建镜像
@@ -71,7 +67,7 @@ build_image() {
     # 切换到项目根目录
     cd "$(dirname "$0")/.."
     
-    # 构建镜像，使用多个标签
+    # 构建镜像，使用多个标签 - 针对2G内存服务器优化
     docker build \
         -f deploy2aliyun/Dockerfile \
         -t "${FULL_IMAGE_NAME}:${VERSION}" \
@@ -80,6 +76,9 @@ build_image() {
         --build-arg BUILD_DATE="${BUILD_DATE}" \
         --build-arg GIT_COMMIT="${GIT_COMMIT}" \
         --platform linux/amd64 \
+        --memory=1.2g \
+        --cpus=1.8 \
+        --ulimit nofile=65536:65536 \
         .
     
     if [[ $? -eq 0 ]]; then
@@ -109,16 +108,15 @@ test_image() {
     fi
 }
 
-# 登录阿里云
 login_aliyun() {
     echo -e "${BLUE}🔐 登录阿里云容器镜像服务...${NC}"
     
     echo -e "${YELLOW}💡 请输入阿里云容器镜像服务的登录信息：${NC}"
-    echo -e "${YELLOW}   用户名：通常是阿里云账号或RAM用户名${NC}"
-    echo -e "${YELLOW}   密码：访问凭证密码${NC}"
+    echo -e "${YELLOW}   用户名：${ALIYUN_USERNAME}${NC}"
+    echo -e "${YELLOW}   密码：访问凭证密码或Personal Access Token${NC}"
     echo ""
     
-    docker login "${ALIYUN_REGISTRY}"
+    docker login "${ALIYUN_REGISTRY}" -u "${ALIYUN_USERNAME}"
     
     if [[ $? -eq 0 ]]; then
         echo -e "${GREEN}✅ 阿里云登录成功${NC}"
@@ -172,11 +170,17 @@ show_deploy_info() {
     echo -e "构建版本: ${FULL_IMAGE_NAME}:${VERSION}-${BUILD_DATE}"
     echo -e "最新版本: ${FULL_IMAGE_NAME}:latest"
     echo ""
-    echo -e "${BLUE}🚀 部署命令示例：${NC}"
+    echo -e "${BLUE}🚀 2G内存服务器部署命令示例：${NC}"
     echo "docker run -d \\"
     echo "  --name yuyingbao-server \\"
+    echo "  --restart unless-stopped \\"
     echo "  -p 8080:8080 \\"
+    echo "  --memory=1.5g \\"
+    echo "  --cpus=1.5 \\"
     echo "  -e SPRING_PROFILES_ACTIVE=prod \\"
+    echo "  -e SERVER_TOMCAT_THREADS_MAX=50 \\"
+    echo "  -e SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=10 \\"
+    echo "  -e SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE=2 \\"
     echo "  -e DB_HOST=your-db-host \\"
     echo "  -e DB_USERNAME=your-db-user \\"
     echo "  -e DB_PASSWORD=your-db-password \\"
