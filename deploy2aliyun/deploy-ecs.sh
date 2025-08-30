@@ -20,6 +20,7 @@ CONTAINER_NAME="yuyingbao-server"
 NETWORK_NAME="yuyingbao-network"
 ALIYUN_REGISTRY="crpi-zyq1wc1umfuictwx.cn-shanghai.personal.cr.aliyuncs.com"
 ALIYUN_USERNAME="xulei0331@126.com"
+POSTGRES_IMAGE="postgres:17"  # 默认PostgreSQL镜像，会在拉取时动态更新
 
 echo -e "${BLUE}======================================${NC}"
 echo -e "${BLUE}    阿里云ECS一键部署脚本${NC}"
@@ -153,6 +154,18 @@ install_docker() {
 EOF
         sudo systemctl restart docker
         echo -e "${GREEN}✅ Docker镜像加速器配置完成${NC}"
+        
+        # 等待Docker服务重启
+        sleep 5
+        
+        # 验证镜像源配置
+        echo -e "${BLUE}🔍 验证镜像源配置...${NC}"
+        if docker info | grep -q "Registry Mirrors"; then
+            echo -e "${GREEN}✅ 镜像源配置生效${NC}"
+            docker info | grep -A 10 "Registry Mirrors" | head -6
+        else
+            echo -e "${YELLOW}⚠️  镜像源配置未生效，将使用默认源${NC}"
+        fi
     else
         echo -e "${GREEN}✅ Docker已安装${NC}"
     fi
@@ -218,6 +231,58 @@ pull_image() {
         echo -e "${RED}❌ 镜像拉取失败${NC}"
         exit 1
     fi
+    echo ""
+}
+
+# 拉取PostgreSQL镜像
+pull_postgres_image() {
+    echo -e "${BLUE}📥 拉取PostgreSQL镜像...${NC}"
+    
+    local postgres_images=(
+        "postgres:17"
+        "postgres:16"
+        "postgres:15"
+    )
+    
+    local pulled_image=""
+    
+    for image in "${postgres_images[@]}"; do
+        echo -e "${CYAN}尝试拉取镜像: ${image}${NC}"
+        
+        # 设置超时时间并重试
+        local attempts=0
+        local max_attempts=3
+        
+        while [ $attempts -lt $max_attempts ]; do
+            if timeout 300 docker pull "$image"; then
+                echo -e "${GREEN}✅ 镜像拉取成功: ${image}${NC}"
+                pulled_image="$image"
+                break 2  # 跳出两层循环
+            else
+                attempts=$((attempts + 1))
+                echo -e "${YELLOW}⚠️  镜像拉取失败，重试 $attempts/$max_attempts${NC}"
+                if [ $attempts -lt $max_attempts ]; then
+                    sleep 5
+                fi
+            fi
+        done
+        
+        echo -e "${YELLOW}⚠️  镜像 ${image} 拉取失败，尝试下一个...${NC}"
+    done
+    
+    if [[ -z "$pulled_image" ]]; then
+        echo -e "${RED}❌ 所有PostgreSQL镜像拉取失败${NC}"
+        echo -e "${YELLOW}💡 解决建议:${NC}"
+        echo -e "1. 检查网络连接: ping registry-1.docker.io"
+        echo -e "2. 检查Docker镜像源配置: docker info | grep 'Registry Mirrors'"
+        echo -e "3. 手动配置镜像源: ./configure-docker-mirrors.sh config"
+        echo -e "4. 尝试重新启动Docker: sudo systemctl restart docker"
+        return 1
+    fi
+    
+    # 更新全局PostgreSQL镜像变量
+    POSTGRES_IMAGE="$pulled_image"
+    echo -e "${GREEN}✅ 将使用PostgreSQL镜像: ${POSTGRES_IMAGE}${NC}"
     echo ""
 }
 
@@ -296,7 +361,7 @@ start_database() {
         -e POSTGRES_PASSWORD=YuyingBao2024@Database \
         -e POSTGRES_INITDB_ARGS="--encoding=UTF-8 --lc-collate=C --lc-ctype=C" \
         -v postgres_data:/var/lib/postgresql/data \
-        postgres:17
+        ${POSTGRES_IMAGE}
     
     if [[ $? -eq 0 ]]; then
         echo -e "${GREEN}✅ PostgreSQL容器启动成功${NC}"
@@ -543,6 +608,7 @@ main() {
     install_docker
     login_aliyun_registry
     pull_image
+    pull_postgres_image
     stop_old_containers
     create_network
     configure_environment
