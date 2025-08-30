@@ -85,7 +85,7 @@ health_check() {
     
     # 检查健康端点
     echo "检查健康端点..."
-    HEALTH_RESPONSE=$(curl -s http://localhost:8080/actuator/health || echo "ERROR")
+    HEALTH_RESPONSE=$(curl -s http://localhost:8080/api/actuator/health || echo "ERROR")
     
     if [[ "$HEALTH_RESPONSE" == *"UP"* ]]; then
         echo -e "${GREEN}✅ 健康检查通过${NC}"
@@ -98,7 +98,7 @@ health_check() {
     
     # 检查API端点
     echo "检查API端点..."
-    API_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/auth/test 2>/dev/null || echo "000")
+    API_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/auth/test 2>/dev/null || echo "000")
     
     if [[ "$API_RESPONSE" == "200" ]] || [[ "$API_RESPONSE" == "404" ]]; then
         echo -e "${GREEN}✅ API端点可访问${NC}"

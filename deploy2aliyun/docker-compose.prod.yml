@@ -1,5 +1,4 @@
 # Docker Compose 生产环境配置 - 2CPU 2G内存服务器优化
-version: '3.8'
 
 services:
   # 育婴宝后端服务

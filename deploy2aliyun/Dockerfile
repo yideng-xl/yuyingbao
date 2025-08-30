@@ -2,7 +2,7 @@
 # 使用阿里云镜像加速
 
 # 构建阶段
-FROM registry.cn-hangzhou.aliyuncs.com/library/maven:3.9.4-openjdk-17-slim AS builder
+FROM maven:3.9-eclipse-temurin-17 AS builder
 
 # 设置工作目录
 WORKDIR /app
@@ -32,10 +32,10 @@ RUN mkdir -p /root/.m2 && \
 RUN mvn dependency:go-offline -B
 
 # 编译和打包应用
-RUN mvn clean package -DskipTests -B
+RUN mvn clean package -DskipTests -Dmaven.test.skip=true -B
 
 # 运行阶段
-FROM registry.cn-hangzhou.aliyuncs.com/library/openjdk:17-jre-slim
+FROM eclipse-temurin:17-jre-jammy
 
 # 设置时区
 ENV TZ=Asia/Shanghai
@@ -59,7 +59,7 @@ USER appuser
 
 # 健康检查 - 针对低配置服务器调整
 HEALTHCHECK --interval=45s --timeout=10s --start-period=90s --retries=3 \
-  CMD curl -f http://localhost:8080/actuator/health || exit 1
+  CMD curl -f http://localhost:8080/api/actuator/health || exit 1
 
 # 暴露端口
 EXPOSE 8080

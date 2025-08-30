@@ -1,8 +1,6 @@
 # Docker Compose 配置文件 - 育婴宝后端服务本地测试
 # 用于在推送到阿里云之前进行本地验证
 
-version: '3.8'
-
 services:
   # 育婴宝后端服务
   yuyingbao-server:
@@ -59,7 +57,7 @@ services:
       - yuyingbao-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/actuator/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -67,7 +65,7 @@ services:
 
   # PostgreSQL 数据库
   postgres:
-    image: registry.cn-hangzhou.aliyuncs.com/library/postgres:17
+    image: postgres:17
     container_name: yuyingbao-postgres-test
     environment:
       POSTGRES_DB: yuyingbao
@@ -90,7 +88,7 @@ services:
 
   # Redis 缓存（可选）
   redis:
-    image: registry.cn-hangzhou.aliyuncs.com/library/redis:7-alpine
+    image: redis:7-alpine
     container_name: yuyingbao-redis-test
     ports:
       - "6379:6379"

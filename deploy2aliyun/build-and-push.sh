@@ -76,9 +76,6 @@ build_image() {
         --build-arg BUILD_DATE="${BUILD_DATE}" \
         --build-arg GIT_COMMIT="${GIT_COMMIT}" \
         --platform linux/amd64 \
-        --memory=1.2g \
-        --cpus=1.8 \
-        --ulimit nofile=65536:65536 \
         .
     
     if [[ $? -eq 0 ]]; then

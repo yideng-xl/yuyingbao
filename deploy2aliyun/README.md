@@ -10,10 +10,13 @@
 deploy2aliyun/
 ├── Dockerfile                   # 多阶段构建Docker文件 (2G内存优化)
 ├── build-and-push.sh           # 自动化构建和推送脚本
+├── deploy-ecs.sh               # 阿里云ECS一键部署脚本 (新增)
 ├── docker-compose.test.yml     # 本地测试配置
 ├── docker-compose.prod.yml     # 生产环境配置 (2G内存优化)
 ├── test-local.sh               # 本地测试脚本
 ├── deploy-to-server.sh         # 阿里云服务器部署脚本
+├── ECS_DEPLOYMENT_GUIDE.md     # ECS详细部署指南 (新增)
+├── QUICK_DEPLOY.md             # 快速部署说明 (新增)
 └── README.md                   # 本文档
 ```
 
@@ -71,7 +74,26 @@ ALIYUN_REPO="yuyingbao"
 ALIYUN_USERNAME="xulei0331@126.com"
 ```
 
-### 3. 一键部署到阿里云服务器
+### 3. 一键部署到阿里云ECS (推荐)
+
+**最简单的部署方式，适合新手：**
+
+```bash
+# 在阿里云ECS服务器上执行
+wget https://raw.githubusercontent.com/westxixia/yuyingbao/main/deploy2aliyun/deploy-ecs.sh
+chmod +x deploy-ecs.sh
+./deploy-ecs.sh
+```
+
+脚本会自动完成：
+1. ✅ 系统环境检查和Docker安装
+2. ✅ 阿里云镜像仓库登录和镜像拉取
+3. ✅ 应用容器启动和健康检查
+4. ✅ 防火墙配置和环境变量设置
+
+详细说明请查看：[ECS部署指南](./ECS_DEPLOYMENT_GUIDE.md) | [快速部署](./QUICK_DEPLOY.md)
+
+### 4. 手动部署到阿里云服务器
 
 使用专门的服务器部署脚本：
 
