@@ -135,16 +135,20 @@ install_docker() {
         sudo tee /etc/docker/daemon.json > /dev/null << 'EOF'
 {
   "registry-mirrors": [
-    "https://mirror.ccs.tencentyun.com",
-    "https://registry.docker-cn.com",
-    "https://docker.mirrors.ustc.edu.cn"
+    "https://dockerproxy.com",
+    "https://hub-mirror.c.163.com",
+    "https://mirror.baidubce.com",
+    "https://ccr.ccs.tencentyun.com"
   ],
   "log-driver": "json-file",
   "log-opts": {
     "max-size": "10m",
     "max-file": "3"
   },
-  "storage-driver": "overlay2"
+  "storage-driver": "overlay2",
+  "max-concurrent-downloads": 10,
+  "max-concurrent-uploads": 5,
+  "experimental": false
 }
 EOF
         sudo systemctl restart docker

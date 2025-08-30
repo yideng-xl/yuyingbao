@@ -11,6 +11,7 @@ deploy2aliyun/
 ├── Dockerfile                   # 多阶段构建Docker文件 (2G内存优化)
 ├── build-and-push.sh           # 自动化构建和推送脚本
 ├── deploy-ecs.sh               # 阿里云ECS一键部署脚本 (新增)
+├── configure-docker-mirrors.sh # Docker镜像源配置脚本 (新增)
 ├── docker-compose.test.yml     # 本地测试配置
 ├── docker-compose.prod.yml     # 生产环境配置 (2G内存优化)
 ├── test-local.sh               # 本地测试脚本
@@ -87,11 +88,47 @@ chmod +x deploy-ecs.sh
 
 脚本会自动完成：
 1. ✅ 系统环境检查和Docker安装
-2. ✅ 阿里云镜像仓库登录和镜像拉取
-3. ✅ 应用容器启动和健康检查
-4. ✅ 防火墙配置和环境变量设置
+2. ✅ Docker镜像源优化配置
+3. ✅ 阿里云镜像仓库登录和镜像拉取
+4. ✅ PostgreSQL数据库容器启动
+5. ✅ 应用容器启动和健康检查
+6. ✅ 防火墙配置和环境变量设置
 
 详细说明请查看：[ECS部署指南](./ECS_DEPLOYMENT_GUIDE.md) | [快速部署](./QUICK_DEPLOY.md)
+
+### 3.1. Docker镜像源配置（可选）
+
+如果您的ECS服务器已安装Docker，可以单独配置镜像源加速：
+
+```bash
+# 下载镜像源配置脚本
+wget https://raw.githubusercontent.com/westxixia/yuyingbao/main/deploy2aliyun/configure-docker-mirrors.sh
+chmod +x configure-docker-mirrors.sh
+
+# 配置镜像源
+./configure-docker-mirrors.sh config
+
+# 测试镜像拉取
+./configure-docker-mirrors.sh test
+```
+
+**优化的镜像源列表：**
+- `dockerproxy.com` - 高性能代理服务
+- `hub-mirror.c.163.com` - 网易镜像源
+- `mirror.baidubce.com` - 百度云镜像源
+- `ccr.ccs.tencentyun.com` - 腾讯云镜像源
+
+**镜像源管理命令：**
+```bash
+# 显示当前配置
+./configure-docker-mirrors.sh show
+
+# 恢复原始配置
+./configure-docker-mirrors.sh restore
+
+# 显示帮助信息
+./configure-docker-mirrors.sh help
+```
 
 ### 4. 手动部署到阿里云服务器
 
