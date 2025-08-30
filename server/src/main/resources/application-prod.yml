@@ -17,8 +17,6 @@ server:
     min-response-size: 1024
 
 spring:
-  profiles:
-    active: prod
   datasource:
     url: jdbc:postgresql://postgres:5432/yuyingbao
     username: yuyingbao
