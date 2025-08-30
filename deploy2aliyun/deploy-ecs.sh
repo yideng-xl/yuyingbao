@@ -221,26 +221,104 @@ pull_image() {
 stop_old_containers() {
     echo -e "${BLUE}🛑 停止旧容器...${NC}"
     
+    # 停止应用容器
     if docker ps -q -f name=${CONTAINER_NAME} | grep -q .; then
         echo "停止容器: ${CONTAINER_NAME}"
         docker stop ${CONTAINER_NAME}
         docker rm ${CONTAINER_NAME}
-        echo -e "${GREEN}✅ 旧容器已停止并删除${NC}"
+        echo -e "${GREEN}✅ 应用容器已停止并删除${NC}"
     else
-        echo -e "${GREEN}✅ 没有发现旧容器${NC}"
+        echo -e "${GREEN}✅ 没有发现旧应用容器${NC}"
     fi
+    
+    # 注意：不停止数据库容器，保持数据持久化
+    if docker ps -q -f name=yuyingbao-postgres | grep -q .; then
+        echo -e "${YELLOW}ℹ️  保持PostgreSQL数据库容器运行（数据持久化）${NC}"
+    fi
+    
     echo ""
 }
 
-# 创建Docker网络
+# 创建Docker网络和数据卷
 create_network() {
-    echo -e "${BLUE}🌐 创建Docker网络...${NC}"
+    echo -e "${BLUE}🌐 创建Docker网络和数据卷...${NC}"
     
+    # 创建网络
     if docker network ls | grep -q ${NETWORK_NAME}; then
         echo -e "${GREEN}✅ 网络已存在: ${NETWORK_NAME}${NC}"
     else
         docker network create ${NETWORK_NAME}
         echo -e "${GREEN}✅ 网络创建成功: ${NETWORK_NAME}${NC}"
+    fi
+    
+    # 创建数据卷
+    if docker volume ls | grep -q postgres_data; then
+        echo -e "${GREEN}✅ PostgreSQL数据卷已存在${NC}"
+    else
+        docker volume create postgres_data
+        echo -e "${GREEN}✅ PostgreSQL数据卷创建成功${NC}"
+    fi
+    
+    echo ""
+}
+
+# 启动PostgreSQL数据库容器
+start_database() {
+    echo -e "${BLUE}🐘 启动PostgreSQL数据库容器...${NC}"
+    
+    # 检查是否已有数据库容器运行
+    if docker ps | grep -q "yuyingbao-postgres"; then
+        echo -e "${GREEN}✅ PostgreSQL容器已在运行${NC}"
+        return 0
+    fi
+    
+    # 停止旧的数据库容器
+    if docker ps -a | grep -q "yuyingbao-postgres"; then
+        echo "停止旧的PostgreSQL容器..."
+        docker stop yuyingbao-postgres || true
+        docker rm yuyingbao-postgres || true
+    fi
+    
+    # 启动PostgreSQL容器
+    docker run -d \
+        --name yuyingbao-postgres \
+        --restart unless-stopped \
+        --network ${NETWORK_NAME} \
+        -p 5432:5432 \
+        --memory=512m \
+        --cpus=0.5 \
+        -e POSTGRES_DB=yuyingbao \
+        -e POSTGRES_USER=yuyingbao \
+        -e POSTGRES_PASSWORD=YuyingBao2024@Database \
+        -e POSTGRES_INITDB_ARGS="--encoding=UTF-8 --lc-collate=C --lc-ctype=C" \
+        -v postgres_data:/var/lib/postgresql/data \
+        postgres:17
+    
+    if [[ $? -eq 0 ]]; then
+        echo -e "${GREEN}✅ PostgreSQL容器启动成功${NC}"
+        
+        # 等待数据库启动
+        echo -e "${BLUE}⏳ 等待数据库启动...${NC}"
+        local db_attempts=0
+        local max_db_attempts=30
+        
+        while [ $db_attempts -lt $max_db_attempts ]; do
+            if docker exec yuyingbao-postgres pg_isready -U yuyingbao -d yuyingbao &>/dev/null; then
+                echo -e "${GREEN}✅ 数据库启动成功！${NC}"
+                return 0
+            else
+                echo -n "."
+                sleep 2
+                db_attempts=$((db_attempts + 1))
+            fi
+        done
+        
+        echo ""
+        echo -e "${RED}❌ 数据库启动超时${NC}"
+        return 1
+    else
+        echo -e "${RED}❌ PostgreSQL容器启动失败${NC}"
+        return 1
     fi
     echo ""
 }
@@ -254,11 +332,11 @@ configure_environment() {
         echo -e "${YELLOW}📝 创建环境变量配置文件...${NC}"
         cat > .env << 'EOF'
 # 数据库配置 (请修改为实际的数据库信息)
-DB_HOST=localhost
+DB_HOST=postgres
 DB_PORT=5432
 DB_NAME=yuyingbao
 DB_USERNAME=yuyingbao
-DB_PASSWORD=your_database_password
+DB_PASSWORD=YuyingBao2024@Database
 
 # JWT配置
 JWT_SECRET=your_jwt_secret_key_32_characters_long
@@ -464,6 +542,7 @@ main() {
     stop_old_containers
     create_network
     configure_environment
+    start_database
     start_application
     
     if wait_for_application; then
@@ -498,6 +577,7 @@ show_help() {
     echo "  status    查看部署状态"
     echo "  restart   重启应用"
     echo "  stop      停止应用"
+    echo "  stop-all  停止所有服务（包括数据库）"
     echo "  help      显示此帮助信息"
     echo ""
     echo "示例:"
@@ -520,9 +600,14 @@ case "${1:-deploy}" in
         ;;
     "status")
         echo -e "${BLUE}📊 部署状态:${NC}"
+        echo -e "${CYAN}应用容器:${NC}"
         docker ps -f name=${CONTAINER_NAME}
         echo ""
-        docker stats --no-stream ${CONTAINER_NAME} 2>/dev/null || echo "容器未运行"
+        echo -e "${CYAN}数据库容器:${NC}"
+        docker ps -f name=yuyingbao-postgres
+        echo ""
+        echo -e "${CYAN}资源使用:${NC}"
+        docker stats --no-stream ${CONTAINER_NAME} yuyingbao-postgres 2>/dev/null || echo "容器未运行"
         ;;
     "restart")
         echo -e "${BLUE}🔄 重启应用...${NC}"
@@ -533,6 +618,11 @@ case "${1:-deploy}" in
         echo -e "${BLUE}🛑 停止应用...${NC}"
         docker stop ${CONTAINER_NAME}
         echo -e "${GREEN}✅ 应用已停止${NC}"
+        ;;
+    "stop-all")
+        echo -e "${BLUE}🛑 停止所有服务...${NC}"
+        docker stop ${CONTAINER_NAME} yuyingbao-postgres
+        echo -e "${GREEN}✅ 所有服务已停止${NC}"
         ;;
     "help"|"-h"|"--help")
         show_help
