@@ -290,9 +290,13 @@ push_postgres_image() {
     if [[ -n "$POSTGRES_TAG" ]]; then
         echo -e "${CYAN}推送到: ${POSTGRES_TAG}${NC}"
         
-        # 检查本地是否有该镜像
-        if docker images "$POSTGRES_TAG" | grep -q "$POSTGRES_TAG"; then
+        # 检查本地是否有该镜像（使用更宽松的匹配）
+        if docker images --format "table {{.Repository}}:{{.Tag}}" | grep -q "${POSTGRES_TAG}"; then
             echo -e "${GREEN}✅ 本地镜像存在，开始推送...${NC}"
+            
+            # 显示镜像详细信息
+            echo -e "${BLUE}📋 准备推送的镜像信息:${NC}"
+            docker images "${POSTGRES_TAG}" --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}\t{{.CreatedAt}}"
             
             if docker push "$POSTGRES_TAG"; then
                 echo -e "${GREEN}✅ PostgreSQL镜像推送成功！${NC}"
@@ -303,6 +307,9 @@ push_postgres_image() {
             fi
         else
             echo -e "${RED}❌ 本地没有找到PostgreSQL镜像: ${POSTGRES_TAG}${NC}"
+            echo -e "${YELLOW}💡 调试信息：${NC}"
+            echo -e "${CYAN}本地所有PostgreSQL相关镜像：${NC}"
+            docker images | grep postgres
             echo -e "${YELLOW}请检查PostgreSQL镜像构建是否成功${NC}"
         fi
     else
