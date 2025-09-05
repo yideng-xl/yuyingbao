@@ -19,6 +19,7 @@ DOCKER_IMAGE="crpi-zyq1wc1umfuictwx.cn-shanghai.personal.cr.aliyuncs.com/aires-d
 CONTAINER_NAME="yuyingbao-server"
 NETWORK_NAME="yuyingbao-network"
 ALIYUN_REGISTRY="crpi-zyq1wc1umfuictwx.cn-shanghai.personal.cr.aliyuncs.com"
+ALIYUN_NAMESPACE="aires-docker"
 ALIYUN_USERNAME="xulei0331@126.com"
 POSTGRES_IMAGE="postgres:17"  # 默认PostgreSQL镜像，会在拉取时动态更新
 
@@ -238,7 +239,15 @@ pull_image() {
 pull_postgres_image() {
     echo -e "${BLUE}📥 拉取PostgreSQL镜像...${NC}"
     
-    local postgres_images=(
+    # 优先尝试从阿里云私有仓库拉取
+    local aliyun_postgres_images=(
+        "${ALIYUN_REGISTRY}/${ALIYUN_NAMESPACE}/postgres:17"
+        "${ALIYUN_REGISTRY}/${ALIYUN_NAMESPACE}/postgres:16"
+        "${ALIYUN_REGISTRY}/${ALIYUN_NAMESPACE}/postgres:15"
+    )
+    
+    # 备用公共镜像
+    local public_postgres_images=(
         "postgres:17"
         "postgres:16"
         "postgres:15"
@@ -246,29 +255,47 @@ pull_postgres_image() {
     
     local pulled_image=""
     
-    for image in "${postgres_images[@]}"; do
+    # 先尝试阿里云私有仓库
+    echo -e "${CYAN}尝试从阿里云私有仓库拉取PostgreSQL镜像...${NC}"
+    for image in "${aliyun_postgres_images[@]}"; do
         echo -e "${CYAN}尝试拉取镜像: ${image}${NC}"
         
-        # 设置超时时间并重试
-        local attempts=0
-        local max_attempts=3
-        
-        while [ $attempts -lt $max_attempts ]; do
-            if timeout 300 docker pull "$image"; then
-                echo -e "${GREEN}✅ 镜像拉取成功: ${image}${NC}"
-                pulled_image="$image"
-                break 2  # 跳出两层循环
-            else
-                attempts=$((attempts + 1))
-                echo -e "${YELLOW}⚠️  镜像拉取失败，重试 $attempts/$max_attempts${NC}"
-                if [ $attempts -lt $max_attempts ]; then
-                    sleep 5
-                fi
-            fi
-        done
-        
-        echo -e "${YELLOW}⚠️  镜像 ${image} 拉取失败，尝试下一个...${NC}"
+        if timeout 180 docker pull "$image"; then
+            echo -e "${GREEN}✅ 从阿里云私有仓库拉取成功: ${image}${NC}"
+            pulled_image="$image"
+            break
+        else
+            echo -e "${YELLOW}⚠️  从阿里云私有仓库拉取失败: ${image}${NC}"
+        fi
     done
+    
+    # 如果私有仓库失败，尝试公共镜像
+    if [[ -z "$pulled_image" ]]; then
+        echo -e "${CYAN}尝试从公共仓库拉取PostgreSQL镜像...${NC}"
+        for image in "${public_postgres_images[@]}"; do
+            echo -e "${CYAN}尝试拉取镜像: ${image}${NC}"
+            
+            # 设置超时时间并重试
+            local attempts=0
+            local max_attempts=3
+            
+            while [ $attempts -lt $max_attempts ]; do
+                if timeout 300 docker pull "$image"; then
+                    echo -e "${GREEN}✅ 镜像拉取成功: ${image}${NC}"
+                    pulled_image="$image"
+                    break 2  # 跳出两层循环
+                else
+                    attempts=$((attempts + 1))
+                    echo -e "${YELLOW}⚠️  镜像拉取失败，重试 $attempts/$max_attempts${NC}"
+                    if [ $attempts -lt $max_attempts ]; then
+                        sleep 5
+                    fi
+                fi
+            done
+            
+            echo -e "${YELLOW}⚠️  镜像 ${image} 拉取失败，尝试下一个...${NC}"
+        done
+    fi
     
     if [[ -z "$pulled_image" ]]; then
         echo -e "${RED}❌ 所有PostgreSQL镜像拉取失败${NC}"

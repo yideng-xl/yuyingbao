@@ -179,24 +179,26 @@ chmod +x test-local.sh
 ./test-local.sh cleanup
 ```
 
-### 5. 手动构建和推送
+### 5. 手动构建和推送（包含PostgreSQL镜像）
 
 ```bash
 # 添加执行权限
 chmod +x build-and-push.sh
 
-# 执行构建和推送
+# 执行构建和推送（包含PostgreSQL镜像）
 ./build-and-push.sh
 ```
 
 脚本会自动执行以下步骤：
 1. ✅ 检查Docker环境
 2. ✅ 检查阿里云配置
-3. ✅ 构建Docker镜像
-4. ✅ 测试镜像
-5. ✅ 登录阿里云（需要输入凭证）
-6. ✅ 推送镜像到阿里云
-7. ✅ 显示部署信息
+3. ✅ 构建应用Docker镜像
+4. ✅ 拉取并打标签PostgreSQL镜像（新增）
+5. ✅ 测试镜像
+6. ✅ 登录阿里云（需要输入凭证）
+7. ✅ 推送应用镜像到阿里云
+8. ✅ 推送PostgreSQL镜像到阿里云（新增）
+9. ✅ 显示部署信息
 
 ## 🐳 Docker镜像特性
 

@@ -86,6 +86,54 @@ build_image() {
     fi
 }
 
+# 拉取并打标签PostgreSQL镜像
+build_postgres_image() {
+    echo -e "${BLUE}📥 拉取并打标签PostgreSQL镜像...${NC}"
+    
+    local postgres_images=(
+        "postgres:17"
+        "postgres:16"
+        "postgres:15"
+    )
+    
+    local pulled_image=""
+    
+    # 尝试拉取PostgreSQL镜像
+    for image in "${postgres_images[@]}"; do
+        echo -e "${CYAN}尝试拉取: ${image}${NC}"
+        
+        if timeout 300 docker pull "$image"; then
+            echo -e "${GREEN}✅ 拉取成功: ${image}${NC}"
+            pulled_image="$image"
+            break
+        else
+            echo -e "${YELLOW}⚠️  拉取失败: ${image}${NC}"
+        fi
+    done
+    
+    if [[ -z "$pulled_image" ]]; then
+        echo -e "${YELLOW}⚠️  PostgreSQL镜像拉取失败，跳过${NC}"
+        return 0
+    fi
+    
+    # 为PostgreSQL镜像打标签
+    local postgres_tag="${ALIYUN_REGISTRY}/${ALIYUN_NAMESPACE}/postgres:${pulled_image##*:}"
+    
+    echo -e "${BLUE}🏷️  为PostgreSQL镜像打标签...${NC}"
+    docker tag "$pulled_image" "$postgres_tag"
+    
+    if [[ $? -eq 0 ]]; then
+        echo -e "${GREEN}✅ PostgreSQL镜像打标签成功${NC}"
+        echo -e "${CYAN}本地标签: ${postgres_tag}${NC}"
+        POSTGRES_TAG="$postgres_tag"
+        echo -e "${GREEN}✅ PostgreSQL镜像处理完成${NC}"
+        return 0
+    else
+        echo -e "${YELLOW}⚠️  PostgreSQL镜像打标签失败，跳过${NC}"
+        return 0
+    fi
+}
+
 # 测试镜像
 test_image() {
     echo -e "${BLUE}🧪 测试镜像...${NC}"
@@ -145,6 +193,22 @@ push_image() {
     fi
 }
 
+# 推送PostgreSQL镜像
+push_postgres_image() {
+    if [[ -n "$POSTGRES_TAG" ]]; then
+        echo -e "${BLUE}🚀 推送PostgreSQL镜像...${NC}"
+        echo -e "${CYAN}推送到: ${POSTGRES_TAG}${NC}"
+        
+        if docker push "$POSTGRES_TAG"; then
+            echo -e "${GREEN}✅ PostgreSQL镜像推送成功${NC}"
+        else
+            echo -e "${YELLOW}⚠️  PostgreSQL镜像推送失败${NC}"
+        fi
+    else
+        echo -e "${YELLOW}⚠️  没有PostgreSQL镜像需要推送${NC}"
+    fi
+}
+
 # 清理本地镜像（可选）
 cleanup() {
     echo -e "${BLUE}🧹 是否清理本地镜像？ (y/N)${NC}"
@@ -166,6 +230,10 @@ show_deploy_info() {
     echo -e "镜像地址: ${FULL_IMAGE_NAME}:${VERSION}"
     echo -e "构建版本: ${FULL_IMAGE_NAME}:${VERSION}-${BUILD_DATE}"
     echo -e "最新版本: ${FULL_IMAGE_NAME}:latest"
+    
+    if [[ -n "$POSTGRES_TAG" ]]; then
+        echo -e "PostgreSQL镜像: ${POSTGRES_TAG}"
+    fi
     echo ""
     echo -e "${BLUE}🚀 2G内存服务器部署命令示例：${NC}"
     echo "docker run -d \\"
@@ -196,9 +264,11 @@ main() {
     check_docker
     check_aliyun_config
     build_image
+    build_postgres_image
     test_image
     login_aliyun
     push_image
+    push_postgres_image
     cleanup
     show_deploy_info
     
