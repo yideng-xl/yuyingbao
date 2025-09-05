@@ -152,37 +152,47 @@ build_image() {
 
 # 拉取并打标签PostgreSQL镜像
 build_postgres_image() {
-    echo -e "${BLUE}📥 拉取并打标签PostgreSQL镜像...${NC}"
+    echo -e "${BLUE}📥 处理PostgreSQL镜像...${NC}"
     
     local postgres_image="postgres:16"
     local pulled_image=""
     
-    # 尝试拉取PostgreSQL 16镜像，最多重试3次
-    echo -e "${CYAN}拉取PostgreSQL 16镜像: ${postgres_image}${NC}"
+    # 首先检查本地是否已有PostgreSQL镜像
+    echo -e "${CYAN}检查本地PostgreSQL镜像: ${postgres_image}${NC}"
     
-    local attempts=0
-    local max_attempts=3
-    
-    while [ $attempts -lt $max_attempts ]; do
-        echo -e "${YELLOW}尝试 $((attempts + 1))/$max_attempts${NC}"
+    if docker images "$postgres_image" | grep -q "postgres"; then
+        echo -e "${GREEN}✅ 发现本地PostgreSQL镜像: ${postgres_image}${NC}"
+        pulled_image="$postgres_image"
+    else
+        echo -e "${YELLOW}⚠️  本地未找到PostgreSQL镜像，尝试拉取...${NC}"
         
-        if timeout 300 docker pull "$postgres_image"; then
-            echo -e "${GREEN}✅ 拉取成功: ${postgres_image}${NC}"
-            pulled_image="$postgres_image"
-            break
-        else
-            attempts=$((attempts + 1))
-            echo -e "${YELLOW}⚠️  拉取失败 (${attempts}/${max_attempts}): ${postgres_image}${NC}"
+        # 尝试拉取PostgreSQL 16镜像，最多重试3次
+        echo -e "${CYAN}拉取PostgreSQL 16镜像: ${postgres_image}${NC}"
+        
+        local attempts=0
+        local max_attempts=3
+        
+        while [ $attempts -lt $max_attempts ]; do
+            echo -e "${YELLOW}尝试 $((attempts + 1))/$max_attempts${NC}"
             
-            if [ $attempts -lt $max_attempts ]; then
-                echo -e "${BLUE}等待5秒后重试...${NC}"
-                sleep 5
+            if timeout 300 docker pull "$postgres_image"; then
+                echo -e "${GREEN}✅ 拉取成功: ${postgres_image}${NC}"
+                pulled_image="$postgres_image"
+                break
+            else
+                attempts=$((attempts + 1))
+                echo -e "${YELLOW}⚠️  拉取失败 (${attempts}/${max_attempts}): ${postgres_image}${NC}"
+                
+                if [ $attempts -lt $max_attempts ]; then
+                    echo -e "${BLUE}等待5秒后重试...${NC}"
+                    sleep 5
+                fi
             fi
-        fi
-    done
+        done
+    fi
     
     if [[ -z "$pulled_image" ]]; then
-        echo -e "${RED}❌ 所有PostgreSQL镜像拉取失败！${NC}"
+        echo -e "${RED}❌ PostgreSQL镜像获取失败！${NC}"
         echo -e "${YELLOW}💡 解决建议:${NC}"
         echo -e "1. 检查网络连接: ping registry-1.docker.io"
         echo -e "2. 检查Docker镜像源配置: docker info | grep 'Registry Mirrors'"
@@ -351,6 +361,59 @@ show_deploy_info() {
     echo "- 项目文档: document/v0.5/"
 }
 
+
+
+# 显示帮助信息
+show_help() {
+    echo "用法: $0 [选项]"
+    echo ""
+    echo "选项:"
+    echo "  -h, --help     显示帮助信息"
+    echo "  -v, --version  显示版本信息"
+    echo "  --skip-postgres 跳过PostgreSQL镜像处理"
+    echo "  --force-postgres 强制重新拉取PostgreSQL镜像"
+    echo ""
+    echo "环境变量:"
+    echo "  ALIYUN_NAMESPACE  阿里云镜像仓库命名空间"
+    echo "  ALIYUN_REGISTRY   阿里云镜像仓库地址"
+    echo ""
+    echo "示例:"
+    echo "  $0                    # 执行完整的构建和推送流程"
+    echo "  $0 --skip-postgres    # 跳过PostgreSQL镜像处理"
+    echo "  $0 --force-postgres   # 强制重新拉取PostgreSQL镜像"
+    echo "  ALIYUN_NAMESPACE=my-namespace $0  # 使用自定义命名空间"
+}
+
+# 解析命令行参数
+SKIP_POSTGRES=false
+FORCE_POSTGRES=false
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -h|--help)
+            show_help
+            exit 0
+            ;;
+        -v|--version)
+            echo "育婴宝 Docker 构建脚本 ${VERSION}"
+            exit 0
+            ;;
+        --skip-postgres)
+            SKIP_POSTGRES=true
+            shift
+            ;;
+        --force-postgres)
+            FORCE_POSTGRES=true
+            shift
+            ;;
+        *)
+            echo "未知参数: $1"
+            show_help
+            exit 1
+            ;;
+    esac
+done
+
 # 主执行流程
 main() {
     echo -e "${BLUE}开始构建和推送流程...${NC}"
@@ -361,52 +424,35 @@ main() {
     check_aliyun_config
     build_image
     
-    # PostgreSQL镜像构建（失败不中断整个流程）
-    if build_postgres_image; then
-        echo -e "${GREEN}✅ PostgreSQL镜像处理成功${NC}"
+    # PostgreSQL镜像构建（根据参数决定是否处理）
+    if [[ "$SKIP_POSTGRES" == true ]]; then
+        echo -e "${YELLOW}⚠️  跳过PostgreSQL镜像处理（用户要求）${NC}"
     else
-        echo -e "${YELLOW}⚠️  PostgreSQL镜像处理失败，将继续构建应用镜像${NC}"
+        if [[ "$FORCE_POSTGRES" == true ]]; then
+            echo -e "${BLUE}🔄 强制重新处理PostgreSQL镜像${NC}"
+            # 删除本地PostgreSQL镜像（如果存在）
+            docker rmi postgres:16 2>/dev/null || true
+        fi
+        
+        if build_postgres_image; then
+            echo -e "${GREEN}✅ PostgreSQL镜像处理成功${NC}"
+        else
+            echo -e "${YELLOW}⚠️  PostgreSQL镜像处理失败，将继续构建应用镜像${NC}"
+        fi
     fi
     
     test_image
     login_aliyun
     push_image
-    push_postgres_image
+    
+    # 只有在未跳过PostgreSQL处理时才推送
+    if [[ "$SKIP_POSTGRES" != true ]]; then
+        push_postgres_image
+    fi
+    
     cleanup
     show_deploy_info
     
     echo ""
     echo -e "${GREEN}🎊 所有操作完成！${NC}"
 }
-
-# 帮助信息
-show_help() {
-    echo "用法: $0 [选项]"
-    echo ""
-    echo "选项:"
-    echo "  -h, --help     显示帮助信息"
-    echo "  -v, --version  显示版本信息"
-    echo ""
-    echo "环境变量:"
-    echo "  ALIYUN_NAMESPACE  阿里云镜像仓库命名空间"
-    echo "  ALIYUN_REGISTRY   阿里云镜像仓库地址"
-    echo ""
-    echo "示例:"
-    echo "  $0                    # 执行完整的构建和推送流程"
-    echo "  ALIYUN_NAMESPACE=my-namespace $0  # 使用自定义命名空间"
-}
-
-# 解析命令行参数
-case "${1:-}" in
-    -h|--help)
-        show_help
-        exit 0
-        ;;
-    -v|--version)
-        echo "育婴宝 Docker 构建脚本 ${VERSION}"
-        exit 0
-        ;;
-    *)
-        main
-        ;;
-esac
