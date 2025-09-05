@@ -287,31 +287,42 @@ pull_postgres_image() {
     echo ""
 }
 
-# 停止旧容器
-stop_old_containers() {
-    echo -e "${BLUE}🛑 停止旧容器...${NC}"
+# 停止并清理所有相关容器
+stop_and_remove_containers() {
+    echo -e "${BLUE}🧹 清理旧容器...${NC}"
     
-    # 停止应用容器
-    if docker ps -q -f name=${CONTAINER_NAME} | grep -q .; then
-        echo "停止容器: ${CONTAINER_NAME}"
-        docker stop ${CONTAINER_NAME}
-        docker rm ${CONTAINER_NAME}
-        echo -e "${GREEN}✅ 应用容器已停止并删除${NC}"
-    else
-        echo -e "${GREEN}✅ 没有发现旧应用容器${NC}"
-    fi
+    # 定义要清理的容器
+    local containers=("yuyingbao-server" "yuyingbao-postgres")
     
-    # 注意：不停止数据库容器，保持数据持久化
-    if docker ps -q -f name=yuyingbao-postgres | grep -q .; then
-        echo -e "${YELLOW}ℹ️  保持PostgreSQL数据库容器运行（数据持久化）${NC}"
-    fi
+    for container in "${containers[@]}"; do
+        # 检查容器是否存在（运行中或已停止）
+        if docker ps -a --format "table {{.Names}}" | grep -q "^${container}$"; then
+            echo -e "${YELLOW}🔍 发现容器: ${container}${NC}"
+            
+            # 检查容器是否正在运行
+            if docker ps --format "table {{.Names}}" | grep -q "^${container}$"; then
+                echo -e "${BLUE}🛑 停止运行中的容器: ${container}${NC}"
+                docker stop "${container}"
+            else
+                echo -e "${YELLOW}ℹ️  容器已停止: ${container}${NC}"
+            fi
+            
+            # 删除容器
+            echo -e "${BLUE}🗑️  删除容器: ${container}${NC}"
+            docker rm "${container}"
+            echo -e "${GREEN}✅ 容器删除成功: ${container}${NC}"
+        else
+            echo -e "${GREEN}✅ 容器不存在: ${container}${NC}"
+        fi
+    done
     
+    echo -e "${GREEN}✅ 容器清理完成${NC}"
     echo ""
 }
 
-# 创建Docker网络和数据卷
-create_network() {
-    echo -e "${BLUE}🌐 创建Docker网络和数据卷...${NC}"
+# 创建Docker网络和数据目录
+create_network_and_data_dirs() {
+    echo -e "${BLUE}🌐 创建Docker网络和数据目录...${NC}"
     
     # 创建网络
     if docker network ls | grep -q ${NETWORK_NAME}; then
@@ -321,13 +332,32 @@ create_network() {
         echo -e "${GREEN}✅ 网络创建成功: ${NETWORK_NAME}${NC}"
     fi
     
-    # 创建数据卷
-    if docker volume ls | grep -q postgres_data; then
-        echo -e "${GREEN}✅ PostgreSQL数据卷已存在${NC}"
+    # 创建本地数据目录（用于数据持久化）
+    local data_dir="./postgres_data"
+    if [[ ! -d "$data_dir" ]]; then
+        echo -e "${BLUE}📁 创建本地数据目录...${NC}"
+        mkdir -p "$data_dir"
+        
+        # 设置目录权限（PostgreSQL需要999:999权限）
+        sudo chown 999:999 "$data_dir"
+        sudo chmod 700 "$data_dir"
+        
+        echo -e "${GREEN}✅ 本地数据目录创建成功: $(pwd)/$data_dir${NC}"
     else
-        docker volume create postgres_data
-        echo -e "${GREEN}✅ PostgreSQL数据卷创建成功${NC}"
+        echo -e "${GREEN}✅ 本地数据目录已存在: $(pwd)/$data_dir${NC}"
+        
+        # 检查权限
+        local dir_owner=$(stat -c "%U:%G" "$data_dir" 2>/dev/null || stat -f "%Su:%Sg" "$data_dir" 2>/dev/null)
+        if [[ "$dir_owner" != "999:999" ]] && [[ "$dir_owner" != "postgres:postgres" ]]; then
+            echo -e "${YELLOW}🔧 修正数据目录权限...${NC}"
+            sudo chown 999:999 "$data_dir"
+            sudo chmod 700 "$data_dir"
+        fi
     fi
+    
+    # 显示数据目录信息
+    echo -e "${CYAN}ℹ️  PostgreSQL数据将存储在: $(pwd)/$data_dir${NC}"
+    echo -e "${CYAN}ℹ️  即使删除容器，数据也不会丢失${NC}"
     
     echo ""
 }
@@ -338,8 +368,16 @@ start_database() {
     
     # 检查是否已有数据库容器运行
     if docker ps | grep -q "yuyingbao-postgres"; then
-        echo -e "${GREEN}✅ PostgreSQL容器已在运行${NC}"
-        return 0
+        echo -e "${GREEN}✅ PostgreSQL容器已在运行，检查数据库连接...${NC}"
+        # 验证数据库是否真正可用
+        if docker exec yuyingbao-postgres pg_isready -U yuyingbao -d yuyingbao &>/dev/null; then
+            echo -e "${GREEN}✅ 数据库连接正常${NC}"
+            return 0
+        else
+            echo -e "${YELLOW}⚠️  数据库连接异常，重新启动...${NC}"
+            docker stop yuyingbao-postgres || true
+            docker rm yuyingbao-postgres || true
+        fi
     fi
     
     # 停止旧的数据库容器
@@ -350,6 +388,7 @@ start_database() {
     fi
     
     # 启动PostgreSQL容器
+    echo -e "${BLUE}🚀 启动新的PostgreSQL容器...${NC}"
     docker run -d \
         --name yuyingbao-postgres \
         --restart unless-stopped \
@@ -361,30 +400,57 @@ start_database() {
         -e POSTGRES_USER=yuyingbao \
         -e POSTGRES_PASSWORD=YuyingBao2024@Database \
         -e POSTGRES_INITDB_ARGS="--encoding=UTF-8 --lc-collate=C --lc-ctype=C" \
-        -v postgres_data:/var/lib/postgresql/data \
+        -v "$(pwd)/postgres_data":/var/lib/postgresql/data \
         ${POSTGRES_IMAGE}
     
     if [[ $? -eq 0 ]]; then
         echo -e "${GREEN}✅ PostgreSQL容器启动成功${NC}"
         
-        # 等待数据库启动
-        echo -e "${BLUE}⏳ 等待数据库启动...${NC}"
+        # 等待数据库启动 - 增加等待时间和更全面的检查
+        echo -e "${BLUE}⏳ 等待数据库完全初始化...${NC}"
+        echo -e "${CYAN}   这可能需要30-60秒，请耐心等待...${NC}"
+        
         local db_attempts=0
-        local max_db_attempts=30
+        local max_db_attempts=60  # 增加到60次（2分钟）
         
         while [ $db_attempts -lt $max_db_attempts ]; do
-            if docker exec yuyingbao-postgres pg_isready -U yuyingbao -d yuyingbao &>/dev/null; then
-                echo -e "${GREEN}✅ 数据库启动成功！${NC}"
-                return 0
-            else
-                echo -n "."
-                sleep 2
-                db_attempts=$((db_attempts + 1))
+            # 首先检查容器是否还在运行
+            if ! docker ps | grep -q "yuyingbao-postgres"; then
+                echo ""
+                echo -e "${RED}❌ PostgreSQL容器已停止运行${NC}"
+                echo -e "${YELLOW}查看容器日志:${NC}"
+                docker logs --tail=20 yuyingbao-postgres
+                return 1
             fi
+            
+            # 检查数据库是否可以接受连接
+            if docker exec yuyingbao-postgres pg_isready -U yuyingbao -d yuyingbao &>/dev/null; then
+                echo ""
+                echo -e "${GREEN}✅ 数据库接受连接，继续检查完整性...${NC}"
+                
+                # 进一步验证数据库是否完全可用
+                if docker exec yuyingbao-postgres psql -U yuyingbao -d yuyingbao -c "SELECT 1;" &>/dev/null; then
+                    echo -e "${GREEN}✅ 数据库完全可用！${NC}"
+                    
+                    # 额外等待5秒确保稳定
+                    echo -e "${BLUE}⏳ 额外等待5秒确保数据库稳定...${NC}"
+                    sleep 5
+                    
+                    return 0
+                else
+                    echo -e "${YELLOW}⚠️  数据库尚未完全准备好，继续等待...${NC}"
+                fi
+            fi
+            
+            echo -n "."
+            sleep 2
+            db_attempts=$((db_attempts + 1))
         done
         
         echo ""
         echo -e "${RED}❌ 数据库启动超时${NC}"
+        echo -e "${YELLOW}查看PostgreSQL日志:${NC}"
+        docker logs --tail=30 yuyingbao-postgres
         return 1
     else
         echo -e "${RED}❌ PostgreSQL容器启动失败${NC}"
@@ -439,6 +505,14 @@ EOF
 start_application() {
     echo -e "${BLUE}🚀 启动应用容器 (2G内存优化)...${NC}"
     
+    # 再次验证数据库连接
+    echo -e "${BLUE}🔍 启动前再次验证数据库连接...${NC}"
+    if ! docker exec yuyingbao-postgres pg_isready -U yuyingbao -d yuyingbao &>/dev/null; then
+        echo -e "${RED}❌ 数据库连接验证失败，无法启动应用${NC}"
+        return 1
+    fi
+    echo -e "${GREEN}✅ 数据库连接验证通过${NC}"
+    
     # 启动应用容器，针对2G内存优化
     docker run -d \
         --name ${CONTAINER_NAME} \
@@ -473,15 +547,45 @@ start_application() {
 # 等待应用启动
 wait_for_application() {
     echo -e "${BLUE}⏳ 等待应用启动...${NC}"
+    echo -e "${CYAN}   这可能需要60-120秒，包括数据库连接和Flyway迁移...${NC}"
     echo -n "启动中"
     
-    local max_attempts=60
+    local max_attempts=80  # 增加等待时间到4分钟
     local attempts=0
+    local last_log_check=0
     
     while [ $attempts -lt $max_attempts ]; do
+        # 每10次尝试检查一次容器状态和日志
+        if [ $((attempts % 10)) -eq 0 ] && [ $attempts -gt 0 ]; then
+            echo ""
+            echo -e "${BLUE}🔍 检查应用状态 (${attempts}/${max_attempts})...${NC}"
+            
+            # 检查容器是否还在运行
+            if ! docker ps | grep -q ${CONTAINER_NAME}; then
+                echo -e "${RED}❌ 容器意外停止${NC}"
+                echo -e "${YELLOW}查看容器日志:${NC}"
+                docker logs --tail=30 ${CONTAINER_NAME}
+                return 1
+            fi
+            
+            # 显示最近的日志
+            echo -e "${YELLOW}最近的应用日志:${NC}"
+            docker logs --tail=5 ${CONTAINER_NAME} 2>/dev/null | sed 's/^/  /'
+            echo -n "继续等待"
+        fi
+        
+        # 检查应用健康状态
         if curl -f -s http://localhost:8080/api/actuator/health &>/dev/null; then
             echo ""
             echo -e "${GREEN}✅ 应用启动成功！${NC}"
+            
+            # 获取应用信息
+            local health_response=$(curl -s http://localhost:8080/api/actuator/health 2>/dev/null)
+            if echo "$health_response" | grep -q '"status":"UP"'; then
+                echo -e "${GREEN}✅ 应用健康检查通过${NC}"
+            else
+                echo -e "${YELLOW}⚠️  应用健康状态未知: $health_response${NC}"
+            fi
             return 0
         elif docker ps | grep -q ${CONTAINER_NAME}; then
             echo -n "."
@@ -499,6 +603,11 @@ wait_for_application() {
     echo ""
     echo -e "${YELLOW}⚠️  应用启动超时，请检查日志${NC}"
     echo -e "${YELLOW}查看日志命令: docker logs -f ${CONTAINER_NAME}${NC}"
+    
+    # 显示详细的错误信息
+    echo -e "${BLUE}🔍 最近的50行日志:${NC}"
+    docker logs --tail=50 ${CONTAINER_NAME} 2>/dev/null | sed 's/^/  /'
+    
     return 1
 }
 
@@ -610,11 +719,20 @@ main() {
     login_aliyun_registry
     pull_image
     pull_postgres_image
-    stop_old_containers
-    create_network
+    stop_and_remove_containers
+    create_network_and_data_dirs
     configure_environment
     start_database
-    start_application
+    
+    # 在数据库启动后额外等待10秒确保稳定
+    if [[ $? -eq 0 ]]; then
+        echo -e "${BLUE}⏳ 数据库启动成功，等待10秒后启动应用...${NC}"
+        sleep 10
+        start_application
+    else
+        echo -e "${RED}❌ 数据库启动失败，停止部署${NC}"
+        exit 1
+    fi
     
     if wait_for_application; then
         health_check
@@ -649,6 +767,7 @@ show_help() {
     echo "  restart   重启应用"
     echo "  stop      停止应用"
     echo "  stop-all  停止所有服务（包括数据库）"
+    echo "  reset-data 彻底清理所有数据（危险操作）"
     echo "  help      显示此帮助信息"
     echo ""
     echo "示例:"
@@ -679,6 +798,15 @@ case "${1:-deploy}" in
         echo ""
         echo -e "${CYAN}资源使用:${NC}"
         docker stats --no-stream ${CONTAINER_NAME} yuyingbao-postgres 2>/dev/null || echo "容器未运行"
+        echo ""
+        echo -e "${CYAN}数据存储信息:${NC}"
+        if [[ -d "./postgres_data" ]]; then
+            local data_size=$(du -sh "./postgres_data" 2>/dev/null | cut -f1)
+            echo -e "数据目录: $(pwd)/postgres_data (大小: ${data_size})"
+            echo -e "数据状态: ✅ 持久化存储已配置"
+        else
+            echo -e "数据目录: 未创建"
+        fi
         ;;
     "restart")
         echo -e "${BLUE}🔄 重启应用...${NC}"
@@ -694,6 +822,48 @@ case "${1:-deploy}" in
         echo -e "${BLUE}🛑 停止所有服务...${NC}"
         docker stop ${CONTAINER_NAME} yuyingbao-postgres
         echo -e "${GREEN}✅ 所有服务已停止${NC}"
+        ;;
+    "reset-data")
+        echo -e "${RED}⚠️  危险操作：彻底清理所有数据${NC}"
+        echo -e "${YELLOW}该操作将删除：${NC}"
+        echo -e "  - 所有容器（应用和数据库）"
+        echo -e "  - 所有数据文件（./postgres_data目录）"
+        echo -e "  - Docker网络和卷"
+        echo ""
+        echo -e "${RED}请确认您要继续：输入 'DELETE_ALL' 继续${NC}"
+        read -r confirm
+        if [[ "$confirm" == "DELETE_ALL" ]]; then
+            echo -e "${BLUE}🔥 开始清理所有数据...${NC}"
+            
+            # 停止并删除所有容器
+            echo "1. 停止并删除容器..."
+            docker stop ${CONTAINER_NAME} yuyingbao-postgres 2>/dev/null || true
+            docker rm ${CONTAINER_NAME} yuyingbao-postgres 2>/dev/null || true
+            
+            # 删除网络
+            echo "2. 删除Docker网络..."
+            docker network rm ${NETWORK_NAME} 2>/dev/null || true
+            
+            # 删除数据目录
+            echo "3. 删除本地数据目录..."
+            if [[ -d "./postgres_data" ]]; then
+                sudo rm -rf "./postgres_data"
+                echo "✅ 数据目录已删除"
+            fi
+            
+            # 清理Docker卷（如果存在）
+            echo "4. 清理Docker卷..."
+            docker volume rm postgres_data 2>/dev/null || true
+            
+            # 清理环境变量文件
+            echo "5. 清理环境变量文件..."
+            rm -f .env
+            
+            echo -e "${GREEN}✅ 所有数据清理完成！${NC}"
+            echo -e "${YELLOW}下次部署将是全新环境${NC}"
+        else
+            echo -e "${YELLOW}操作取消${NC}"
+        fi
         ;;
     "help"|"-h"|"--help")
         show_help

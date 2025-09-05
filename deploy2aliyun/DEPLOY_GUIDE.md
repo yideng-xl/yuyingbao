@@ -60,19 +60,63 @@ curl -fsSL https://raw.githubusercontent.com/westxixia/yuyingbao/main/deploy2ali
 - 验证镜像完整性
 
 ### 5. 数据库部署
+- **彻底清理旧容器**：停止并删除所有相关容器
+- **本地数据持久化**：创建`./postgres_data`目录并设置正确权限
 - 创建PostgreSQL容器（512M内存限制）
-- 配置数据持久化存储
-- 等待数据库启动就绪
+- 数据目录映射：`./postgres_data:/var/lib/postgresql/data`
+- 等待数据库完全初始化就绪（2-4分钟）
+- 进行数据库连接和功能性验证
 
 ### 6. 应用部署
+- **等待数据库完全准备好**（关键步骤）
 - 停止旧版本容器
+- 再次验证数据库连接
 - 创建应用容器（1.5G内存限制）
 - 配置环境变量和网络
-- 启动健康检查
+- 启动健康检查（等待4-6分钟）
 
 ### 7. 网络配置
 - 配置防火墙规则（开放8080端口）
 - 验证服务可访问性
+
+## 🗄️ 数据持久化配置
+
+### 本地目录映射
+
+脚本使用本地目录映射而不是Docker卷，确保数据安全：
+
+```bash
+# 数据目录
+./postgres_data  # PostgreSQL数据存储目录
+
+# 目录权限
+所有者: postgres (999:999)
+权限: 700 (rwx------)
+```
+
+### 数据安全保障
+
+1. **容器删除数据不丢失**：即使删除PostgreSQL容器，数据仍保存在本地目录
+2. **可视化数据管理**：可直接查看和备份`./postgres_data`目录
+3. **便于迁移**：复制`postgres_data`目录即可迁移数据
+
+### 数据管理命令
+
+```bash
+# 查看数据目录大小
+du -sh ./postgres_data
+
+# 备份数据
+tar -czf postgres_backup_$(date +%Y%m%d).tar.gz postgres_data/
+
+# 恢复数据（需先停止容器）
+./deploy-ecs.sh stop-all
+tar -xzf postgres_backup_20240905.tar.gz
+./deploy-ecs.sh deploy
+
+# 彻底清理所有数据（危险操作）
+./deploy-ecs.sh reset-data
+```
 
 ## ⚙️ 配置说明
 
@@ -189,7 +233,65 @@ SPRING_PROFILES_ACTIVE=prod
    docker ps -a
    ```
 
-5. **防火墙配置问题**
+5. **数据库连接错误 (UnknownHostException: postgres)**
+   这是最常见的错误，原因和解决方案：
+   ```bash
+   # 1. 检查PostgreSQL容器是否运行
+   docker ps | grep postgres
+   
+   # 2. 检查数据库连接
+   docker exec yuyingbao-postgres pg_isready -U yuyingbao -d yuyingbao
+   
+   # 3. 检查Docker网络
+   docker network ls
+   docker network inspect yuyingbao-network
+   
+   # 4. 重新部署数据库（数据不会丢失）
+   docker stop yuyingbao-postgres
+   docker rm yuyingbao-postgres
+   # 然后重新运行deploy-ecs.sh
+   
+   # 5. 完全重置（清理所有容器和网络）
+   docker stop yuyingbao-server yuyingbao-postgres
+   docker rm yuyingbao-server yuyingbao-postgres
+   docker network rm yuyingbao-network
+   # 然后重新运行deploy-ecs.sh
+   ```
+   
+   该错误通常发生在：
+   - PostgreSQL容器还未完全启动
+   - Docker网络配置错误
+   - 容器之间无法通信
+   - 等待时间不足
+
+6. **数据目录权限问题**
+   ```bash
+   # 检查数据目录权限
+   ls -la postgres_data/
+   
+   # 修复数据目录权限
+   sudo chown -R 999:999 postgres_data/
+   sudo chmod 700 postgres_data/
+   
+   # 重新启动数据库
+   docker restart yuyingbao-postgres
+   ```
+
+7. **数据库初始化失败**
+   ```bash
+   # 检查数据目录是否为空
+   ls -la postgres_data/
+   
+   # 如果目录不为空但初始化失败，清空重新初始化
+   ./deploy-ecs.sh stop-all
+   sudo rm -rf postgres_data/*
+   ./deploy-ecs.sh deploy
+   
+   # 如果需要完全重置（数据将丢失）
+   ./deploy-ecs.sh reset-data
+   ```
+
+8. **防火墙配置问题**
    ```bash
    # CentOS/RHEL
    sudo firewall-cmd --zone=public --add-port=8080/tcp --permanent
