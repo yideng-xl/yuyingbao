@@ -18,7 +18,7 @@ server:
 
 spring:
   datasource:
-    url: jdbc:postgresql://postgres:5432/yuyingbao
+    url: jdbc:postgresql://yuyingbao-postgres:5432/yuyingbao
     username: yuyingbao
     password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver

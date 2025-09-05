@@ -234,54 +234,34 @@ SPRING_PROFILES_ACTIVE=prod
    ```
 
 5. **数据库连接错误 (UnknownHostException: postgres)**
-   这是最常见的错误，现在已增加hosts映射解决方案：
-   ```bash
-   # 使用增强的网络诊断脚本
-   ./test-hosts-mapping.sh       # 检查hosts映射配置
-   ./fix-postgres-connection.sh  # 全面网络诊断
+   现已从根本上解决了这个问题：
    
-   # 或者使用内置诊断命令
-   ./deploy-ecs.sh diagnose
+   **根本原因：** 应用配置中使用了`postgres`作为数据库主机名，但实际的PostgreSQL容器名是`yuyingbao-postgres`。
    
-   # 1. 检查PostgreSQL容器是否运行
-   docker ps | grep postgres
+   **解决方案：** 已修改`application-prod.yml`中的数据库连接URL:
+   ```yaml
+   # 修改前
+   url: jdbc:postgresql://postgres:5432/yuyingbao
    
-   # 2. 检查hosts映射配置
-   docker exec yuyingbao-server cat /etc/hosts | grep postgres
-   
-   # 3. 测试DNS解析
-   docker exec yuyingbao-server nslookup postgres
-   
-   # 4. 检查数据库连接
-   docker exec yuyingbao-postgres pg_isready -U yuyingbao -d yuyingbao
-   
-   # 5. 检查Docker网络
-   docker network ls
-   docker network inspect yuyingbao-network
-   
-   # 6. 手动修复（获取PostgreSQL IP并重新创建应用容器）
-   POSTGRES_IP=$(docker inspect yuyingbao-postgres --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}')
-   docker stop yuyingbao-server && docker rm yuyingbao-server
-   # 然后重新运行deploy-ecs.sh，它会自动添加hosts映射
-   
-   # 7. 完全重置（清理所有容器和网络）
-   docker stop yuyingbao-server yuyingbao-postgres
-   docker rm yuyingbao-server yuyingbao-postgres
-   docker network rm yuyingbao-network
-   # 然后重新运行deploy-ecs.sh
+   # 修改后
+   url: jdbc:postgresql://yuyingbao-postgres:5432/yuyingbao
    ```
    
-   **新增的hosts映射功能:**
-   - 部署脚本现在会自动获取PostgreSQL容器IP地址
-   - 使用`--add-host="postgres:IP"`参数将postgres解析到正确IP
-   - 解决DNS解析问题，确保应用可以找到数据库
+   **诊断命令：**
+   ```bash
+   # 检查应用配置
+   grep "postgresql://" server/src/main/resources/application-prod.yml
    
-   该错误通常发生在：
-   - PostgreSQL容器还未完全启动
-   - Docker网络配置错误
-   - 容器之间无法通信
-   - DNS解析失败（现在通过hosts映射解决）
-   - 容器未正确加入Docker网络
+   # 测试容器间连接
+   docker exec yuyingbao-server nslookup yuyingbao-postgres
+   docker exec yuyingbao-server ping -c 2 yuyingbao-postgres
+   
+   # 如果仍有问题，使用诊断脚本
+   ./fix-postgres-connection.sh
+   ./deploy-ecs.sh diagnose
+   ```
+   
+   这个修改解决了DNS解析问题，现在应用可以直接通过Docker内部网络找到PostgreSQL容器。
 
 6. **数据目录权限问题**
    ```bash

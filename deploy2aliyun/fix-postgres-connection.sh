@@ -115,18 +115,18 @@ test_connectivity() {
     echo -e "${CYAN}PostgreSQL容器IP地址: ${postgres_ip}${NC}"
     
     # 检查应用容器的hosts配置
-    echo -e "${CYAN}检查应用容器的/etc/hosts文件:${NC}"
-    docker exec "${CONTAINER_NAME}" cat /etc/hosts | grep postgres || echo "未找到postgres的hosts映射"
+    echo -e "${CYAN}检查应用容器的DNS解析:${NC}"
+    docker exec "${CONTAINER_NAME}" cat /etc/hosts | grep -E "(postgres|yuyingbao-postgres)" || echo "未找到postgres相关的hosts映射"
     
     # 从应用容器测试连接
     echo -e "${CYAN}从应用容器测试连接到数据库:${NC}"
     
-    # 测试DNS解析
-    echo -n "  DNS解析测试 (postgres): "
-    if docker exec "${CONTAINER_NAME}" nslookup postgres &>/dev/null; then
+    # 测试DNS解析 - 使用实际的容器名
+    echo -n "  DNS解析测试 (yuyingbao-postgres): "
+    if docker exec "${CONTAINER_NAME}" nslookup yuyingbao-postgres &>/dev/null; then
         echo -e "${GREEN}✅ 成功${NC}"
         # 显示解析结果
-        local resolved_ip=$(docker exec "${CONTAINER_NAME}" nslookup postgres | grep "Address:" | tail -1 | awk '{print $2}')
+        local resolved_ip=$(docker exec "${CONTAINER_NAME}" nslookup yuyingbao-postgres | grep "Address:" | tail -1 | awk '{print $2}')
         echo "    解析IP: $resolved_ip"
         if [[ "$resolved_ip" == "$postgres_ip" ]]; then
             echo -e "    ${GREEN}✅ IP地址匹配正确${NC}"
@@ -139,7 +139,7 @@ test_connectivity() {
     
     # 测试ping
     echo -n "  Ping测试: "
-    if docker exec "${CONTAINER_NAME}" ping -c 2 postgres &>/dev/null; then
+    if docker exec "${CONTAINER_NAME}" ping -c 2 yuyingbao-postgres &>/dev/null; then
         echo -e "${GREEN}✅ 成功${NC}"
     else
         echo -e "${RED}❌ 失败${NC}"
@@ -147,7 +147,7 @@ test_connectivity() {
     
     # 测试端口连接
     echo -n "  端口连接测试 (5432): "
-    if docker exec "${CONTAINER_NAME}" nc -z postgres 5432 &>/dev/null; then
+    if docker exec "${CONTAINER_NAME}" nc -z yuyingbao-postgres 5432 &>/dev/null; then
         echo -e "${GREEN}✅ 成功${NC}"
     else
         echo -e "${RED}❌ 失败${NC}"
@@ -155,7 +155,7 @@ test_connectivity() {
     
     # 测试PostgreSQL连接
     echo -n "  PostgreSQL连接测试: "
-    if docker exec "${CONTAINER_NAME}" pg_isready -h postgres -p 5432 -U yuyingbao -d yuyingbao &>/dev/null; then
+    if docker exec "${CONTAINER_NAME}" pg_isready -h yuyingbao-postgres -p 5432 -U yuyingbao -d yuyingbao &>/dev/null; then
         echo -e "${GREEN}✅ 成功${NC}"
     else
         echo -e "${RED}❌ 失败${NC}"

@@ -33,27 +33,27 @@ check_current_state() {
         echo -e "${GREEN}✅ 应用容器正在运行${NC}"
         
         # 检查容器的hosts映射
-        echo -e "${CYAN}🔍 检查应用容器的hosts配置:${NC}"
-        docker exec yuyingbao-server cat /etc/hosts | grep postgres || echo "  未找到postgres的hosts映射"
+        echo -e "${CYAN}🔍 检查应用容器的DNS解析:${NC}"
+        docker exec yuyingbao-server cat /etc/hosts | grep -E "(postgres|yuyingbao-postgres)" || echo "  未找到postgres相关的hosts映射"
         
         # 测试DNS解析
         echo -e "${CYAN}🔍 测试DNS解析:${NC}"
-        if docker exec yuyingbao-server nslookup postgres &>/dev/null; then
-            local resolved_ip=$(docker exec yuyingbao-server nslookup postgres | grep "Address:" | tail -1 | awk '{print $2}')
-            echo -e "  postgres解析到: ${resolved_ip}"
+        if docker exec yuyingbao-server nslookup yuyingbao-postgres &>/dev/null; then
+            local resolved_ip=$(docker exec yuyingbao-server nslookup yuyingbao-postgres | grep "Address:" | tail -1 | awk '{print $2}')
+            echo -e "  yuyingbao-postgres解析到: ${resolved_ip}"
         else
             echo -e "  ${RED}DNS解析失败${NC}"
         fi
         
         # 测试连接
         echo -e "${CYAN}🔍 测试网络连接:${NC}"
-        if docker exec yuyingbao-server ping -c 1 postgres &>/dev/null; then
-            echo -e "  ${GREEN}✅ ping postgres 成功${NC}"
+        if docker exec yuyingbao-server ping -c 1 yuyingbao-postgres &>/dev/null; then
+            echo -e "  ${GREEN}✅ ping yuyingbao-postgres 成功${NC}"
         else
-            echo -e "  ${RED}❌ ping postgres 失败${NC}"
+            echo -e "  ${RED}❌ ping yuyingbao-postgres 失败${NC}"
         fi
         
-        if docker exec yuyingbao-server nc -z postgres 5432 &>/dev/null; then
+        if docker exec yuyingbao-server nc -z yuyingbao-postgres 5432 &>/dev/null; then
             echo -e "  ${GREEN}✅ 端口5432连接成功${NC}"
         else
             echo -e "  ${RED}❌ 端口5432连接失败${NC}"

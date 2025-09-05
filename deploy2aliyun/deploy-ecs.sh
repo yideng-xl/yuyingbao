@@ -468,7 +468,7 @@ configure_environment() {
         echo -e "${YELLOW}📝 创建环境变量配置文件...${NC}"
         cat > .env << 'EOF'
 # 数据库配置 (请修改为实际的数据库信息)
-DB_HOST=postgres
+DB_HOST=yuyingbao-postgres
 DB_PORT=5432
 DB_NAME=yuyingbao
 DB_USERNAME=yuyingbao
@@ -579,25 +579,8 @@ start_application() {
     fi
     echo -e "${GREEN}✅ 数据库连接验证通过${NC}"
     
-    # 增强网络诊断和获取PostgreSQL IP地址
-    echo -e "${BLUE}🌐 检查Docker网络连接和获取IP地址...${NC}"
-    
-    # 获取PostgreSQL容器的IP地址
-    local postgres_ip=$(docker inspect yuyingbao-postgres --format="{{.NetworkSettings.Networks.${NETWORK_NAME}.IPAddress}}")
-    if [[ -z "$postgres_ip" || "$postgres_ip" == "<no value>" ]]; then
-        # 如果没有获取到IP，尝试从默认网络获取
-        postgres_ip=$(docker inspect yuyingbao-postgres --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}')
-    fi
-    
-    if [[ -n "$postgres_ip" && "$postgres_ip" != "<no value>" ]]; then
-        echo -e "${GREEN}✅ 获取到PostgreSQL容器IP: ${postgres_ip}${NC}"
-    else
-        echo -e "${RED}❌ 无法获取PostgreSQL容器IP地址${NC}"
-        # 显示详细的网络信息供诊断
-        echo -e "${YELLOW}网络诊断信息:${NC}"
-        docker network inspect ${NETWORK_NAME} | grep -A 10 -B 2 "yuyingbao-postgres" || echo "未找到PostgreSQL容器在网络中"
-        return 1
-    fi
+    # 检查网络配置
+    echo -e "${BLUE}🌐 检查Docker网络连接...${NC}"
     
     # 检查数据库容器是否在网络中
     if docker network inspect ${NETWORK_NAME} | grep -q "yuyingbao-postgres"; then
@@ -606,22 +589,18 @@ start_application() {
         echo -e "${RED}❌ PostgreSQL容器未加入网络，正在修复...${NC}"
         docker network connect ${NETWORK_NAME} yuyingbao-postgres
         sleep 5
-        # 重新获取IP地址
-        postgres_ip=$(docker inspect yuyingbao-postgres --format="{{.NetworkSettings.Networks.${NETWORK_NAME}.IPAddress}}")
-        echo -e "${CYAN}重新获取的PostgreSQL IP: ${postgres_ip}${NC}"
     fi
     
     # 等待一下确保网络配置生效
-    echo -e "${BLUE}⏳ 等待15秒确保网络配置生效...${NC}"
-    sleep 15
+    echo -e "${BLUE}⏳ 等待10秒确保网络配置生效...${NC}"
+    sleep 10
     
-    # 启动应用容器，针对2G内存优化，增加hosts映射
-    echo -e "${BLUE}🚀 启动应用容器，配置hosts映射 postgres -> ${postgres_ip}...${NC}"
+    # 启动应用容器，针对2G内存优化
+    echo -e "${BLUE}🚀 启动应用容器，使用容器名 yuyingbao-postgres 作为数据库主机...${NC}"
     docker run -d \
         --name ${CONTAINER_NAME} \
         --restart unless-stopped \
         --network ${NETWORK_NAME} \
-        --add-host="postgres:${postgres_ip}" \
         -p 8080:8080 \
         --memory=1.5g \
         --cpus=1.5 \
