@@ -240,65 +240,36 @@ pull_postgres_image() {
     echo -e "${BLUE}📥 拉取PostgreSQL镜像...${NC}"
     
     # 优先尝试从阿里云私有仓库拉取
-    local aliyun_postgres_images=(
-        "${ALIYUN_REGISTRY}/${ALIYUN_NAMESPACE}/postgres:16"
-        "${ALIYUN_REGISTRY}/${ALIYUN_NAMESPACE}/postgres:15"
-        "${ALIYUN_REGISTRY}/${ALIYUN_NAMESPACE}/postgres:14"
-    )
+    local aliyun_postgres_image="${ALIYUN_REGISTRY}/${ALIYUN_NAMESPACE}/postgres:16"
     
     # 备用公共镜像
-    local public_postgres_images=(
-        "postgres:16"
-        "postgres:15"
-        "postgres:14"
-    )
+    local public_postgres_image="postgres:16"
     
     local pulled_image=""
     
     # 先尝试阿里云私有仓库
     echo -e "${CYAN}尝试从阿里云私有仓库拉取PostgreSQL镜像...${NC}"
-    for image in "${aliyun_postgres_images[@]}"; do
-        echo -e "${CYAN}尝试拉取镜像: ${image}${NC}"
-        
-        if timeout 180 docker pull "$image"; then
-            echo -e "${GREEN}✅ 从阿里云私有仓库拉取成功: ${image}${NC}"
-            pulled_image="$image"
-            break
-        else
-            echo -e "${YELLOW}⚠️  从阿里云私有仓库拉取失败: ${image}${NC}"
-        fi
-    done
+    echo -e "${CYAN}尝试拉取镜像: ${aliyun_postgres_image}${NC}"
+    
+    if timeout 180 docker pull "$aliyun_postgres_image"; then
+        echo -e "${GREEN}✅ 从阿里云私有仓库拉取成功: ${aliyun_postgres_image}${NC}"
+        pulled_image="$aliyun_postgres_image"
+    else
+        echo -e "${YELLOW}⚠️  从阿里云私有仓库拉取失败: ${aliyun_postgres_image}${NC}"
+    fi
     
     # 如果私有仓库失败，尝试公共镜像
     if [[ -z "$pulled_image" ]]; then
         echo -e "${CYAN}尝试从公共仓库拉取PostgreSQL镜像...${NC}"
-        for image in "${public_postgres_images[@]}"; do
-            echo -e "${CYAN}尝试拉取镜像: ${image}${NC}"
-            
-            # 设置超时时间并重试
-            local attempts=0
-            local max_attempts=3
-            
-            while [ $attempts -lt $max_attempts ]; do
-                if timeout 300 docker pull "$image"; then
-                    echo -e "${GREEN}✅ 镜像拉取成功: ${image}${NC}"
-                    pulled_image="$image"
-                    break 2  # 跳出两层循环
-                else
-                    attempts=$((attempts + 1))
-                    echo -e "${YELLOW}⚠️  镜像拉取失败，重试 $attempts/$max_attempts${NC}"
-                    if [ $attempts -lt $max_attempts ]; then
-                        sleep 5
-                    fi
-                fi
-            done
-            
-            echo -e "${YELLOW}⚠️  镜像 ${image} 拉取失败，尝试下一个...${NC}"
-        done
-    fi
-    
+        echo -e "${CYAN}尝试拉取镜像: ${public_postgres_image}${NC}"
+        
+        if timeout 300 docker pull "$public_postgres_image"; then
+            echo -e "${GREEN}✅ 从公共仓库拉取成功: ${public_postgres_image}${NC}"
+            pulled_image="$public_postgres_image"
+        else
+            echo -e "${RED}❌ 从公共仓库拉取失败: ${public_postgres_image}${NC}"
     if [[ -z "$pulled_image" ]]; then
-        echo -e "${RED}❌ 所有PostgreSQL镜像拉取失败${NC}"
+        echo -e "${RED}❌ PostgreSQL 16镜像拉取完全失败${NC}"
         echo -e "${YELLOW}💡 解决建议:${NC}"
         echo -e "1. 检查网络连接: ping registry-1.docker.io"
         echo -e "2. 检查Docker镜像源配置: docker info | grep 'Registry Mirrors'"

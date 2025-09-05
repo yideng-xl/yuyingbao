@@ -63,39 +63,30 @@ diagnose_environment() {
 pull_postgres_manual() {
     echo -e "${BLUE}📥 手动拉取PostgreSQL镜像...${NC}"
     
-    local postgres_images=(
-        "postgres:16"
-        "postgres:15"
-        "postgres:14"
-    )
-    
+    local postgres_image="postgres:16"
     local success=false
     local pulled_image=""
     
-    for image in "${postgres_images[@]}"; do
-        echo -e "${CYAN}尝试拉取: ${image}${NC}"
+    echo -e "${CYAN}拉取PostgreSQL 16镜像: ${postgres_image}${NC}"
+    
+    local attempts=0
+    local max_attempts=3
+    
+    while [ $attempts -lt $max_attempts ]; do
+        echo -e "${YELLOW}尝试 $((attempts + 1))/$max_attempts${NC}"
         
-        local attempts=0
-        local max_attempts=3
-        
-        while [ $attempts -lt $max_attempts ]; do
-            echo -e "${YELLOW}尝试 $((attempts + 1))/$max_attempts${NC}"
-            
-            if timeout 300 docker pull "$image"; then
-                echo -e "${GREEN}✅ 拉取成功: ${image}${NC}"
-                pulled_image="$image"
-                success=true
-                break 2
-            else
-                attempts=$((attempts + 1))
-                if [ $attempts -lt $max_attempts ]; then
-                    echo -e "${YELLOW}等待5秒后重试...${NC}"
-                    sleep 5
-                fi
+        if timeout 300 docker pull "$postgres_image"; then
+            echo -e "${GREEN}✅ 拉取成功: ${postgres_image}${NC}"
+            pulled_image="$postgres_image"
+            success=true
+            break
+        else
+            attempts=$((attempts + 1))
+            if [ $attempts -lt $max_attempts ]; then
+                echo -e "${YELLOW}等待5秒后重试...${NC}"
+                sleep 5
             fi
-        done
-        
-        echo -e "${YELLOW}⚠️  镜像 ${image} 拉取失败${NC}"
+        fi
     done
     
     if [[ "$success" == true ]]; then
@@ -108,7 +99,7 @@ pull_postgres_manual() {
         
         return 0
     else
-        echo -e "${RED}❌ 所有PostgreSQL镜像拉取失败${NC}"
+        echo -e "${RED}❌ PostgreSQL 16镜像拉取失败${NC}"
         return 1
     fi
 }

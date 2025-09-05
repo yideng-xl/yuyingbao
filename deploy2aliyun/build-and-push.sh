@@ -90,39 +90,30 @@ build_image() {
 build_postgres_image() {
     echo -e "${BLUE}📥 拉取并打标签PostgreSQL镜像...${NC}"
     
-    local postgres_images=(
-        "postgres:16"
-        "postgres:15"
-        "postgres:14"
-    )
-    
+    local postgres_image="postgres:16"
     local pulled_image=""
     
-    # 尝试拉取PostgreSQL镜像，每个镜像重试3次
-    for image in "${postgres_images[@]}"; do
-        echo -e "${CYAN}尝试拉取: ${image}${NC}"
+    # 尝试拉取PostgreSQL 16镜像，最多重试3次
+    echo -e "${CYAN}拉取PostgreSQL 16镜像: ${postgres_image}${NC}"
+    
+    local attempts=0
+    local max_attempts=3
+    
+    while [ $attempts -lt $max_attempts ]; do
+        echo -e "${YELLOW}尝试 $((attempts + 1))/$max_attempts${NC}"
         
-        local attempts=0
-        local max_attempts=3
-        
-        while [ $attempts -lt $max_attempts ]; do
-            if timeout 300 docker pull "$image"; then
-                echo -e "${GREEN}✅ 拉取成功: ${image}${NC}"
-                pulled_image="$image"
-                break 2  # 跳出两层循环
-            else
-                attempts=$((attempts + 1))
-                echo -e "${YELLOW}⚠️  拉取失败 (${attempts}/${max_attempts}): ${image}${NC}"
-                
-                if [ $attempts -lt $max_attempts ]; then
-                    echo -e "${BLUE}等待5秒后重试...${NC}"
-                    sleep 5
-                fi
+        if timeout 300 docker pull "$postgres_image"; then
+            echo -e "${GREEN}✅ 拉取成功: ${postgres_image}${NC}"
+            pulled_image="$postgres_image"
+            break
+        else
+            attempts=$((attempts + 1))
+            echo -e "${YELLOW}⚠️  拉取失败 (${attempts}/${max_attempts}): ${postgres_image}${NC}"
+            
+            if [ $attempts -lt $max_attempts ]; then
+                echo -e "${BLUE}等待5秒后重试...${NC}"
+                sleep 5
             fi
-        done
-        
-        if [[ -z "$pulled_image" ]]; then
-            echo -e "${YELLOW}⚠️  镜像 ${image} 拉取失败，尝试下一个版本...${NC}"
         fi
     done
     

@@ -19,42 +19,52 @@ echo -e "${BLUE}    网络优化版本${NC}"
 echo -e "${BLUE}======================================${NC}"
 echo ""
 
-# PostgreSQL镜像列表（按优先级排序）
-POSTGRES_IMAGES=(
-    "postgres:16"
-    "postgres:15"
-    "postgres:14"
-    "postgres:13"
-)
+# PostgreSQL镜像配置
+POSTGRES_IMAGE="postgres:16"
 
 # 拉取PostgreSQL镜像
 pull_postgres_image() {
     echo -e "${BLUE}📥 拉取PostgreSQL镜像...${NC}"
     
-    local pulled_image=""
     local success=false
+    local attempts=0
+    local max_attempts=3
     
-    for image in "${POSTGRES_IMAGES[@]}"; do
-        echo -e "${CYAN}尝试拉取镜像: ${image}${NC}"
+    echo -e "${CYAN}拉取镜像: ${POSTGRES_IMAGE}${NC}"
+    
+    while [ $attempts -lt $max_attempts ]; do
+        echo -e "${YELLOW}尝试 $((attempts + 1))/$max_attempts${NC}"
         
-        # 设置超时时间并重试
-        local attempts=0
-        local max_attempts=3
-        
-        while [ $attempts -lt $max_attempts ]; do
-            echo -e "${YELLOW}尝试 $((attempts + 1))/$max_attempts${NC}"
+        # 使用timeout命令限制拉取时间（5分钟超时）
+        if timeout 300 docker pull "$POSTGRES_IMAGE"; then
+            echo -e "${GREEN}✅ 镜像拉取成功: ${POSTGRES_IMAGE}${NC}"
+            success=true
+            break
+        else
+            attempts=$((attempts + 1))
+            echo -e "${YELLOW}⚠️  镜像拉取失败，重试 $attempts/$max_attempts${NC}"
             
-            # 使用timeout命令限制拉取时间（5分钟超时）
-            if timeout 300 docker pull "$image"; then
-                echo -e "${GREEN}✅ 镜像拉取成功: ${image}${NC}"
-                pulled_image="$image"
-                success=true
-                break 2  # 跳出两层循环
-            else
-                attempts=$((attempts + 1))
-                echo -e "${YELLOW}⚠️  镜像拉取失败，重试 $attempts/$max_attempts${NC}"
-                
-                if [ $attempts -lt $max_attempts ]; then
+            if [ $attempts -lt $max_attempts ]; then
+                echo -e "${BLUE}等待5秒后重试...${NC}"
+                sleep 5
+            fi
+        fi
+    done
+    
+    if [[ "$success" == true ]]; then
+        echo -e "${GREEN}🎉 PostgreSQL镜像拉取成功！${NC}"
+        echo -e "${CYAN}使用镜像: ${POSTGRES_IMAGE}${NC}"
+        
+        # 显示镜像信息
+        echo -e "${BLUE}📊 镜像信息:${NC}"
+        docker images "$POSTGRES_IMAGE" --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}\t{{.CreatedAt}}"
+        
+        return 0
+    else
+        echo -e "${RED}❌ PostgreSQL镜像拉取失败${NC}"
+        return 1
+    fi
+}
                     echo -e "${BLUE}等待5秒后重试...${NC}"
                     sleep 5
                 fi
