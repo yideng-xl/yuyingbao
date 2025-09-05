@@ -366,11 +366,16 @@ create_network_and_data_dirs() {
 start_database() {
     echo -e "${BLUE}🐘 启动PostgreSQL数据库容器...${NC}"
     
+    # 确保环境变量已加载，如果未设置则使用默认值
+    local db_name=${DB_NAME:-yuyingbao}
+    local db_user=${DB_USERNAME:-yuyingbao}
+    local db_password=${DB_PASSWORD:-YuyingBao2024@Database}
+    
     # 检查是否已有数据库容器运行
     if docker ps | grep -q "yuyingbao-postgres"; then
         echo -e "${GREEN}✅ PostgreSQL容器已在运行，检查数据库连接...${NC}"
         # 验证数据库是否真正可用
-        if docker exec yuyingbao-postgres pg_isready -U yuyingbao -d yuyingbao &>/dev/null; then
+        if docker exec yuyingbao-postgres pg_isready -U ${db_user} -d ${db_name} &>/dev/null; then
             echo -e "${GREEN}✅ 数据库连接正常${NC}"
             return 0
         else
@@ -396,9 +401,9 @@ start_database() {
         -p 5432:5432 \
         --memory=512m \
         --cpus=0.5 \
-        -e POSTGRES_DB=yuyingbao \
-        -e POSTGRES_USER=yuyingbao \
-        -e POSTGRES_PASSWORD=YuyingBao2024@Database \
+        -e POSTGRES_DB=${db_name} \
+        -e POSTGRES_USER=${db_user} \
+        -e POSTGRES_PASSWORD=${db_password} \
         -e POSTGRES_INITDB_ARGS="--encoding=UTF-8 --lc-collate=C --lc-ctype=C" \
         -v "$(pwd)/postgres_data":/var/lib/postgresql/data \
         ${POSTGRES_IMAGE}
@@ -424,12 +429,12 @@ start_database() {
             fi
             
             # 检查数据库是否可以接受连接
-            if docker exec yuyingbao-postgres pg_isready -U yuyingbao -d yuyingbao &>/dev/null; then
+            if docker exec yuyingbao-postgres pg_isready -U ${db_user} -d ${db_name} &>/dev/null; then
                 echo ""
                 echo -e "${GREEN}✅ 数据库接受连接，继续检查完整性...${NC}"
                 
                 # 进一步验证数据库是否完全可用
-                if docker exec yuyingbao-postgres psql -U yuyingbao -d yuyingbao -c "SELECT 1;" &>/dev/null; then
+                if docker exec yuyingbao-postgres psql -U ${db_user} -d ${db_name} -c "SELECT 1;" &>/dev/null; then
                     echo -e "${GREEN}✅ 数据库完全可用！${NC}"
                     
                     # 额外等待5秒确保稳定
@@ -463,16 +468,21 @@ start_database() {
 configure_environment() {
     echo -e "${BLUE}⚙️  配置环境变量...${NC}"
     
+    # 设置默认数据库配置
+    local default_db_name="yuyingbao"
+    local default_db_user="yuyingbao"
+    local default_db_password="YuyingBao2024@Database"
+    
     # 检查是否存在环境变量文件
     if [[ ! -f ".env" ]]; then
         echo -e "${YELLOW}📝 创建环境变量配置文件...${NC}"
-        cat > .env << 'EOF'
+        cat > .env << EOF
 # 数据库配置 (请修改为实际的数据库信息)
 DB_HOST=yuyingbao-postgres
 DB_PORT=5432
-DB_NAME=yuyingbao
-DB_USERNAME=yuyingbao
-DB_PASSWORD=YuyingBao2024@Database
+DB_NAME=${default_db_name}
+DB_USERNAME=${default_db_user}
+DB_PASSWORD=${default_db_password}
 
 # JWT配置
 JWT_SECRET=your_jwt_secret_key_32_characters_long
@@ -498,6 +508,13 @@ EOF
     else
         echo -e "${GREEN}✅ 环境变量文件已存在${NC}"
     fi
+    
+    # 加载环境变量
+    if [[ -f ".env" ]]; then
+        source .env
+        echo -e "${GREEN}✅ 环境变量加载完成${NC}"
+    fi
+    
     echo ""
 }
 
@@ -513,7 +530,7 @@ diagnose_and_fix_network() {
     
     # 显示网络详细信息
     echo -e "${CYAN}🌐 网络信息:${NC}"
-    docker network inspect ${NETWORK_NAME} --format='{{.Name}}: {{.Driver}} - {{range .IPAM.Config}}{{.Subnet}}{{end}}'
+    docker network inspect ${NETWORK_NAME} --format='{{.Name}}: {{.Driver}} {{range .IPAM.Config}}{{.Subnet}}{{end}}'
     
     # 检查容器网络连接
     echo -e "${CYAN}🔗 检查容器网络连接:${NC}"
@@ -571,9 +588,14 @@ diagnose_and_fix_network() {
 start_application() {
     echo -e "${BLUE}🚀 启动应用容器 (2G内存优化)...${NC}"
     
+    # 确保环境变量已加载，如果未设置则使用默认值
+    local db_name=${DB_NAME:-yuyingbao}
+    local db_user=${DB_USERNAME:-yuyingbao}
+    local db_password=${DB_PASSWORD:-YuyingBao2024@Database}
+    
     # 再次验证数据库连接
     echo -e "${BLUE}🔍 启动前再次验证数据库连接...${NC}"
-    if ! docker exec yuyingbao-postgres pg_isready -U yuyingbao -d yuyingbao &>/dev/null; then
+    if ! docker exec yuyingbao-postgres pg_isready -U ${db_user} -d ${db_name} &>/dev/null; then
         echo -e "${RED}❌ 数据库连接验证失败，无法启动应用${NC}"
         return 1
     fi

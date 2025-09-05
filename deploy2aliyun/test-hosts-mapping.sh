@@ -72,7 +72,7 @@ show_fix_suggestions() {
     echo -e "${BLUE}💡 修复建议:${NC}"
     echo ""
     
-    local postgres_ip=$(docker inspect yuyingbao-postgres --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' 2>/dev/null)
+    local postgres_ip=$(docker inspect yuyingbao-postgres --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}')
     
     if [[ -n "$postgres_ip" ]]; then
         echo -e "${YELLOW}如果应用容器没有正确的hosts映射，可以手动重新创建:${NC}"
@@ -94,7 +94,7 @@ show_fix_suggestions() {
         echo ""
         echo "# 3. 或者直接使用部署脚本"
         echo "./deploy-ecs.sh stop"
-        echo "./deploy-ecs.sh deploy"
+        echo "./deploy-ecs.sh deploy  # 现在使用正确的容器名 yuyingbao-postgres"
     else
         echo -e "${RED}无法获取PostgreSQL容器IP地址${NC}"
     fi

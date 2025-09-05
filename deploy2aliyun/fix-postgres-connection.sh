@@ -62,7 +62,7 @@ check_network() {
         
         # 显示网络详情
         echo -e "${CYAN}网络配置:${NC}"
-        docker network inspect ${NETWORK_NAME} --format='Driver: {{.Driver}}, Subnet: {{range .IPAM.Config}}{{.Subnet}}{{end}}'
+        docker network inspect ${NETWORK_NAME} --format='{{.Name}}: {{.Driver}} {{range .IPAM.Config}}{{.Subnet}}{{end}}'
         
         # 检查容器是否在网络中
         echo -e "${CYAN}网络中的容器:${NC}"
@@ -108,10 +108,7 @@ test_connectivity() {
     fi
     
     # 获取PostgreSQL容器IP地址
-    local postgres_ip=$(docker inspect yuyingbao-postgres --format="{{.NetworkSettings.Networks.${NETWORK_NAME}.IPAddress}}")
-    if [[ -z "$postgres_ip" || "$postgres_ip" == "<no value>" ]]; then
-        postgres_ip=$(docker inspect yuyingbao-postgres --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}')
-    fi
+    local postgres_ip=$(docker inspect yuyingbao-postgres --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}')
     echo -e "${CYAN}PostgreSQL容器IP地址: ${postgres_ip}${NC}"
     
     # 检查应用容器的hosts配置
@@ -120,6 +117,18 @@ test_connectivity() {
     
     # 从应用容器测试连接
     echo -e "${CYAN}从应用容器测试连接到数据库:${NC}"
+    
+    # 加载环境变量配置
+    local db_name="yuyingbao"
+    local db_user="yuyingbao"
+    local db_password="YuyingBao2024@Database"
+    
+    if [[ -f ".env" ]]; then
+        source .env
+        db_name=${DB_NAME:-$db_name}
+        db_user=${DB_USERNAME:-$db_user}
+        db_password=${DB_PASSWORD:-$db_password}
+    fi
     
     # 测试DNS解析 - 使用实际的容器名
     echo -n "  DNS解析测试 (yuyingbao-postgres): "
@@ -155,7 +164,7 @@ test_connectivity() {
     
     # 测试PostgreSQL连接
     echo -n "  PostgreSQL连接测试: "
-    if docker exec "${CONTAINER_NAME}" pg_isready -h yuyingbao-postgres -p 5432 -U yuyingbao -d yuyingbao &>/dev/null; then
+    if docker exec "${CONTAINER_NAME}" pg_isready -h yuyingbao-postgres -p 5432 -U "${db_user}" -d "${db_name}" &>/dev/null; then
         echo -e "${GREEN}✅ 成功${NC}"
     else
         echo -e "${RED}❌ 失败${NC}"
@@ -202,38 +211,24 @@ show_recommendations() {
     echo ""
     
     echo -e "${YELLOW}如果问题持续存在，尝试以下步骤:${NC}"
-    echo "1. 使用增强hosts映射的部署脚本:"
+    echo "1. 从根本上修复数据库连接问题:"
+    echo "   已修正 application-prod.yml 中的数据库URL"
+    echo "   从 jdbc:postgresql://postgres:5432/yuyingbao"
+    echo "   修改为 jdbc:postgresql://yuyingbao-postgres:5432/yuyingbao"
+    echo ""
+    echo "2. 重新部署应用:"
     echo "   ./deploy-ecs.sh stop-all"
-    echo "   ./deploy-ecs.sh deploy  # 现在包含 --add-host 参数"
+    echo "   ./deploy-ecs.sh deploy"
     echo ""
-    echo "2. 手动重新创建应用容器并添加hosts映射:"
-    echo "   # 获取PostgreSQL IP地址"
-    echo "   POSTGRES_IP=\$(docker inspect yuyingbao-postgres --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}')"
-    echo "   echo \"数据库IP: \$POSTGRES_IP\""
-    echo "   "
-    echo "   # 停止并删除应用容器"
-    echo "   docker stop yuyingbao-server && docker rm yuyingbao-server"
-    echo "   "
-    echo "   # 重新创建带hosts映射的容器"
-    echo "   docker run -d --name yuyingbao-server \\"
-    echo "     --network yuyingbao-network \\"
-    echo "     --add-host=\"postgres:\$POSTGRES_IP\" \\"
-    echo "     --env-file .env -p 8080:8080 \\"
-    echo "     [YOUR_IMAGE_NAME]"
-    echo ""
-    echo "3. 检查应用配置:"
-    echo "   确保数据库主机名配置为 'postgres'"
-    echo "   检查 .env 文件中的 DB_HOST=postgres"
+    echo "3. 如果仍有问题，检查网络:"
+    echo "   ./deploy-ecs.sh diagnose"
+    echo "   ./fix-postgres-connection.sh"
     echo ""
     echo "4. 查看详细日志:"
     echo "   docker logs -f yuyingbao-server"
     echo "   docker logs -f yuyingbao-postgres"
     echo ""
-    echo "5. 网络诊断:"
-    echo "   ./deploy-ecs.sh diagnose"
-    echo "   ./fix-postgres-connection.sh"
-    echo ""
-    echo "6. 完全重置 (注意：会删除所有数据):"
+    echo "5. 完全重置 (注意：会删除所有数据):"
     echo "   ./deploy-ecs.sh reset-data"
     echo ""
 }

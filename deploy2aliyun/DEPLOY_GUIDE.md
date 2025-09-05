@@ -162,11 +162,11 @@ CPU限制: 0.5核心
 
 ### 环境变量配置
 
-脚本会自动创建 `.env` 文件：
+脚本会自动创建 `.env` 文件，并支持自定义数据库配置：
 
 ```bash
 # 数据库配置
-DB_HOST=postgres
+DB_HOST=yuyingbao-postgres
 DB_PORT=5432
 DB_NAME=yuyingbao
 DB_USERNAME=yuyingbao
@@ -183,6 +183,18 @@ WECHAT_APP_SECRET=your_wechat_app_secret
 # 服务配置
 SERVER_PORT=8080
 SPRING_PROFILES_ACTIVE=prod
+```
+
+**自定义数据库配置：**
+
+您可以修改 `.env` 文件中的数据库配置信息，脚本会自动使用这些配置来：
+1. 创建PostgreSQL容器时设置数据库名称、用户名和密码
+2. 应用容器启动时使用相同的数据库连接信息
+
+修改后，请重新运行部署脚本以应用新的配置：
+```bash
+./deploy-ecs.sh stop-all
+./deploy-ecs.sh deploy
 ```
 
 ## 🔧 故障排除
@@ -262,6 +274,32 @@ SPRING_PROFILES_ACTIVE=prod
    ```
    
    这个修改解决了DNS解析问题，现在应用可以直接通过Docker内部网络找到PostgreSQL容器。
+
+6. **Docker模板解析错误 (template parsing error: template: :1: bad character U+002D '-')**
+   
+   **问题描述：** 在执行网络诊断命令时出现此错误，这是由于在Docker的Go模板中使用了包含连字符的格式字符串。
+   
+   **解决方案：** 已修复所有相关脚本中的模板格式问题：
+   ```bash
+   # 修复前（错误的格式）
+   docker network inspect ${NETWORK_NAME} --format='{{.Name}}: {{.Driver}} - {{range .IPAM.Config}}{{.Subnet}}{{end}}'
+   
+   # 修复后（正确的格式）
+   docker network inspect ${NETWORK_NAME} --format='{{.Name}}: {{.Driver}} {{range .IPAM.Config}}{{.Subnet}}{{end}}'
+   ```
+   
+   **涉及文件：**
+   - [`deploy-ecs.sh`](./deploy-ecs.sh)
+   - [`fix-postgres-connection.sh`](./fix-postgres-connection.sh)
+   
+   **验证修复：**
+   ```bash
+   # 执行网络诊断
+   ./deploy-ecs.sh diagnose
+   
+   # 或使用专用诊断脚本
+   ./fix-postgres-connection.sh
+   ```
 
 6. **数据目录权限问题**
    ```bash
