@@ -456,3 +456,6 @@ main() {
     echo ""
     echo -e "${GREEN}🎊 所有操作完成！${NC}"
 }
+
+# 执行主函数
+main
