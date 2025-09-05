@@ -1,8 +1,8 @@
-# 育婴宝 后端服务 (Spring Boot + PostgreSQL 17)
+# 育婴宝 后端服务 (Spring Boot + PostgreSQL 16)
 
 ## 技术栈
 - Spring Boot 3 (Web, Validation, Data JPA, Security)
-- PostgreSQL 17
+- PostgreSQL 16
 - Flyway 数据库迁移
 - JWT 鉴权
 

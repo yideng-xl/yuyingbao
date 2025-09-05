@@ -24,7 +24,7 @@
 
 ### 后端 - Spring Boot
 - **框架**: Spring Boot 3.3.2
-- **数据库**: PostgreSQL 17
+- **数据库**: PostgreSQL 16
 - **认证**: JWT + 微信授权
 - **API**: RESTful API 设计
 

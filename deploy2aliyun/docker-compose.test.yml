@@ -65,7 +65,7 @@ services:
 
   # PostgreSQL 数据库
   postgres:
-    image: postgres:17
+    image: postgres:16
     container_name: yuyingbao-postgres-test
     environment:
       POSTGRES_DB: yuyingbao

@@ -21,10 +21,10 @@ echo ""
 
 # PostgreSQL镜像列表（按优先级排序）
 POSTGRES_IMAGES=(
-    "postgres:17"
     "postgres:16"
     "postgres:15"
     "postgres:14"
+    "postgres:13"
 )
 
 # 拉取PostgreSQL镜像

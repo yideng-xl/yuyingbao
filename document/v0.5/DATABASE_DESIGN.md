@@ -6,7 +6,7 @@
 
 ## 技术选型
 
-- **数据库**: PostgreSQL 17
+- **数据库**: PostgreSQL 16
 - **字符集**: UTF-8
 - **时区**: UTC
 - **连接池**: HikariCP

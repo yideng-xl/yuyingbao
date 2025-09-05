@@ -91,46 +91,71 @@ build_postgres_image() {
     echo -e "${BLUE}📥 拉取并打标签PostgreSQL镜像...${NC}"
     
     local postgres_images=(
-        "postgres:17"
         "postgres:16"
         "postgres:15"
+        "postgres:14"
     )
     
     local pulled_image=""
     
-    # 尝试拉取PostgreSQL镜像
+    # 尝试拉取PostgreSQL镜像，每个镜像重试3次
     for image in "${postgres_images[@]}"; do
         echo -e "${CYAN}尝试拉取: ${image}${NC}"
         
-        if timeout 300 docker pull "$image"; then
-            echo -e "${GREEN}✅ 拉取成功: ${image}${NC}"
-            pulled_image="$image"
-            break
-        else
-            echo -e "${YELLOW}⚠️  拉取失败: ${image}${NC}"
+        local attempts=0
+        local max_attempts=3
+        
+        while [ $attempts -lt $max_attempts ]; do
+            if timeout 300 docker pull "$image"; then
+                echo -e "${GREEN}✅ 拉取成功: ${image}${NC}"
+                pulled_image="$image"
+                break 2  # 跳出两层循环
+            else
+                attempts=$((attempts + 1))
+                echo -e "${YELLOW}⚠️  拉取失败 (${attempts}/${max_attempts}): ${image}${NC}"
+                
+                if [ $attempts -lt $max_attempts ]; then
+                    echo -e "${BLUE}等待5秒后重试...${NC}"
+                    sleep 5
+                fi
+            fi
+        done
+        
+        if [[ -z "$pulled_image" ]]; then
+            echo -e "${YELLOW}⚠️  镜像 ${image} 拉取失败，尝试下一个版本...${NC}"
         fi
     done
     
     if [[ -z "$pulled_image" ]]; then
-        echo -e "${YELLOW}⚠️  PostgreSQL镜像拉取失败，跳过${NC}"
-        return 0
+        echo -e "${RED}❌ 所有PostgreSQL镜像拉取失败！${NC}"
+        echo -e "${YELLOW}💡 解决建议:${NC}"
+        echo -e "1. 检查网络连接: ping registry-1.docker.io"
+        echo -e "2. 检查Docker镜像源配置: docker info | grep 'Registry Mirrors'"
+        echo -e "3. 手动配置镜像源: ./configure-docker-mirrors.sh config"
+        echo -e "4. 手动拉取镜像: docker pull postgres:16"
+        echo -e "${CYAN}🚀 将继续构建应用镜像，但不包含PostgreSQL镜像${NC}"
+        return 1
     fi
     
     # 为PostgreSQL镜像打标签
     local postgres_tag="${ALIYUN_REGISTRY}/${ALIYUN_NAMESPACE}/postgres:${pulled_image##*:}"
     
     echo -e "${BLUE}🏷️  为PostgreSQL镜像打标签...${NC}"
-    docker tag "$pulled_image" "$postgres_tag"
+    echo -e "${CYAN}原始镜像: ${pulled_image}${NC}"
+    echo -e "${CYAN}目标标签: ${postgres_tag}${NC}"
     
-    if [[ $? -eq 0 ]]; then
+    if docker tag "$pulled_image" "$postgres_tag"; then
         echo -e "${GREEN}✅ PostgreSQL镜像打标签成功${NC}"
-        echo -e "${CYAN}本地标签: ${postgres_tag}${NC}"
         POSTGRES_TAG="$postgres_tag"
-        echo -e "${GREEN}✅ PostgreSQL镜像处理完成${NC}"
+        
+        # 显示本地镜像信息
+        echo -e "${BLUE}📋 PostgreSQL本地镜像信息:${NC}"
+        docker images "$postgres_tag" --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}\t{{.CreatedAt}}"
+        
         return 0
     else
-        echo -e "${YELLOW}⚠️  PostgreSQL镜像打标签失败，跳过${NC}"
-        return 0
+        echo -e "${RED}❌ PostgreSQL镜像打标签失败${NC}"
+        return 1
     fi
 }
 
@@ -195,18 +220,33 @@ push_image() {
 
 # 推送PostgreSQL镜像
 push_postgres_image() {
+    echo -e "${BLUE}🚀 推送PostgreSQL镜像...${NC}"
+    
     if [[ -n "$POSTGRES_TAG" ]]; then
-        echo -e "${BLUE}🚀 推送PostgreSQL镜像...${NC}"
         echo -e "${CYAN}推送到: ${POSTGRES_TAG}${NC}"
         
-        if docker push "$POSTGRES_TAG"; then
-            echo -e "${GREEN}✅ PostgreSQL镜像推送成功${NC}"
+        # 检查本地是否有该镜像
+        if docker images "$POSTGRES_TAG" | grep -q "$POSTGRES_TAG"; then
+            echo -e "${GREEN}✅ 本地镜像存在，开始推送...${NC}"
+            
+            if docker push "$POSTGRES_TAG"; then
+                echo -e "${GREEN}✅ PostgreSQL镜像推送成功！${NC}"
+                echo -e "${CYAN}推送地址: ${POSTGRES_TAG}${NC}"
+            else
+                echo -e "${RED}❌ PostgreSQL镜像推送失败${NC}"
+                echo -e "${YELLOW}请检查网络连接和阿里云登录状态${NC}"
+            fi
         else
-            echo -e "${YELLOW}⚠️  PostgreSQL镜像推送失败${NC}"
+            echo -e "${RED}❌ 本地没有找到PostgreSQL镜像: ${POSTGRES_TAG}${NC}"
+            echo -e "${YELLOW}请检查PostgreSQL镜像构建是否成功${NC}"
         fi
     else
         echo -e "${YELLOW}⚠️  没有PostgreSQL镜像需要推送${NC}"
+        echo -e "${CYAN}原因： PostgreSQL镜像拉取或打标签失败${NC}"
+        echo -e "${YELLOW}💡 如需PostgreSQL镜像，请检查网络后重试${NC}"
     fi
+    
+    echo ""
 }
 
 # 清理本地镜像（可选）
@@ -264,7 +304,14 @@ main() {
     check_docker
     check_aliyun_config
     build_image
-    build_postgres_image
+    
+    # PostgreSQL镜像构建（失败不中断整个流程）
+    if build_postgres_image; then
+        echo -e "${GREEN}✅ PostgreSQL镜像处理成功${NC}"
+    else
+        echo -e "${YELLOW}⚠️  PostgreSQL镜像处理失败，将继续构建应用镜像${NC}"
+    fi
+    
     test_image
     login_aliyun
     push_image

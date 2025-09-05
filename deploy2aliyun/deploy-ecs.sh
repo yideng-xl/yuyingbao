@@ -21,7 +21,7 @@ NETWORK_NAME="yuyingbao-network"
 ALIYUN_REGISTRY="crpi-zyq1wc1umfuictwx.cn-shanghai.personal.cr.aliyuncs.com"
 ALIYUN_NAMESPACE="aires-docker"
 ALIYUN_USERNAME="xulei0331@126.com"
-POSTGRES_IMAGE="postgres:17"  # 默认PostgreSQL镜像，会在拉取时动态更新
+POSTGRES_IMAGE="postgres:16"  # 默认PostgreSQL镜像，会在拉取时动态更新
 
 echo -e "${BLUE}======================================${NC}"
 echo -e "${BLUE}    阿里云ECS一键部署脚本${NC}"
@@ -241,16 +241,16 @@ pull_postgres_image() {
     
     # 优先尝试从阿里云私有仓库拉取
     local aliyun_postgres_images=(
-        "${ALIYUN_REGISTRY}/${ALIYUN_NAMESPACE}/postgres:17"
         "${ALIYUN_REGISTRY}/${ALIYUN_NAMESPACE}/postgres:16"
         "${ALIYUN_REGISTRY}/${ALIYUN_NAMESPACE}/postgres:15"
+        "${ALIYUN_REGISTRY}/${ALIYUN_NAMESPACE}/postgres:14"
     )
     
     # 备用公共镜像
     local public_postgres_images=(
-        "postgres:17"
         "postgres:16"
         "postgres:15"
+        "postgres:14"
     )
     
     local pulled_image=""

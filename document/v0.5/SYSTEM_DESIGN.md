@@ -48,7 +48,7 @@
 
 #### 后端技术栈
 - **框架**: Spring Boot 3.3.2
-- **数据库**: PostgreSQL 17
+- **数据库**: PostgreSQL 16
 - **ORM**: Spring Data JPA
 - **认证**: JWT + 微信OAuth2
 - **构建工具**: Maven 3.9.11
