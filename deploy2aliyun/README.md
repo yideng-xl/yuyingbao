@@ -83,7 +83,15 @@ graph TB
 
 ### 🛠️ 增强管理命令
 - `./deploy-ecs.sh status` - 显示数据目录大小和状态
+- `./deploy-ecs.sh diagnose` - 网络诊断和修复
 - `./deploy-ecs.sh reset-data` - 彻底清理所有数据（危险操作）
+- `./fix-postgres-connection.sh` - 专门的数据库连接问题诊断
+- `./test-hosts-mapping.sh` - 检查hosts映射配置
+
+### 🌐 智能网络修复
+- **DNS解析修复**：自动添加`--add-host="postgres:IP"`解决UnknownHostException
+- **网络诊断**：自动检查容器网络配置和连接状态
+- **自动修复**：检测到网络问题时自动尝试修复
 
 ## 🛠️ 技术栈
 

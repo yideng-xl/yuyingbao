@@ -107,6 +107,17 @@ test_connectivity() {
         return 1
     fi
     
+    # 获取PostgreSQL容器IP地址
+    local postgres_ip=$(docker inspect yuyingbao-postgres --format="{{.NetworkSettings.Networks.${NETWORK_NAME}.IPAddress}}")
+    if [[ -z "$postgres_ip" || "$postgres_ip" == "<no value>" ]]; then
+        postgres_ip=$(docker inspect yuyingbao-postgres --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}')
+    fi
+    echo -e "${CYAN}PostgreSQL容器IP地址: ${postgres_ip}${NC}"
+    
+    # 检查应用容器的hosts配置
+    echo -e "${CYAN}检查应用容器的/etc/hosts文件:${NC}"
+    docker exec "${CONTAINER_NAME}" cat /etc/hosts | grep postgres || echo "未找到postgres的hosts映射"
+    
     # 从应用容器测试连接
     echo -e "${CYAN}从应用容器测试连接到数据库:${NC}"
     
@@ -115,8 +126,13 @@ test_connectivity() {
     if docker exec "${CONTAINER_NAME}" nslookup postgres &>/dev/null; then
         echo -e "${GREEN}✅ 成功${NC}"
         # 显示解析结果
-        local ip=$(docker exec "${CONTAINER_NAME}" nslookup postgres | grep "Address:" | tail -1 | awk '{print $2}')
-        echo "    解析IP: $ip"
+        local resolved_ip=$(docker exec "${CONTAINER_NAME}" nslookup postgres | grep "Address:" | tail -1 | awk '{print $2}')
+        echo "    解析IP: $resolved_ip"
+        if [[ "$resolved_ip" == "$postgres_ip" ]]; then
+            echo -e "    ${GREEN}✅ IP地址匹配正确${NC}"
+        else
+            echo -e "    ${YELLOW}⚠️  IP地址不匹配（期望: $postgres_ip，实际: $resolved_ip）${NC}"
+        fi
     else
         echo -e "${RED}❌ 失败${NC}"
     fi
@@ -186,23 +202,38 @@ show_recommendations() {
     echo ""
     
     echo -e "${YELLOW}如果问题持续存在，尝试以下步骤:${NC}"
-    echo "1. 完全重启服务:"
+    echo "1. 使用增强hosts映射的部署脚本:"
     echo "   ./deploy-ecs.sh stop-all"
-    echo "   ./deploy-ecs.sh deploy"
+    echo "   ./deploy-ecs.sh deploy  # 现在包含 --add-host 参数"
     echo ""
-    echo "2. 重建网络:"
-    echo "   docker network rm ${NETWORK_NAME}"
-    echo "   ./deploy-ecs.sh deploy"
+    echo "2. 手动重新创建应用容器并添加hosts映射:"
+    echo "   # 获取PostgreSQL IP地址"
+    echo "   POSTGRES_IP=\$(docker inspect yuyingbao-postgres --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}')"
+    echo "   echo \"数据库IP: \$POSTGRES_IP\""
+    echo "   "
+    echo "   # 停止并删除应用容器"
+    echo "   docker stop yuyingbao-server && docker rm yuyingbao-server"
+    echo "   "
+    echo "   # 重新创建带hosts映射的容器"
+    echo "   docker run -d --name yuyingbao-server \\"
+    echo "     --network yuyingbao-network \\"
+    echo "     --add-host=\"postgres:\$POSTGRES_IP\" \\"
+    echo "     --env-file .env -p 8080:8080 \\"
+    echo "     [YOUR_IMAGE_NAME]"
     echo ""
     echo "3. 检查应用配置:"
     echo "   确保数据库主机名配置为 'postgres'"
     echo "   检查 .env 文件中的 DB_HOST=postgres"
     echo ""
     echo "4. 查看详细日志:"
-    echo "   docker logs -f ${CONTAINER_NAME}"
+    echo "   docker logs -f yuyingbao-server"
     echo "   docker logs -f yuyingbao-postgres"
     echo ""
-    echo "5. 完全重置 (注意：会删除所有数据):"
+    echo "5. 网络诊断:"
+    echo "   ./deploy-ecs.sh diagnose"
+    echo "   ./fix-postgres-connection.sh"
+    echo ""
+    echo "6. 完全重置 (注意：会删除所有数据):"
     echo "   ./deploy-ecs.sh reset-data"
     echo ""
 }
