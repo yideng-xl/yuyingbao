@@ -236,6 +236,12 @@ SPRING_PROFILES_ACTIVE=prod
 5. **数据库连接错误 (UnknownHostException: postgres)**
    这是最常见的错误，原因和解决方案：
    ```bash
+   # 使用专用的网络诊断脚本
+   ./fix-postgres-connection.sh
+   
+   # 或者使用内置诊断命令
+   ./deploy-ecs.sh diagnose
+   
    # 1. 检查PostgreSQL容器是否运行
    docker ps | grep postgres
    
@@ -246,12 +252,20 @@ SPRING_PROFILES_ACTIVE=prod
    docker network ls
    docker network inspect yuyingbao-network
    
-   # 4. 重新部署数据库（数据不会丢失）
+   # 4. 测试网络内部连接
+   docker exec yuyingbao-server ping postgres
+   docker exec yuyingbao-server nc -z postgres 5432
+   
+   # 5. 修复网络连接
+   docker network connect yuyingbao-network yuyingbao-postgres
+   docker network connect yuyingbao-network yuyingbao-server
+   
+   # 6. 重新部署数据库（数据不会丢失）
    docker stop yuyingbao-postgres
    docker rm yuyingbao-postgres
    # 然后重新运行deploy-ecs.sh
    
-   # 5. 完全重置（清理所有容器和网络）
+   # 7. 完全重置（清理所有容器和网络）
    docker stop yuyingbao-server yuyingbao-postgres
    docker rm yuyingbao-server yuyingbao-postgres
    docker network rm yuyingbao-network
@@ -263,6 +277,7 @@ SPRING_PROFILES_ACTIVE=prod
    - Docker网络配置错误
    - 容器之间无法通信
    - 等待时间不足
+   - 容器未正确加入Docker网络
 
 6. **数据目录权限问题**
    ```bash

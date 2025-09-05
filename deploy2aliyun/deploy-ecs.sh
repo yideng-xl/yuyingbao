@@ -501,7 +501,72 @@ EOF
     echo ""
 }
 
-# 启动应用容器 (2G内存优化)
+# 网络诊断和修复功能
+diagnose_and_fix_network() {
+    echo -e "${BLUE}🔍 进行网络诊断...${NC}"
+    
+    # 检查网络是否存在
+    if ! docker network ls | grep -q ${NETWORK_NAME}; then
+        echo -e "${RED}❌ 网络不存在，重新创建...${NC}"
+        docker network create ${NETWORK_NAME}
+    fi
+    
+    # 显示网络详细信息
+    echo -e "${CYAN}🌐 网络信息:${NC}"
+    docker network inspect ${NETWORK_NAME} --format='{{.Name}}: {{.Driver}} - {{range .IPAM.Config}}{{.Subnet}}{{end}}'
+    
+    # 检查容器网络连接
+    echo -e "${CYAN}🔗 检查容器网络连接:${NC}"
+    
+    # 检查PostgreSQL容器网络
+    if docker ps | grep -q "yuyingbao-postgres"; then
+        local postgres_networks=$(docker inspect yuyingbao-postgres --format='{{range $net, $conf := .NetworkSettings.Networks}}{{$net}} {{end}}')
+        echo -e "  PostgreSQL容器网络: ${postgres_networks}"
+        
+        if echo "$postgres_networks" | grep -q "${NETWORK_NAME}"; then
+            echo -e "  ${GREEN}✅ PostgreSQL已加入正确网络${NC}"
+        else
+            echo -e "  ${RED}❌ PostgreSQL未加入正确网络，正在修复...${NC}"
+            docker network connect ${NETWORK_NAME} yuyingbao-postgres
+            sleep 3
+        fi
+    fi
+    
+    # 检查应用容器网络
+    if docker ps | grep -q "${CONTAINER_NAME}"; then
+        local app_networks=$(docker inspect ${CONTAINER_NAME} --format='{{range $net, $conf := .NetworkSettings.Networks}}{{$net}} {{end}}')
+        echo -e "  应用容器网络: ${app_networks}"
+        
+        if echo "$app_networks" | grep -q "${NETWORK_NAME}"; then
+            echo -e "  ${GREEN}✅ 应用已加入正确网络${NC}"
+        else
+            echo -e "  ${RED}❌ 应用未加入正确网络，正在修复...${NC}"
+            docker network connect ${NETWORK_NAME} ${CONTAINER_NAME}
+            sleep 3
+        fi
+    fi
+    
+    # 检查网络内部连接
+    if docker ps | grep -q "yuyingbao-postgres" && docker ps | grep -q "${CONTAINER_NAME}"; then
+        echo -e "${BLUE}🔎 测试网络内部连接...${NC}"
+        
+        # 从应用容器ping数据库容器
+        if docker exec ${CONTAINER_NAME} ping -c 2 postgres &>/dev/null; then
+            echo -e "  ${GREEN}✅ 应用可以ping通数据库${NC}"
+        else
+            echo -e "  ${RED}❌ 应用无法ping通数据库${NC}"
+        fi
+        
+        # 从应用容器测试数据库端口
+        if docker exec ${CONTAINER_NAME} nc -z postgres 5432 &>/dev/null; then
+            echo -e "  ${GREEN}✅ 应用可以连接数据库端口${NC}"
+        else
+            echo -e "  ${RED}❌ 应用无法连接数据库端口${NC}"
+        fi
+    fi
+    
+    echo ""
+}
 start_application() {
     echo -e "${BLUE}🚀 启动应用容器 (2G内存优化)...${NC}"
     
@@ -512,6 +577,21 @@ start_application() {
         return 1
     fi
     echo -e "${GREEN}✅ 数据库连接验证通过${NC}"
+    
+    # 增强网络诊断
+    echo -e "${BLUE}🌐 检查Docker网络连接...${NC}"
+    
+    # 检查数据库容器是否在网络中
+    if docker network inspect ${NETWORK_NAME} | grep -q "yuyingbao-postgres"; then
+        echo -e "${GREEN}✅ PostgreSQL容器已加入网络: ${NETWORK_NAME}${NC}"
+    else
+        echo -e "${RED}❌ PostgreSQL容器未加入网络，正在修复...${NC}"
+        docker network connect ${NETWORK_NAME} yuyingbao-postgres
+    fi
+    
+    # 等待一下确保网络配置生效
+    echo -e "${BLUE}⏳ 等徆10秒确保网络配置生效...${NC}"
+    sleep 10
     
     # 启动应用容器，针对2G内存优化
     docker run -d \
@@ -726,8 +806,12 @@ main() {
     
     # 在数据库启动后额外等待10秒确保稳定
     if [[ $? -eq 0 ]]; then
-        echo -e "${BLUE}⏳ 数据库启动成功，等待10秒后启动应用...${NC}"
-        sleep 10
+        echo -e "${BLUE}⏳ 数据库启动成功，等待15秒后启动应用...${NC}"
+        sleep 15
+        
+        # 进行网络诊断
+        diagnose_and_fix_network
+        
         start_application
     else
         echo -e "${RED}❌ 数据库启动失败，停止部署${NC}"
@@ -735,6 +819,8 @@ main() {
     fi
     
     if wait_for_application; then
+        # 部署成功后再次进行网络诊断
+        diagnose_and_fix_network
         health_check
         configure_firewall
         show_deployment_info
@@ -768,12 +854,14 @@ show_help() {
     echo "  stop      停止应用"
     echo "  stop-all  停止所有服务（包括数据库）"
     echo "  reset-data 彻底清理所有数据（危险操作）"
+    echo "  diagnose  网络诊断和修复"
     echo "  help      显示此帮助信息"
     echo ""
     echo "示例:"
-    echo "  $0 deploy   # 执行完整部署"
-    echo "  $0 logs     # 查看应用日志"
-    echo "  $0 status   # 查看部署状态"
+    echo "  $0 deploy     # 执行完整部署"
+    echo "  $0 logs       # 查看应用日志"
+    echo "  $0 status     # 查看部署状态"
+    echo "  $0 diagnose   # 网络问题诊断"
     echo ""
 }
 
@@ -864,6 +952,21 @@ case "${1:-deploy}" in
         else
             echo -e "${YELLOW}操作取消${NC}"
         fi
+        ;;
+    "diagnose")
+        echo -e "${BLUE}🔍 开始网络诊断...${NC}"
+        diagnose_and_fix_network
+        
+        # 额外的详细诊断
+        echo -e "${BLUE}🔎 详细环境诊断...${NC}"
+        echo -e "${CYAN}容器状态:${NC}"
+        docker ps -a --filter "name=yuyingbao"
+        echo ""
+        echo -e "${CYAN}Docker网络:${NC}"
+        docker network ls | grep -E "(NETWORK|${NETWORK_NAME})"
+        echo ""
+        echo -e "${CYAN}网络详情:${NC}"
+        docker network inspect ${NETWORK_NAME} 2>/dev/null || echo "网络不存在"
         ;;
     "help"|"-h"|"--help")
         show_help
