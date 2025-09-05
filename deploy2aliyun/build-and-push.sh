@@ -2,6 +2,7 @@
 
 # 育婴宝后端服务 Docker 构建和推送脚本
 # 目标：阿里云容器镜像服务
+# 集成功能：镜像构建、PostgreSQL镜像处理、推送到阿里云、Docker镜像源配置
 
 set -e
 
@@ -50,6 +51,69 @@ check_docker() {
     fi
     
     echo -e "${GREEN}✅ Docker 环境正常${NC}"
+}
+
+# 配置Docker镜像源（集成功能）
+configure_docker_mirrors() {
+    echo -e "${BLUE}🚀 配置Docker镜像源优化...${NC}"
+    
+    # 检查是否已配置镜像源
+    if docker info 2>/dev/null | grep -q "Registry Mirrors"; then
+        echo -e "${GREEN}✅ Docker镜像源已配置${NC}"
+        return 0
+    fi
+    
+    echo -e "${YELLOW}💡 检测到未配置镜像源，是否配置以提升拉取速度？(y/N)${NC}"
+    read -r configure_mirrors
+    
+    if [[ "$configure_mirrors" =~ ^[Yy]$ ]]; then
+        # 备份原有配置
+        if [[ -f /etc/docker/daemon.json ]]; then
+            sudo cp /etc/docker/daemon.json /etc/docker/daemon.json.backup.$(date +%Y%m%d_%H%M%S)
+            echo -e "${GREEN}✅ 原配置已备份${NC}"
+        fi
+        
+        # 创建配置目录
+        sudo mkdir -p /etc/docker
+        
+        # 写入配置文件
+        sudo tee /etc/docker/daemon.json > /dev/null << 'EOF'
+{
+  "registry-mirrors": [
+    "https://dockerproxy.com",
+    "https://hub-mirror.c.163.com",
+    "https://mirror.baidubce.com",
+    "https://ccr.ccs.tencentyun.com"
+  ],
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "10m",
+    "max-file": "3"
+  },
+  "storage-driver": "overlay2",
+  "max-concurrent-downloads": 10,
+  "max-concurrent-uploads": 5,
+  "experimental": false
+}
+EOF
+        
+        echo -e "${GREEN}✅ Docker配置文件已更新${NC}"
+        
+        # 重启Docker服务
+        echo -e "${BLUE}🔄 重启Docker服务...${NC}"
+        sudo systemctl daemon-reload
+        sudo systemctl restart docker
+        sleep 3
+        
+        if sudo systemctl is-active --quiet docker; then
+            echo -e "${GREEN}✅ Docker服务重启成功${NC}"
+        else
+            echo -e "${RED}❌ Docker服务重启失败${NC}"
+            echo -e "${YELLOW}请检查配置文件和系统日志${NC}"
+            exit 1
+        fi
+    fi
+    echo ""
 }
 
 check_aliyun_config() {
@@ -122,7 +186,7 @@ build_postgres_image() {
         echo -e "${YELLOW}💡 解决建议:${NC}"
         echo -e "1. 检查网络连接: ping registry-1.docker.io"
         echo -e "2. 检查Docker镜像源配置: docker info | grep 'Registry Mirrors'"
-        echo -e "3. 手动配置镜像源: ./configure-docker-mirrors.sh config"
+        echo -e "3. 重新运行本脚本并选择配置镜像源"
         echo -e "4. 手动拉取镜像: docker pull postgres:16"
         echo -e "${CYAN}🚀 将继续构建应用镜像，但不包含PostgreSQL镜像${NC}"
         return 1
@@ -293,6 +357,7 @@ main() {
     echo ""
     
     check_docker
+    configure_docker_mirrors
     check_aliyun_config
     build_image
     

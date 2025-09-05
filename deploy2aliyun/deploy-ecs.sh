@@ -2,6 +2,7 @@
 
 # 阿里云ECS一键部署脚本 - 育婴宝后端服务
 # 适用于2CPU 2G内存的阿里云ECS服务器
+# 集成功能：Docker安装、镜像源配置、PostgreSQL部署、应用部署、防火墙配置
 # 版本: v0.5.0
 
 set -e
@@ -268,12 +269,14 @@ pull_postgres_image() {
             pulled_image="$public_postgres_image"
         else
             echo -e "${RED}❌ 从公共仓库拉取失败: ${public_postgres_image}${NC}"
+        fi
+    fi
     if [[ -z "$pulled_image" ]]; then
         echo -e "${RED}❌ PostgreSQL 16镜像拉取完全失败${NC}"
         echo -e "${YELLOW}💡 解决建议:${NC}"
         echo -e "1. 检查网络连接: ping registry-1.docker.io"
         echo -e "2. 检查Docker镜像源配置: docker info | grep 'Registry Mirrors'"
-        echo -e "3. 手动配置镜像源: ./configure-docker-mirrors.sh config"
+        echo -e "3. 手动配置镜像源或重新运行本脚本"
         echo -e "4. 尝试重新启动Docker: sudo systemctl restart docker"
         return 1
     fi
