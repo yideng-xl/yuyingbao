@@ -219,7 +219,7 @@ login_aliyun_registry() {
 }
 
 # 拉取应用镜像
-pull_image() {
+pull_images() {
     echo -e "${BLUE}📥 拉取应用镜像...${NC}"
     echo -e "${CYAN}镜像: ${DOCKER_IMAGE}${NC}"
     
@@ -287,41 +287,8 @@ pull_postgres_image() {
     echo ""
 }
 
-# 停止并清理所有相关容器
-stop_and_remove_containers() {
-    echo -e "${BLUE}🧹 清理旧容器...${NC}"
-    
-    # 定义要清理的容器
-    local containers=("yuyingbao-server" "yuyingbao-postgres")
-    
-    for container in "${containers[@]}"; do
-        # 检查容器是否存在（运行中或已停止）
-        if docker ps -a --format "table {{.Names}}" | grep -q "^${container}$"; then
-            echo -e "${YELLOW}🔍 发现容器: ${container}${NC}"
-            
-            # 检查容器是否正在运行
-            if docker ps --format "table {{.Names}}" | grep -q "^${container}$"; then
-                echo -e "${BLUE}🛑 停止运行中的容器: ${container}${NC}"
-                docker stop "${container}"
-            else
-                echo -e "${YELLOW}ℹ️  容器已停止: ${container}${NC}"
-            fi
-            
-            # 删除容器
-            echo -e "${BLUE}🗑️  删除容器: ${container}${NC}"
-            docker rm "${container}"
-            echo -e "${GREEN}✅ 容器删除成功: ${container}${NC}"
-        else
-            echo -e "${GREEN}✅ 容器不存在: ${container}${NC}"
-        fi
-    done
-    
-    echo -e "${GREEN}✅ 容器清理完成${NC}"
-    echo ""
-}
-
 # 创建Docker网络和数据目录
-create_network_and_data_dirs() {
+setup_data_directory() {
     echo -e "${BLUE}🌐 创建Docker网络和数据目录...${NC}"
     
     # 创建网络
@@ -363,7 +330,7 @@ create_network_and_data_dirs() {
 }
 
 # 启动PostgreSQL数据库容器
-start_database() {
+deploy_postgres() {
     echo -e "${BLUE}🐘 启动PostgreSQL数据库容器...${NC}"
     
     # 确保环境变量已加载，如果未设置则使用默认值
@@ -464,127 +431,56 @@ start_database() {
     echo ""
 }
 
-# 配置环境变量
-configure_environment() {
-    echo -e "${BLUE}⚙️  配置环境变量...${NC}"
+# 等待PostgreSQL数据库启动
+wait_for_postgres() {
+    echo -e "${BLUE}⏳ 等待PostgreSQL数据库启动...${NC}"
+    echo -e "${CYAN}   这可能需要30-60秒，请耐心等待...${NC}"
     
-    # 设置默认数据库配置
-    local default_db_name="yuyingbao"
-    local default_db_user="yuyingbao"
-    local default_db_password="YuyingBao2024@Database"
+    local db_attempts=0
+    local max_db_attempts=60  # 增加到60次（2分钟）
     
-    # 检查是否存在环境变量文件
-    if [[ ! -f ".env" ]]; then
-        echo -e "${YELLOW}📝 创建环境变量配置文件...${NC}"
-        cat > .env << EOF
-# 数据库配置 (请修改为实际的数据库信息)
-DB_HOST=yuyingbao-postgres
-DB_PORT=5432
-DB_NAME=${default_db_name}
-DB_USERNAME=${default_db_user}
-DB_PASSWORD=${default_db_password}
-
-# JWT配置
-JWT_SECRET=your_jwt_secret_key_32_characters_long
-JWT_EXPIRATION=86400000
-
-# 微信小程序配置
-WECHAT_APP_ID=your_wechat_app_id
-WECHAT_APP_SECRET=your_wechat_app_secret
-
-# 服务配置
-SERVER_PORT=8080
-SPRING_PROFILES_ACTIVE=prod
-
-# 日志配置
-LOGGING_LEVEL_ROOT=INFO
-EOF
-        echo -e "${GREEN}✅ 环境变量文件创建完成: .env${NC}"
-        echo -e "${YELLOW}🔧 请编辑 .env 文件配置实际的数据库和微信信息${NC}"
-        echo -e "${YELLOW}   编辑命令: nano .env 或 vim .env${NC}"
-        echo ""
-        echo -e "${CYAN}按任意键继续，或按Ctrl+C退出编辑环境变量...${NC}"
-        read -n 1 -s
-    else
-        echo -e "${GREEN}✅ 环境变量文件已存在${NC}"
-    fi
-    
-    # 加载环境变量
-    if [[ -f ".env" ]]; then
-        source .env
-        echo -e "${GREEN}✅ 环境变量加载完成${NC}"
-    fi
+    while [ $db_attempts -lt $max_db_attempts ]; do
+        # 首先检查容器是否还在运行
+        if ! docker ps | grep -q "yuyingbao-postgres"; then
+            echo ""
+            echo -e "${RED}❌ PostgreSQL容器已停止运行${NC}"
+            echo -e "${YELLOW}查看容器日志:${NC}"
+            docker logs --tail=20 yuyingbao-postgres
+            return 1
+        fi
+        
+        # 检查数据库是否可以接受连接
+        if docker exec yuyingbao-postgres pg_isready -U ${DB_USERNAME} -d ${DB_NAME} &>/dev/null; then
+            echo ""
+            echo -e "${GREEN}✅ 数据库接受连接，继续检查完整性...${NC}"
+            
+            # 进一步验证数据库是否完全可用
+            if docker exec yuyingbao-postgres psql -U ${DB_USERNAME} -d ${DB_NAME} -c "SELECT 1;" &>/dev/null; then
+                echo -e "${GREEN}✅ 数据库完全可用！${NC}"
+                
+                # 额外等待5秒确保稳定
+                echo -e "${BLUE}⏳ 额外等待5秒确保数据库稳定...${NC}"
+                sleep 5
+                
+                return 0
+            else
+                echo -e "${YELLOW}⚠️  数据库尚未完全准备好，继续等待...${NC}"
+            fi
+        fi
+        
+        echo -n "."
+        sleep 2
+        db_attempts=$((db_attempts + 1))
+    done
     
     echo ""
+    echo -e "${RED}❌ 数据库启动超时${NC}"
+    echo -e "${YELLOW}查看PostgreSQL日志:${NC}"
+    docker logs --tail=30 yuyingbao-postgres
+    return 1
 }
 
-# 网络诊断和修复功能
-diagnose_and_fix_network() {
-    echo -e "${BLUE}🔍 进行网络诊断...${NC}"
-    
-    # 检查网络是否存在
-    if ! docker network ls | grep -q ${NETWORK_NAME}; then
-        echo -e "${RED}❌ 网络不存在，重新创建...${NC}"
-        docker network create ${NETWORK_NAME}
-    fi
-    
-    # 显示网络详细信息
-    echo -e "${CYAN}🌐 网络信息:${NC}"
-    docker network inspect ${NETWORK_NAME} --format='{{.Name}}: {{.Driver}} {{range .IPAM.Config}}{{.Subnet}}{{end}}'
-    
-    # 检查容器网络连接
-    echo -e "${CYAN}🔗 检查容器网络连接:${NC}"
-    
-    # 检查PostgreSQL容器网络
-    if docker ps | grep -q "yuyingbao-postgres"; then
-        local postgres_networks=$(docker inspect yuyingbao-postgres --format='{{range $net, $conf := .NetworkSettings.Networks}}{{$net}} {{end}}')
-        echo -e "  PostgreSQL容器网络: ${postgres_networks}"
-        
-        if echo "$postgres_networks" | grep -q "${NETWORK_NAME}"; then
-            echo -e "  ${GREEN}✅ PostgreSQL已加入正确网络${NC}"
-        else
-            echo -e "  ${RED}❌ PostgreSQL未加入正确网络，正在修复...${NC}"
-            docker network connect ${NETWORK_NAME} yuyingbao-postgres
-            sleep 3
-        fi
-    fi
-    
-    # 检查应用容器网络
-    if docker ps | grep -q "${CONTAINER_NAME}"; then
-        local app_networks=$(docker inspect ${CONTAINER_NAME} --format='{{range $net, $conf := .NetworkSettings.Networks}}{{$net}} {{end}}')
-        echo -e "  应用容器网络: ${app_networks}"
-        
-        if echo "$app_networks" | grep -q "${NETWORK_NAME}"; then
-            echo -e "  ${GREEN}✅ 应用已加入正确网络${NC}"
-        else
-            echo -e "  ${RED}❌ 应用未加入正确网络，正在修复...${NC}"
-            docker network connect ${NETWORK_NAME} ${CONTAINER_NAME}
-            sleep 3
-        fi
-    fi
-    
-    # 检查网络内部连接
-    if docker ps | grep -q "yuyingbao-postgres" && docker ps | grep -q "${CONTAINER_NAME}"; then
-        echo -e "${BLUE}🔎 测试网络内部连接...${NC}"
-        
-        # 从应用容器ping数据库容器
-        if docker exec ${CONTAINER_NAME} ping -c 2 postgres &>/dev/null; then
-            echo -e "  ${GREEN}✅ 应用可以ping通数据库${NC}"
-        else
-            echo -e "  ${RED}❌ 应用无法ping通数据库${NC}"
-        fi
-        
-        # 从应用容器测试数据库端口
-        if docker exec ${CONTAINER_NAME} nc -z postgres 5432 &>/dev/null; then
-            echo -e "  ${GREEN}✅ 应用可以连接数据库端口${NC}"
-        else
-            echo -e "  ${RED}❌ 应用无法连接数据库端口${NC}"
-        fi
-    fi
-    
-    echo ""
-}
-
+# 启动应用容器
 start_application() {
     echo -e "${BLUE}🚀 启动应用容器 (2G内存优化)...${NC}"
     
@@ -716,62 +612,145 @@ wait_for_application() {
     return 1
 }
 
-# 健康检查
-health_check() {
-    echo -e "${BLUE}🏥 执行健康检查...${NC}"
+# 网络诊断和修复功能
+diagnose_and_fix_network() {
+    echo -e "${BLUE}🔍 进行网络诊断...${NC}"
     
-    # 检查容器状态
-    if docker ps | grep -q ${CONTAINER_NAME}; then
-        echo -e "${GREEN}✅ 容器运行正常${NC}"
-    else
-        echo -e "${RED}❌ 容器未运行${NC}"
-        return 1
+    # 检查网络是否存在
+    if ! docker network ls | grep -q ${NETWORK_NAME}; then
+        echo -e "${RED}❌ 网络不存在，重新创建...${NC}"
+        docker network create ${NETWORK_NAME}
     fi
     
-    # 检查应用健康状态
-    if curl -f -s http://localhost:8080/api/actuator/health &>/dev/null; then
-        echo -e "${GREEN}✅ 应用健康检查通过${NC}"
-    else
-        echo -e "${YELLOW}⚠️  应用健康检查失败，可能还在启动中${NC}"
+    # 显示网络详细信息
+    echo -e "${CYAN}🌐 网络信息:${NC}"
+    docker network inspect ${NETWORK_NAME} --format='{{.Name}}: {{.Driver}} {{range .IPAM.Config}}{{.Subnet}}{{end}}'
+    
+    # 检查容器网络连接
+    echo -e "${CYAN}🔗 检查容器网络连接:${NC}"
+    
+    # 检查PostgreSQL容器网络
+    if docker ps | grep -q "yuyingbao-postgres"; then
+        local postgres_networks=$(docker inspect yuyingbao-postgres --format='{{range $net, $conf := .NetworkSettings.Networks}}{{$net}} {{end}}')
+        echo -e "  PostgreSQL容器网络: ${postgres_networks}"
+        
+        if echo "$postgres_networks" | grep -q "${NETWORK_NAME}"; then
+            echo -e "  ${GREEN}✅ PostgreSQL已加入正确网络${NC}"
+        else
+            echo -e "  ${RED}❌ PostgreSQL未加入正确网络，正在修复...${NC}"
+            docker network connect ${NETWORK_NAME} yuyingbao-postgres
+            sleep 3
+        fi
     fi
     
-    # 检查端口
-    if netstat -tuln | grep -q ":8080 "; then
-        echo -e "${GREEN}✅ 端口8080正在监听${NC}"
-    else
-        echo -e "${YELLOW}⚠️  端口8080未监听${NC}"
+    # 检查应用容器网络
+    if docker ps | grep -q "${CONTAINER_NAME}"; then
+        local app_networks=$(docker inspect ${CONTAINER_NAME} --format='{{range $net, $conf := .NetworkSettings.Networks}}{{$net}} {{end}}')
+        echo -e "  应用容器网络: ${app_networks}"
+        
+        if echo "$app_networks" | grep -q "${NETWORK_NAME}"; then
+            echo -e "  ${GREEN}✅ 应用已加入正确网络${NC}"
+        else
+            echo -e "  ${RED}❌ 应用未加入正确网络，正在修复...${NC}"
+            docker network connect ${NETWORK_NAME} ${CONTAINER_NAME}
+            sleep 3
+        fi
+    fi
+    
+    # 检查网络内部连接
+    if docker ps | grep -q "yuyingbao-postgres" && docker ps | grep -q "${CONTAINER_NAME}"; then
+        echo -e "${BLUE}🔎 测试网络内部连接...${NC}"
+        
+        # 从应用容器ping数据库容器
+        if docker exec ${CONTAINER_NAME} ping -c 2 yuyingbao-postgres &>/dev/null; then
+            echo -e "  ${GREEN}✅ 应用可以ping通数据库${NC}"
+        else
+            echo -e "  ${RED}❌ 应用无法ping通数据库${NC}"
+        fi
+        
+        # 从应用容器测试数据库端口
+        if docker exec ${CONTAINER_NAME} nc -z yuyingbao-postgres 5432 &>/dev/null; then
+            echo -e "  ${GREEN}✅ 应用可以连接数据库端口${NC}"
+        else
+            echo -e "  ${RED}❌ 应用无法连接数据库端口${NC}"
+        fi
     fi
     
     echo ""
-}
-
-# 显示部署信息
-show_deployment_info() {
-    local server_ip=$(curl -s ifconfig.me 2>/dev/null || echo "无法获取公网IP")
     
-    echo -e "${GREEN}🎉 部署完成！${NC}"
+    # 增强的诊断功能 - 类似于fix-postgres-connection.sh的功能
+    echo -e "${BLUE}🔍 增强诊断 - 容器状态检查...${NC}"
+    
+    echo -e "${CYAN}应用容器状态:${NC}"
+    if docker ps | grep -q "${CONTAINER_NAME}"; then
+        echo -e "${GREEN}✅ 应用容器正在运行${NC}"
+        docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" | grep "${CONTAINER_NAME}"
+    else
+        echo -e "${RED}❌ 应用容器未运行${NC}"
+        if docker ps -a | grep -q "${CONTAINER_NAME}"; then
+            echo "容器存在但已停止，查看最近日志："
+            docker logs --tail=10 "${CONTAINER_NAME}"
+        fi
+    fi
+    
     echo ""
-    echo -e "${BLUE}📋 服务信息:${NC}"
-    echo -e "${CYAN}应用地址: http://${server_ip}:8080${NC}"
-    echo -e "${CYAN}API地址: http://${server_ip}:8080/api${NC}"
-    echo -e "${CYAN}健康检查: http://${server_ip}:8080/api/actuator/health${NC}"
-    echo -e "${CYAN}容器名称: ${CONTAINER_NAME}${NC}"
-    echo -e "${CYAN}镜像版本: ${DOCKER_IMAGE}${NC}"
+    echo -e "${CYAN}数据库容器状态:${NC}"
+    if docker ps | grep -q "yuyingbao-postgres"; then
+        echo -e "${GREEN}✅ 数据库容器正在运行${NC}"
+        docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" | grep "yuyingbao-postgres"
+    else
+        echo -e "${RED}❌ 数据库容器未运行${NC}"
+        if docker ps -a | grep -q "yuyingbao-postgres"; then
+            echo "容器存在但已停止，查看最近日志："
+            docker logs --tail=10 "yuyingbao-postgres"
+        fi
+    fi
     echo ""
-    echo -e "${BLUE}🔧 管理命令:${NC}"
-    echo -e "查看日志: ${CYAN}docker logs -f ${CONTAINER_NAME}${NC}"
-    echo -e "重启应用: ${CYAN}docker restart ${CONTAINER_NAME}${NC}"
-    echo -e "停止应用: ${CYAN}docker stop ${CONTAINER_NAME}${NC}"
-    echo -e "查看状态: ${CYAN}docker ps${NC}"
-    echo -e "进入容器: ${CYAN}docker exec -it ${CONTAINER_NAME} bash${NC}"
-    echo ""
-    echo -e "${BLUE}📊 资源使用:${NC}"
-    docker stats --no-stream ${CONTAINER_NAME} 2>/dev/null || echo "容器状态获取失败"
-    echo ""
-    echo -e "${YELLOW}📝 重要提醒:${NC}"
-    echo -e "1. 请确保已配置正确的数据库连接信息 (.env文件)"
-    echo -e "2. 请确保防火墙已开放8080端口"
-    echo -e "3. 请定期备份数据和更新镜像"
+    
+    # 检查DNS解析和hosts映射 - 类似于test-hosts-mapping.sh的功能
+    if docker ps | grep -q "yuyingbao-postgres"; then
+        local postgres_ip=$(docker inspect yuyingbao-postgres --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}')
+        echo -e "${CYAN}PostgreSQL容器IP地址: ${postgres_ip}${NC}"
+        
+        if docker ps | grep -q "${CONTAINER_NAME}"; then
+            # 检查应用容器的hosts配置
+            echo -e "${CYAN}检查应用容器的DNS解析:${NC}"
+            docker exec "${CONTAINER_NAME}" cat /etc/hosts | grep -E "(postgres|yuyingbao-postgres)" || echo "未找到postgres相关的hosts映射"
+            
+            # 测试DNS解析 - 使用实际的容器名
+            echo -e "${CYAN}DNS解析测试 (yuyingbao-postgres):${NC}"
+            if docker exec "${CONTAINER_NAME}" nslookup yuyingbao-postgres &>/dev/null; then
+                echo -e "  ${GREEN}✅ 成功${NC}"
+                # 显示解析结果
+                local resolved_ip=$(docker exec "${CONTAINER_NAME}" nslookup yuyingbao-postgres | grep "Address:" | tail -1 | awk '{print $2}')
+                echo "    解析IP: $resolved_ip"
+                if [[ "$resolved_ip" == "$postgres_ip" ]]; then
+                    echo -e "    ${GREEN}✅ IP地址匹配正确${NC}"
+                else
+                    echo -e "    ${YELLOW}⚠️  IP地址不匹配（期望: $postgres_ip，实际: $resolved_ip）${NC}"
+                fi
+            else
+                echo -e "  ${RED}❌ 失败${NC}"
+            fi
+            
+            # 测试ping
+            echo -e "${CYAN}Ping测试:${NC}"
+            if docker exec "${CONTAINER_NAME}" ping -c 2 yuyingbao-postgres &>/dev/null; then
+                echo -e "  ${GREEN}✅ 成功${NC}"
+            else
+                echo -e "  ${RED}❌ 失败${NC}"
+            fi
+            
+            # 测试端口连接
+            echo -e "${CYAN}端口连接测试 (5432):${NC}"
+            if docker exec "${CONTAINER_NAME}" nc -z yuyingbao-postgres 5432 &>/dev/null; then
+                echo -e "  ${GREEN}✅ 成功${NC}"
+            else
+                echo -e "  ${RED}❌ 失败${NC}"
+            fi
+        fi
+    fi
+    
     echo ""
 }
 
@@ -815,53 +794,131 @@ configure_firewall() {
     echo ""
 }
 
-# 主执行流程
-main() {
-    check_root
-    show_system_info
-    check_system_resources
-    install_docker
-    login_aliyun_registry
-    pull_image
-    pull_postgres_image
-    stop_and_remove_containers
-    create_network_and_data_dirs
-    configure_environment
-    start_database
+# 显示部署信息
+show_completion_message() {
+    local server_ip=$(curl -s ifconfig.me 2>/dev/null || echo "无法获取公网IP")
     
-    # 在数据库启动后额外等待10秒确保稳定
-    if [[ $? -eq 0 ]]; then
-        echo -e "${BLUE}⏳ 数据库启动成功，等待15秒后启动应用...${NC}"
-        sleep 15
-        
-        # 进行网络诊断
-        diagnose_and_fix_network
-        
-        start_application
-    else
-        echo -e "${RED}❌ 数据库启动失败，停止部署${NC}"
-        exit 1
-    fi
-    
-    if wait_for_application; then
-        # 部署成功后再次进行网络诊断
-        diagnose_and_fix_network
-        health_check
-        configure_firewall
-        show_deployment_info
-        echo -e "${GREEN}🎊 部署成功完成！${NC}"
-    else
-        echo -e "${RED}❌ 部署失败，请检查日志${NC}"
-        echo -e "${YELLOW}查看日志: docker logs -f ${CONTAINER_NAME}${NC}"
-        exit 1
-    fi
+    echo -e "${GREEN}🎉 部署完成！${NC}"
+    echo ""
+    echo -e "${BLUE}📋 服务信息:${NC}"
+    echo -e "${CYAN}应用地址: http://${server_ip}:8080${NC}"
+    echo -e "${CYAN}API地址: http://${server_ip}:8080/api${NC}"
+    echo -e "${CYAN}健康检查: http://${server_ip}:8080/api/actuator/health${NC}"
+    echo -e "${CYAN}容器名称: ${CONTAINER_NAME}${NC}"
+    echo -e "${CYAN}镜像版本: ${DOCKER_IMAGE}${NC}"
+    echo ""
+    echo -e "${BLUE}🔧 管理命令:${NC}"
+    echo -e "查看日志: ${CYAN}docker logs -f ${CONTAINER_NAME}${NC}"
+    echo -e "重启应用: ${CYAN}docker restart ${CONTAINER_NAME}${NC}"
+    echo -e "停止应用: ${CYAN}docker stop ${CONTAINER_NAME}${NC}"
+    echo -e "查看状态: ${CYAN}docker ps${NC}"
+    echo -e "进入容器: ${CYAN}docker exec -it ${CONTAINER_NAME} bash${NC}"
+    echo ""
+    echo -e "${BLUE}📊 资源使用:${NC}"
+    docker stats --no-stream ${CONTAINER_NAME} 2>/dev/null || echo "容器状态获取失败"
+    echo ""
+    echo -e "${YELLOW}📝 重要提醒:${NC}"
+    echo -e "1. 请确保已配置正确的数据库连接信息 (.env文件)"
+    echo -e "2. 请确保防火墙已开放8080端口"
+    echo -e "3. 请定期备份数据和更新镜像"
+    echo ""
 }
 
-# 清理函数
-cleanup() {
-    echo -e "${BLUE}🧹 清理旧镜像...${NC}"
-    docker image prune -f
-    echo -e "${GREEN}✅ 清理完成${NC}"
+# 容器清理功能
+cleanup_containers() {
+    echo -e "${BLUE}🧹 清理容器...${NC}"
+    
+    # 停止并删除应用容器
+    if docker ps -a --format "table {{.Names}}" | grep -q "^${CONTAINER_NAME}$"; then
+        echo -e "  停止并删除应用容器..."
+        docker stop ${CONTAINER_NAME} 2>/dev/null || true
+        docker rm ${CONTAINER_NAME} 2>/dev/null || true
+    fi
+    
+    # 停止并删除PostgreSQL容器
+    if docker ps -a --format "table {{.Names}}" | grep -q "^yuyingbao-postgres$"; then
+        echo -e "  停止并删除PostgreSQL容器..."
+        docker stop yuyingbao-postgres 2>/dev/null || true
+        docker rm yuyingbao-postgres 2>/dev/null || true
+    fi
+    
+    echo -e "${GREEN}✅ 容器清理完成${NC}"
+    echo ""
+    
+    # 增强的清理功能 - 类似于test-container-cleanup.sh的功能
+    echo -e "${BLUE}🔍 模拟容器清理过程...${NC}"
+    echo ""
+    
+    local containers=("yuyingbao-server" "yuyingbao-postgres")
+    
+    for container in "${containers[@]}"; do
+        echo -e "${YELLOW}📋 检查容器: ${container}${NC}"
+        
+        if docker ps -a --format "table {{.Names}}" | grep -q "^${container}$"; then
+            if docker ps --format "table {{.Names}}" | grep -q "^${container}$"; then
+                echo -e "  ➜ 需要停止并删除运行中的容器"
+            else
+                echo -e "  ➜ 需要删除已停止的容器"
+            fi
+        else
+            echo -e "  ➜ 容器不存在，无需清理"
+        fi
+        echo ""
+    done
+}
+
+# 数据目录检查功能
+check_data_directory() {
+    echo -e "${BLUE}📁 检查数据目录...${NC}"
+    
+    if [[ -d "./postgres_data" ]]; then
+        local size=$(du -sh "./postgres_data" 2>/dev/null | cut -f1 || echo "无法计算")
+        local owner=$(stat -c "%U:%G" "./postgres_data" 2>/dev/null || stat -f "%Su:%Sg" "./postgres_data" 2>/dev/null || echo "未知")
+        local perms=$(stat -c "%a" "./postgres_data" 2>/dev/null || stat -f "%A" "./postgres_data" 2>/dev/null || echo "未知")
+        
+        echo -e "${GREEN}✅ 数据目录存在${NC}"
+        echo -e "  路径: $(pwd)/postgres_data"
+        echo -e "  大小: ${size}"
+        echo -e "  权限: ${owner} (${perms})"
+        
+        # 检查权限是否正确
+        if [[ "$owner" == "999:999" ]] || [[ "$owner" == "postgres:postgres" ]]; then
+            echo -e "  ${GREEN}✅ 权限配置正确${NC}"
+        else
+            echo -e "  ${YELLOW}⚠️  权限可能需要调整${NC}"
+            echo -e "  ${YELLOW}建议执行: sudo chown 999:999 ./postgres_data${NC}"
+        fi
+    else
+        echo -e "${YELLOW}⚠️  数据目录不存在: ./postgres_data${NC}"
+        echo -e "  ${BLUE}部署时将自动创建${NC}"
+    fi
+    echo ""
+    
+    # 增强的数据目录检查功能 - 类似于test-container-cleanup.sh中的检查
+    echo -e "${BLUE}🔍 详细数据目录检查...${NC}"
+    
+    if [[ -d "./postgres_data" ]]; then
+        local size=$(du -sh "./postgres_data" 2>/dev/null | cut -f1 || echo "无法计算")
+        local owner=$(stat -c "%U:%G" "./postgres_data" 2>/dev/null || stat -f "%Su:%Sg" "./postgres_data" 2>/dev/null || echo "未知")
+        local perms=$(stat -c "%a" "./postgres_data" 2>/dev/null || stat -f "%A" "./postgres_data" 2>/dev/null || echo "未知")
+        
+        echo -e "${GREEN}✅ 数据目录存在${NC}"
+        echo -e "  路径: $(pwd)/postgres_data"
+        echo -e "  大小: ${size}"
+        echo -e "  权限: ${owner} (${perms})"
+        
+        # 检查权限是否正确
+        if [[ "$owner" == "999:999" ]] || [[ "$owner" == "postgres:postgres" ]]; then
+            echo -e "  ${GREEN}✅ 权限配置正确${NC}"
+        else
+            echo -e "  ${YELLOW}⚠️  权限可能需要调整${NC}"
+            echo -e "  ${YELLOW}建议执行: sudo chown 999:999 ./postgres_data${NC}"
+        fi
+    else
+        echo -e "${YELLOW}⚠️  数据目录不存在: ./postgres_data${NC}"
+        echo -e "  ${BLUE}部署时将自动创建${NC}"
+    fi
+    echo ""
 }
 
 # 显示帮助信息
@@ -872,106 +929,67 @@ show_help() {
     echo ""
     echo "选项:"
     echo "  deploy    执行完整部署 (默认)"
-    echo "  cleanup   清理旧镜像"
-    echo "  logs      查看应用日志"
+    echo "  stop      停止应用容器"
+    echo "  stop-all  停止所有容器（包括数据库）"
     echo "  status    查看部署状态"
-    echo "  restart   重启应用"
-    echo "  stop      停止应用"
-    echo "  stop-all  停止所有服务（包括数据库）"
     echo "  reset-data 彻底清理所有数据（危险操作）"
-    echo "  diagnose  网络诊断和修复"
+    echo "  diagnose  网络诊断和修复（整合了网络连接问题诊断和hosts映射测试）"
+    echo "  cleanup   清理旧镜像和容器（整合了容器清理功能）"
+    echo "  check-data 检查数据目录（整合了数据目录检查功能）"
     echo "  help      显示此帮助信息"
     echo ""
     echo "示例:"
     echo "  $0 deploy     # 执行完整部署"
-    echo "  $0 logs       # 查看应用日志"
+    echo "  $0 stop       # 停止应用容器"
     echo "  $0 status     # 查看部署状态"
-    echo "  $0 diagnose   # 网络问题诊断"
+    echo "  $0 diagnose   # 网络问题诊断（包含增强的网络诊断和DNS解析测试）"
+    echo "  $0 cleanup    # 清理容器（包含详细的容器状态检查）"
+    echo "  $0 check-data # 检查数据目录（包含详细的权限和大小检查）"
     echo ""
 }
 
 # 命令行参数处理
-case "${1:-deploy}" in
+case "${1:-}" in
     "deploy")
-        main
-        ;;
-    "cleanup")
-        cleanup
-        ;;
-    "logs")
-        docker logs -f ${CONTAINER_NAME}
-        ;;
-    "status")
-        echo -e "${BLUE}📊 部署状态:${NC}"
-        echo -e "${CYAN}应用容器:${NC}"
-        docker ps -f name=${CONTAINER_NAME}
-        echo ""
-        echo -e "${CYAN}数据库容器:${NC}"
-        docker ps -f name=yuyingbao-postgres
-        echo ""
-        echo -e "${CYAN}资源使用:${NC}"
-        docker stats --no-stream ${CONTAINER_NAME} yuyingbao-postgres 2>/dev/null || echo "容器未运行"
-        echo ""
-        echo -e "${CYAN}数据存储信息:${NC}"
-        if [[ -d "./postgres_data" ]]; then
-            local data_size=$(du -sh "./postgres_data" 2>/dev/null | cut -f1)
-            echo -e "数据目录: $(pwd)/postgres_data (大小: ${data_size})"
-            echo -e "数据状态: ✅ 持久化存储已配置"
-        else
-            echo -e "数据目录: 未创建"
-        fi
-        ;;
-    "restart")
-        echo -e "${BLUE}🔄 重启应用...${NC}"
-        docker restart ${CONTAINER_NAME}
-        echo -e "${GREEN}✅ 应用已重启${NC}"
+        check_root
+        show_system_info
+        check_system_resources
+        install_docker
+        login_aliyun_registry
+        pull_images
+        setup_data_directory
+        deploy_postgres
+        wait_for_postgres
+        start_application
+        wait_for_application
+        configure_firewall
+        show_completion_message
         ;;
     "stop")
-        echo -e "${BLUE}🛑 停止应用...${NC}"
-        docker stop ${CONTAINER_NAME}
-        echo -e "${GREEN}✅ 应用已停止${NC}"
+        echo -e "${BLUE}⏹️  停止应用容器...${NC}"
+        docker stop ${CONTAINER_NAME} 2>/dev/null || echo -e "${YELLOW}应用容器未运行${NC}"
         ;;
     "stop-all")
-        echo -e "${BLUE}🛑 停止所有服务...${NC}"
-        docker stop ${CONTAINER_NAME} yuyingbao-postgres
-        echo -e "${GREEN}✅ 所有服务已停止${NC}"
+        echo -e "${BLUE}⏹️  停止所有容器...${NC}"
+        docker stop ${CONTAINER_NAME} yuyingbao-postgres 2>/dev/null || echo -e "${YELLOW}部分容器未运行${NC}"
+        ;;
+    "status")
+        echo -e "${BLUE}📊 容器状态:${NC}"
+        docker ps -a --filter "name=yuyingbao"
+        echo ""
+        check_data_directory
         ;;
     "reset-data")
-        echo -e "${RED}⚠️  危险操作：彻底清理所有数据${NC}"
-        echo -e "${YELLOW}该操作将删除：${NC}"
-        echo -e "  - 所有容器（应用和数据库）"
-        echo -e "  - 所有数据文件（./postgres_data目录）"
-        echo -e "  - Docker网络和卷"
-        echo ""
-        echo -e "${RED}请确认您要继续：输入 'DELETE_ALL' 继续${NC}"
+        echo -e "${RED}🔥 警告: 此操作将删除所有数据!${NC}"
+        echo -e "${YELLOW}是否继续？(y/N)${NC}"
         read -r confirm
-        if [[ "$confirm" == "DELETE_ALL" ]]; then
-            echo -e "${BLUE}🔥 开始清理所有数据...${NC}"
-            
-            # 停止并删除所有容器
-            echo "1. 停止并删除容器..."
-            docker stop ${CONTAINER_NAME} yuyingbao-postgres 2>/dev/null || true
-            docker rm ${CONTAINER_NAME} yuyingbao-postgres 2>/dev/null || true
-            
-            # 删除网络
-            echo "2. 删除Docker网络..."
-            docker network rm ${NETWORK_NAME} 2>/dev/null || true
-            
-            # 删除数据目录
-            echo "3. 删除本地数据目录..."
+        if [[ "$confirm" =~ ^[Yy]$ ]]; then
+            cleanup_containers
+            echo -e "${BLUE}🗑️  删除本地数据目录...${NC}"
             if [[ -d "./postgres_data" ]]; then
                 sudo rm -rf "./postgres_data"
-                echo "✅ 数据目录已删除"
+                echo -e "${GREEN}✅ 数据目录已删除${NC}"
             fi
-            
-            # 清理Docker卷（如果存在）
-            echo "4. 清理Docker卷..."
-            docker volume rm postgres_data 2>/dev/null || true
-            
-            # 清理环境变量文件
-            echo "5. 清理环境变量文件..."
-            rm -f .env
-            
             echo -e "${GREEN}✅ 所有数据清理完成！${NC}"
             echo -e "${YELLOW}下次部署将是全新环境${NC}"
         else
@@ -992,6 +1010,12 @@ case "${1:-deploy}" in
         echo ""
         echo -e "${CYAN}网络详情:${NC}"
         docker network inspect ${NETWORK_NAME} 2>/dev/null || echo "网络不存在"
+        ;;
+    "cleanup")
+        cleanup_containers
+        ;;
+    "check-data")
+        check_data_directory
         ;;
     "help"|"-h"|"--help")
         show_help

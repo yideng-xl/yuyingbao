@@ -57,8 +57,10 @@ sudo ./setup-nginx-https.sh
 sudo apt update
 sudo apt install nginx certbot python3-certbot-nginx
 
-# CentOS/RHEL
-sudo yum install nginx certbot python3-certbot-nginx
+# CentOS/RHEL/阿里云Linux
+sudo yum install nginx
+# 如果遇到EPEL包冲突问题，脚本会自动处理
+sudo ./setup-nginx-https.sh
 ```
 
 ### 2. 配置Nginx
@@ -121,6 +123,13 @@ sudo tail -f /var/log/nginx/error.log
 sudo certbot certificates
 sudo certbot renew --dry-run
 ```
+
+### 5. 阿里云ECS特定问题
+
+如果在阿里云ECS上遇到Certbot安装问题（EPEL包冲突），主脚本会自动处理：
+- 检测并解决EPEL包冲突问题
+- 自动更新系统包
+- 安装Certbot及其Nginx插件
 
 ## 自动续期
 

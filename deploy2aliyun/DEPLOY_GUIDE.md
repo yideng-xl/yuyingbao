@@ -478,9 +478,17 @@ sudo nginx -t && sudo systemctl reload nginx
 
 1. 确保域名已正确解析到您的阿里云ECS服务器IP
 2. 确保服务器80和443端口已开放
-3. 运行HTTPS配置脚本：
+3. 上传HTTPS配置文件：
+   ```bash
+   # 上传以下文件到服务器
+   nginx-https.conf
+   setup-nginx-https.sh
+   ```
+4. 运行HTTPS配置脚本：
    ```bash
    chmod +x setup-nginx-https.sh
+   
+   # 运行主配置脚本（会自动处理阿里云ECS特定问题）
    sudo ./setup-nginx-https.sh
    ```
 

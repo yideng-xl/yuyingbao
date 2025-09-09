@@ -22,6 +22,7 @@ echo -e "${BLUE}======================================${NC}"
 echo -e "${BLUE}    阿里云ECS Nginx HTTPS配置脚本${NC}"
 echo -e "${BLUE}    育婴宝后端服务${NC}"
 echo -e "${BLUE}======================================${NC}"
+echo ""
 
 # 检查是否为root用户
 check_root() {
@@ -85,9 +86,59 @@ install_certbot() {
     fi
     
     if [[ $OS == "centos" ]]; then
-        # CentOS安装Certbot
-        yum install -y epel-release
-        yum install -y certbot python3-certbot-nginx
+        # CentOS安装Certbot - 处理阿里云ECS特定问题
+        echo -e "${YELLOW}检测到CentOS系统，处理阿里云ECS环境...${NC}"
+        
+        # 修复阿里云ECS上的EPEL包冲突问题
+        fix_epel_conflict() {
+            echo -e "${BLUE}🔍 检查并修复EPEL包冲突...${NC}"
+            
+            # 检查是否存在冲突的包
+            if rpm -q epel-aliyuncs-release &> /dev/null && rpm -q epel-release &> /dev/null; then
+                echo -e "${YELLOW}检测到EPEL包冲突，正在解决...${NC}"
+                
+                # 移除官方epel-release包，保留阿里云的
+                yum remove -y epel-release
+                echo -e "${GREEN}✅ 已移除官方epel-release包${NC}"
+            elif rpm -q epel-aliyuncs-release &> /dev/null; then
+                echo -e "${GREEN}✅ 检测到阿里云EPEL镜像包，无需处理${NC}"
+            else
+                echo -e "${YELLOW}未检测到阿里云EPEL包，安装官方EPEL包...${NC}"
+                yum install -y epel-release
+            fi
+        }
+        
+        # 执行EPEL冲突修复
+        fix_epel_conflict
+        
+        # 尝试直接安装
+        if yum install -y certbot python3-certbot-nginx; then
+            echo -e "${GREEN}✅ Certbot安装成功${NC}"
+        else
+            # 如果失败，尝试使用--allowerasing参数
+            echo -e "${YELLOW}尝试使用--allowerasing参数...${NC}"
+            if yum install -y --allowerasing certbot python3-certbot-nginx; then
+                echo -e "${GREEN}✅ Certbot安装成功${NC}"
+            else
+                # 如果还是失败，尝试其他方法
+                echo -e "${YELLOW}尝试其他安装方法...${NC}"
+                
+                # 确保EPEL源已启用
+                if command -v yum-config-manager &> /dev/null; then
+                    yum-config-manager --enable epel
+                fi
+                
+                # 再次尝试安装
+                if yum install -y certbot python3-certbot-nginx; then
+                    echo -e "${GREEN}✅ Certbot安装成功${NC}"
+                else
+                    echo -e "${RED}❌ Certbot安装失败${NC}"
+                    echo -e "${YELLOW}请手动安装Certbot:${NC}"
+                    echo -e "${YELLOW}参考: https://certbot.eff.org/instructions${NC}"
+                    exit 1
+                fi
+            fi
+        fi
     else
         # Ubuntu安装Certbot
         apt install -y software-properties-common
@@ -96,7 +147,16 @@ install_certbot() {
         apt install -y certbot python3-certbot-nginx
     fi
     
-    echo -e "${GREEN}✅ Certbot安装完成${NC}"
+    # 最后的验证
+    if command -v certbot &> /dev/null; then
+        echo -e "${GREEN}✅ Certbot安装完成${NC}"
+        certbot --version
+    else
+        echo -e "${RED}❌ Certbot安装失败${NC}"
+        echo -e "${YELLOW}请手动安装Certbot:${NC}"
+        echo -e "${YELLOW}参考: https://certbot.eff.org/instructions${NC}"
+        exit 1
+    fi
 }
 
 # 配置防火墙
