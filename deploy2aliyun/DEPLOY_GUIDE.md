@@ -454,7 +454,7 @@ sudo apt install nginx
 sudo tee /etc/nginx/sites-available/yuyingbao << 'EOF'
 server {
     listen 80;
-    server_name your-domain.com;
+    server_name yuyingbao.yideng.ltd;
     
     location / {
         proxy_pass http://localhost:8080;
@@ -468,6 +468,40 @@ EOF
 
 sudo ln -s /etc/nginx/sites-available/yuyingbao /etc/nginx/sites-enabled/
 sudo nginx -t && sudo systemctl reload nginx
+```
+
+## 8. 配置HTTPS (可选但推荐)
+
+为了提高安全性，建议为您的服务配置HTTPS。我们提供了自动化脚本来配置Let's Encrypt免费SSL证书。
+
+### 8.1 使用自动化脚本配置HTTPS
+
+1. 确保域名已正确解析到您的阿里云ECS服务器IP
+2. 确保服务器80和443端口已开放
+3. 运行HTTPS配置脚本：
+   ```bash
+   chmod +x setup-nginx-https.sh
+   sudo ./setup-nginx-https.sh
+   ```
+
+### 8.2 手动配置HTTPS
+
+如果您需要手动配置，请参考 [HTTPS_SETUP.md](HTTPS_SETUP.md) 文件。
+
+## 9. 验证部署
+
+部署完成后，您可以通过以下方式验证服务：
+
+```
+# 检查服务状态
+curl http://localhost:8080/api/actuator/health
+
+# 检查容器状态
+docker ps
+docker stats yuyingbao-server yuyingbao-postgres
+
+# 检查数据库连接
+docker exec yuyingbao-postgres pg_isready -U yuyingbao -d yuyingbao
 ```
 
 ## 📋 部署检查清单

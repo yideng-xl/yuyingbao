@@ -14,6 +14,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.util.Map;
 
 /**
  * 测试基础类
@@ -53,7 +54,7 @@ public abstract class BaseIntegrationTest {
         testUser = userRepository.save(testUser);
 
         // 生成测试token
-        testToken = jwtService.generateToken(testUser.getId());
+        testToken = jwtService.generateToken(testUser.getId(), Map.of());
     }
 
     /**

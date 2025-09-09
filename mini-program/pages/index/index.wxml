@@ -127,7 +127,7 @@
       <!-- 母乳亲喂 -->
       <view wx:if="{{recordType === 'breastfeeding'}}">
         <view class="form-item">
-          <text class="form-label">开始时间</text>
+          <text class="form-label">喂养时间</text>
           <picker mode="time" value="{{recordData.startTime}}" bindchange="onTimeChange">
             <view class="picker">{{recordData.startTime || '请选择时间'}}</view>
           </picker>
@@ -154,7 +154,7 @@
       <!-- 瓶喂 -->
       <view wx:if="{{recordType === 'bottle'}}">
         <view class="form-item">
-          <text class="form-label">开始时间</text>
+          <text class="form-label">喂养时间</text>
           <picker mode="time" value="{{recordData.startTime}}" bindchange="onTimeChange">
             <view class="picker">{{recordData.startTime || '请选择时间'}}</view>
           </picker>
@@ -169,7 +169,7 @@
       <!-- 配方奶 -->
       <view wx:if="{{recordType === 'formula'}}">
         <view class="form-item">
-          <text class="form-label">开始时间</text>
+          <text class="form-label">喂养时间</text>
           <picker mode="time" value="{{recordData.startTime}}" bindchange="onTimeChange">
             <view class="picker">{{recordData.startTime || '请选择时间'}}</view>
           </picker>
@@ -184,7 +184,7 @@
       <!-- 辅食 -->
       <view wx:if="{{recordType === 'solid'}}">
         <view class="form-item">
-          <text class="form-label">开始时间</text>
+          <text class="form-label">喂养时间</text>
           <picker mode="time" value="{{recordData.startTime}}" bindchange="onTimeChange">
             <view class="picker">{{recordData.startTime || '请选择时间'}}</view>
           </picker>

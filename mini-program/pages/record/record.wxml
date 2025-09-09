@@ -86,9 +86,9 @@
     
     <view class="modal-body">
       <!-- 根据记录类型显示不同的编辑表单 -->
-      <view wx:if="{{editingRecord.type === 'breastfeeding'}}">
+      <view wx:if="{{editingRecord.type === 'BREASTFEEDING'}}">
         <view class="form-item">
-          <text class="form-label">开始时间</text>
+          <text class="form-label">喂养时间</text>
           <picker mode="time" value="{{editingRecord.startTime}}" bindchange="onEditTimeChange">
             <view class="picker">{{editingRecord.startTime}}</view>
           </picker>
@@ -112,9 +112,9 @@
         </view>
       </view>
       
-      <view wx:if="{{editingRecord.type === 'bottle' || editingRecord.type === 'formula'}}">
+      <view wx:if="{{editingRecord.type === 'BOTTLE' || editingRecord.type === 'FORMULA'}}">
         <view class="form-item">
-          <text class="form-label">开始时间</text>
+          <text class="form-label">喂养时间</text>
           <picker mode="time" value="{{editingRecord.startTime}}" bindchange="onEditTimeChange">
             <view class="picker">{{editingRecord.startTime}}</view>
           </picker>
@@ -126,9 +126,9 @@
         </view>
       </view>
       
-      <view wx:if="{{editingRecord.type === 'solid'}}">
+      <view wx:if="{{editingRecord.type === 'SOLID'}}">
         <view class="form-item">
-          <text class="form-label">开始时间</text>
+          <text class="form-label">喂养时间</text>
           <picker mode="time" value="{{editingRecord.startTime}}" bindchange="onEditTimeChange">
             <view class="picker">{{editingRecord.startTime}}</view>
           </picker>
@@ -147,7 +147,7 @@
         </view>
       </view>
       
-      <view wx:if="{{editingRecord.type === 'diaper'}}">
+      <view wx:if="{{editingRecord.type === 'DIAPER'}}">
         <view class="form-item">
           <text class="form-label">时间</text>
           <picker mode="time" value="{{editingRecord.startTime}}" bindchange="onEditTimeChange">
@@ -175,7 +175,7 @@
         </view>
       </view>
       
-      <view wx:if="{{editingRecord.type === 'growth'}}">
+      <view wx:if="{{editingRecord.type === 'GROWTH'}}">
         <view class="form-item">
           <text class="form-label">日期</text>
           <picker mode="date" value="{{editingRecord.date}}" bindchange="onEditDateChange">

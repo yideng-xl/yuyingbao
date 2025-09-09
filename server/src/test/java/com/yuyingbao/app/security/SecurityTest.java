@@ -129,7 +129,7 @@ class SecurityTest extends BaseIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(toJson(request)))
                 .andDo(print())
-                .andExpected(status().isUnauthorized());
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -143,7 +143,7 @@ class SecurityTest extends BaseIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(toJson(request)))
                 .andDo(print())
-                .andExpected(status().isUnauthorized());
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -159,7 +159,7 @@ class SecurityTest extends BaseIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(toJson(request)))
                 .andDo(print())
-                .andExpected(status().isUnauthorized());
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -182,7 +182,7 @@ class SecurityTest extends BaseIntegrationTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(toJson(request)))
                     .andDo(print())
-                    .andExpected(status().isUnauthorized());
+                    .andExpect(status().isUnauthorized());
         }
     }
 
@@ -194,7 +194,7 @@ class SecurityTest extends BaseIntegrationTest {
         mockMvc.perform(get("/families/{familyId}/babies", otherFamily.getId())
                         .header("Authorization", getAuthHeader()))
                 .andDo(print())
-                .andExpected(status().isForbidden());
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -210,7 +210,7 @@ class SecurityTest extends BaseIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(toJson(request)))
                 .andDo(print())
-                .andExpected(status().isForbidden());
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -219,7 +219,7 @@ class SecurityTest extends BaseIntegrationTest {
         mockMvc.perform(get("/families/{familyId}/members", otherFamily.getId())
                         .header("Authorization", getAuthHeader()))
                 .andDo(print())
-                .andExpected(status().isForbidden());
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -236,7 +236,7 @@ class SecurityTest extends BaseIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(toJson(request)))
                 .andDo(print())
-                .andExpected(status().isForbidden());
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -245,7 +245,7 @@ class SecurityTest extends BaseIntegrationTest {
         mockMvc.perform(get("/families/{familyId}/records", otherFamily.getId())
                         .header("Authorization", getAuthHeader()))
                 .andDo(print())
-                .andExpected(status().isForbidden());
+                .andExpect(status().isForbidden());
     }
 
     // =========================== 跨用户权限测试 ===========================
@@ -257,13 +257,13 @@ class SecurityTest extends BaseIntegrationTest {
         mockMvc.perform(get("/families/{familyId}/babies", testFamily.getId())
                         .header("Authorization", "Bearer " + anotherUserToken))
                 .andDo(print())
-                .andExpected(status().isForbidden());
+                .andExpect(status().isForbidden());
 
         // 另一个用户尝试访问我的家庭记录
         mockMvc.perform(get("/families/{familyId}/records", testFamily.getId())
                         .header("Authorization", "Bearer " + anotherUserToken))
                 .andDo(print())
-                .andExpected(status().isForbidden());
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -273,25 +273,25 @@ class SecurityTest extends BaseIntegrationTest {
         mockMvc.perform(get("/families/{familyId}/babies", testFamily.getId())
                         .header("Authorization", getAuthHeader()))
                 .andDo(print())
-                .andExpected(status().isOk());
+                .andExpect(status().isOk());
 
         // 当前用户访问其他家庭 - 应该失败
         mockMvc.perform(get("/families/{familyId}/babies", otherFamily.getId())
                         .header("Authorization", getAuthHeader()))
                 .andDo(print())
-                .andExpected(status().isForbidden());
+                .andExpect(status().isForbidden());
 
         // 另一个用户访问自己的家庭 - 应该成功
         mockMvc.perform(get("/families/{familyId}/babies", otherFamily.getId())
                         .header("Authorization", "Bearer " + anotherUserToken))
                 .andDo(print())
-                .andExpected(status().isOk());
+                .andExpect(status().isOk());
 
         // 另一个用户访问其他家庭 - 应该失败
         mockMvc.perform(get("/families/{familyId}/babies", testFamily.getId())
                         .header("Authorization", "Bearer " + anotherUserToken))
                 .andDo(print())
-                .andExpected(status().isForbidden());
+                .andExpect(status().isForbidden());
     }
 
     // =========================== 数据隔离测试 ===========================
@@ -311,19 +311,19 @@ class SecurityTest extends BaseIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(toJson(myRecord)))
                 .andDo(print())
-                .andExpected(status().isOk());
+                .andExpect(status().isOk());
 
         // 查询自己家庭的记录 - 应该能看到
         mockMvc.perform(get("/families/{familyId}/records", testFamily.getId())
                         .header("Authorization", getAuthHeader()))
                 .andDo(print())
-                .andExpected(status().isOk());
+                .andExpect(status().isOk());
 
         // 尝试查询其他家庭的记录 - 应该被拒绝
         mockMvc.perform(get("/families/{familyId}/records", otherFamily.getId())
                         .header("Authorization", getAuthHeader()))
                 .andDo(print())
-                .andExpected(status().isForbidden());
+                .andExpect(status().isForbidden());
     }
 
     // =========================== 特殊情况测试 ===========================
@@ -335,7 +335,7 @@ class SecurityTest extends BaseIntegrationTest {
         mockMvc.perform(get("/families/{familyId}/babies", 99999L)
                         .header("Authorization", getAuthHeader()))
                 .andDo(print())
-                .andExpected(status().isNotFound());
+                .andExpect(status().isNotFound());
     }
 
     @Test
@@ -347,6 +347,6 @@ class SecurityTest extends BaseIntegrationTest {
         mockMvc.perform(get("/families/{familyId}/babies", maliciousId)
                         .header("Authorization", getAuthHeader()))
                 .andDo(print())
-                .andExpected(status().isBadRequest()); // 应该返回400而不是500
+                .andExpect(status().isBadRequest()); // 应该返回400而不是500
     }
 }

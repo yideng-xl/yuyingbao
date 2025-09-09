@@ -162,12 +162,13 @@ Page({
       return;
     }
 
-    // 获取今天的开始和结束时间
+    // 获取今天的开始和结束时间（使用本地时区）
     const today = new Date();
     const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
     const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
 
     // 转换为ISO格式，确保包含时区信息
+    // 后端API期望ISO格式的时间，所以我们需要使用toISOString()
     const startISO = startOfDay.toISOString();
     const endISO = endOfDay.toISOString();
 
@@ -180,7 +181,16 @@ Page({
       const feedingRecords = records.filter(r => ['BREASTFEEDING', 'BOTTLE', 'FORMULA', 'SOLID'].includes(r.type));
       const diaperRecords = records.filter(r => r.type === 'DIAPER');
       
-      const feedingTotal = feedingRecords.reduce((sum, r) => sum + (r.amountMl || 0), 0);
+      // 计算喂养总量，包括母乳亲喂（按10ml/分钟估算）和其它喂养类型
+      const feedingTotal = feedingRecords.reduce((sum, r) => {
+        if (r.type === 'BREASTFEEDING') {
+          // 母乳亲喂按10ml/分钟估算
+          return sum + (r.durationMin || 0) * 10;
+        } else {
+          // 其它喂养类型直接使用amountMl
+          return sum + (r.amountMl || 0);
+        }
+      }, 0);
       
       this.setData({
         todayStats: {
@@ -478,9 +488,31 @@ Page({
     };
 
     const payload = { type: typeMap[recordType] };
-    // happenedAt 使用当前时间或由前端表单组合
-    const nowIso = new Date().toISOString();
-    payload.happenedAt = nowIso;
+    
+    // 使用用户选择的时间而不是当前系统时间
+    // 对于成长记录，使用选择的日期；对于其他记录，使用选择的日期和时间组合
+    if (recordType === 'growth') {
+      // 成长记录使用选择的日期
+      if (recordData.date) {
+        // 使用ISO格式时间以匹配后端期望的格式
+        payload.happenedAt = new Date(recordData.date).toISOString();
+      } else {
+        // 使用ISO格式时间以匹配后端期望的格式
+        payload.happenedAt = new Date().toISOString();
+      }
+    } else {
+      // 其他记录使用今天日期加上选择的时间
+      if (recordData.startTime) {
+        const today = new Date();
+        const [hours, minutes] = recordData.startTime.split(':');
+        today.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+        // 使用ISO格式时间以匹配后端期望的格式
+        payload.happenedAt = today.toISOString();
+      } else {
+        // 使用ISO格式时间以匹配后端期望的格式
+        payload.happenedAt = new Date().toISOString();
+      }
+    }
 
     if (recordType === 'breastfeeding') {
       payload.durationMin = Number(recordData.duration) || undefined;
@@ -500,8 +532,6 @@ Page({
     } else if (recordType === 'growth') {
       payload.heightCm = Number(recordData.height) || undefined;
       payload.weightKg = Number(recordData.weight) || undefined;
-      payload.happenedAt = new Date(`${recordData.date || nowIso}`).toISOString();
-      console.log('Growth record payload:', payload);
     }
 
     // 需要 babyId，若暂无选择，默认取全局 babyInfo.id（前端目前未从后端加载宝宝列表，先尝试本地）
@@ -595,5 +625,11 @@ Page({
     const hours = String(date.getHours()).padStart(2, '0');
     const minutes = String(date.getMinutes()).padStart(2, '0');
     return `${hours}:${minutes}`;
-  }
+  },
+
+  // 添加本地时间转ISO字符串的辅助函数
+  toLocalISOString(date) {
+    const pad = (n) => n.toString().padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+  },
 });

@@ -258,6 +258,8 @@ Page({
         const solidTypeName = solidTypeMap[record.solidType] || record.solidType || '其他';
         record.solidTypeIndex = this.data.solidTypes.indexOf(solidTypeName);
         record.solidType = solidTypeName;
+        // 辅食记录的note字段包含喂食量信息
+        record.solidAmount = record.note || '';
       } else if (record.type === 'DIAPER') {
         const textureMap = { 'WATERY': '稀', 'SOFT': '软', 'NORMAL': '成形', 'HARD': '干硬' };
         const colorMap = { 'YELLOW': '黄', 'GREEN': '绿', 'BROWN': '棕', 'BLACK': '黑', 'RED': '红', 'WHITE': '白' };
@@ -397,16 +399,39 @@ Page({
 
     // 构建更新请求数据
     const payload = {
-      type: editingRecord.type,
-      happenedAt: new Date().toISOString() // 使用当前时间或从表单获取
+      type: editingRecord.type
     };
 
-    // 根据记录类型设置字段
+    // 根据记录类型设置字段和时间
     if (editingRecord.type === 'BREASTFEEDING') {
       payload.durationMin = Number(editingRecord.duration) || undefined;
       payload.breastfeedingSide = editingRecord.breast === 'left' ? 'LEFT' : 'RIGHT';
+      
+      // 使用选择的时间
+      if (editingRecord.startTime) {
+        const today = new Date();
+        const [hours, minutes] = editingRecord.startTime.split(':');
+        today.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+        // 使用ISO格式时间以匹配后端期望的格式
+        payload.happenedAt = today.toISOString();
+      } else {
+        // 使用ISO格式时间以匹配后端期望的格式
+        payload.happenedAt = new Date().toISOString();
+      }
     } else if (editingRecord.type === 'BOTTLE' || editingRecord.type === 'FORMULA') {
       payload.amountMl = Number(editingRecord.amount) || undefined;
+      
+      // 使用选择的时间
+      if (editingRecord.startTime) {
+        const today = new Date();
+        const [hours, minutes] = editingRecord.startTime.split(':');
+        today.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+        // 使用ISO格式时间以匹配后端期望的格式
+        payload.happenedAt = today.toISOString();
+      } else {
+        // 使用ISO格式时间以匹配后端期望的格式
+        payload.happenedAt = new Date().toISOString();
+      }
     } else if (editingRecord.type === 'SOLID') {
       const solidTypeMap = {
         '米糊': 'RICE_CEREAL',
@@ -417,19 +442,47 @@ Page({
         '其他': 'OTHER'
       };
       payload.solidType = solidTypeMap[editingRecord.solidType] || 'OTHER';
-      payload.note = editingRecord.solidAmount || editingRecord.note;
+      payload.note = editingRecord.solidAmount || '';
+      
+      // 使用选择的时间
+      if (editingRecord.startTime) {
+        const today = new Date();
+        const [hours, minutes] = editingRecord.startTime.split(':');
+        today.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+        // 使用ISO格式时间以匹配后端期望的格式
+        payload.happenedAt = today.toISOString();
+      } else {
+        // 使用ISO格式时间以匹配后端期望的格式
+        payload.happenedAt = new Date().toISOString();
+      }
     } else if (editingRecord.type === 'DIAPER') {
       const textureMap = { '稀': 'WATERY', '软': 'SOFT', '成形': 'NORMAL', '干硬': 'HARD' };
       const colorMap = { '黄': 'YELLOW', '绿': 'GREEN', '棕': 'BROWN', '黑': 'BLACK' };
       payload.diaperTexture = textureMap[editingRecord.texture] || undefined;
       payload.diaperColor = colorMap[editingRecord.color] || undefined;
       payload.note = editingRecord.note;
+      
+      // 使用选择的时间
+      if (editingRecord.startTime) {
+        const today = new Date();
+        const [hours, minutes] = editingRecord.startTime.split(':');
+        today.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+        // 使用ISO格式时间以匹配后端期望的格式
+        payload.happenedAt = today.toISOString();
+      } else {
+        // 使用ISO格式时间以匹配后端期望的格式
+        payload.happenedAt = new Date().toISOString();
+      }
     } else if (editingRecord.type === 'GROWTH') {
       payload.heightCm = Number(editingRecord.height) || undefined;
       payload.weightKg = Number(editingRecord.weight) || undefined;
       // 如果有日期字段，使用它
       if (editingRecord.date) {
+        // 使用ISO格式时间以匹配后端期望的格式
         payload.happenedAt = new Date(editingRecord.date).toISOString();
+      } else {
+        // 使用ISO格式时间以匹配后端期望的格式
+        payload.happenedAt = new Date().toISOString();
       }
     }
 
@@ -447,7 +500,8 @@ Page({
   },
 
   validateEditRecord(record) {
-    if (record.type === 'breastfeeding') {
+    // 注意：编辑记录时，record.type 是后端的枚举值（如 'BREASTFEEDING'），而不是前端的类型（如 'breastfeeding'）
+    if (record.type === 'BREASTFEEDING') {
       if (!record.startTime || !record.duration || !record.breast) {
         wx.showToast({
           title: '请填写完整信息',
@@ -455,7 +509,7 @@ Page({
         });
         return false;
       }
-    } else if (record.type === 'bottle' || record.type === 'formula') {
+    } else if (record.type === 'BOTTLE' || record.type === 'FORMULA') {
       if (!record.startTime || !record.amount) {
         wx.showToast({
           title: '请填写完整信息',
@@ -463,7 +517,7 @@ Page({
         });
         return false;
       }
-    } else if (record.type === 'solid') {
+    } else if (record.type === 'SOLID') {
       if (!record.startTime || !record.solidType || !record.solidAmount) {
         wx.showToast({
           title: '请填写完整信息',
@@ -471,7 +525,7 @@ Page({
         });
         return false;
       }
-    } else if (record.type === 'diaper') {
+    } else if (record.type === 'DIAPER') {
       if (!record.startTime || !record.texture || !record.color) {
         wx.showToast({
           title: '请填写完整信息',
@@ -479,7 +533,7 @@ Page({
         });
         return false;
       }
-    } else if (record.type === 'growth') {
+    } else if (record.type === 'GROWTH') {
       if (!record.date || !record.height || !record.weight) {
         wx.showToast({
           title: '请填写完整信息',

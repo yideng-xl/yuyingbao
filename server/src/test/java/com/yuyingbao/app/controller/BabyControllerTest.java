@@ -124,13 +124,13 @@ class BabyControllerTest extends BaseIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(toJson(request)))
                 .andDo(print())
-                .andExpected(status().isOk())
-                .andExpected(jsonPath("$.name", is("小红")))
-                .andExpected(jsonPath("$.gender", is("GIRL")))
-                .andExpected(jsonPath("$.birthDate", is("2023-08-20")))
-                .andExpected(jsonPath("$.avatarUrl", nullValue()))
-                .andExpected(jsonPath("$.birthHeightCm", nullValue()))
-                .andExpected(jsonPath("$.birthWeightKg", nullValue()));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name", is("小红")))
+                .andExpect(jsonPath("$.gender", is("GIRL")))
+                .andExpect(jsonPath("$.birthDate", is("2023-08-20")))
+                .andExpect(jsonPath("$.avatarUrl", nullValue()))
+                .andExpect(jsonPath("$.birthHeightCm", nullValue()))
+                .andExpect(jsonPath("$.birthWeightKg", nullValue()));
     }
 
     @Test
@@ -147,7 +147,7 @@ class BabyControllerTest extends BaseIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(toJson(request)))
                 .andDo(print())
-                .andExpected(status().isBadRequest());
+                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -164,7 +164,7 @@ class BabyControllerTest extends BaseIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(toJson(request)))
                 .andDo(print())
-                .andExpected(status().isUnauthorized());
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -196,10 +196,10 @@ class BabyControllerTest extends BaseIntegrationTest {
         mockMvc.perform(get("/families/{familyId}/babies", testFamily.getId())
                         .header("Authorization", getAuthHeader()))
                 .andDo(print())
-                .andExpected(status().isOk())
-                .andExpected(jsonPath("$", hasSize(2)))
-                .andExpected(jsonPath("$[0].name", anyOf(is("宝宝1"), is("宝宝2"))))
-                .andExpected(jsonPath("$[1].name", anyOf(is("宝宝1"), is("宝宝2"))));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(2)))
+                .andExpect(jsonPath("$[0].name", anyOf(is("宝宝1"), is("宝宝2"))))
+                .andExpect(jsonPath("$[1].name", anyOf(is("宝宝1"), is("宝宝2"))));
     }
 
     @Test
@@ -209,8 +209,8 @@ class BabyControllerTest extends BaseIntegrationTest {
         mockMvc.perform(get("/families/{familyId}/babies", testFamily.getId())
                         .header("Authorization", getAuthHeader()))
                 .andDo(print())
-                .andExpected(status().isOk())
-                .andExpected(jsonPath("$", hasSize(0)));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(0)));
     }
 
     @Test
@@ -220,7 +220,7 @@ class BabyControllerTest extends BaseIntegrationTest {
         mockMvc.perform(get("/families/{familyId}/babies", 99999L)
                         .header("Authorization", getAuthHeader()))
                 .andDo(print())
-                .andExpected(status().isNotFound());
+                .andExpect(status().isNotFound());
     }
 
     @Test
@@ -239,7 +239,7 @@ class BabyControllerTest extends BaseIntegrationTest {
         mockMvc.perform(get("/families/{familyId}/babies", otherFamily.getId())
                         .header("Authorization", getAuthHeader()))
                 .andDo(print())
-                .andExpected(status().isForbidden());
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -273,11 +273,11 @@ class BabyControllerTest extends BaseIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(toJson(updateRequest)))
                 .andDo(print())
-                .andExpected(status().isOk())
-                .andExpected(jsonPath("$.name", is("新名字")))
-                .andExpected(jsonPath("$.avatarUrl", is("http://test.com/new-avatar.jpg")))
-                .andExpected(jsonPath("$.birthHeightCm", is(50.0)))
-                .andExpected(jsonPath("$.birthWeightKg", is(3.5)));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name", is("新名字")))
+                .andExpect(jsonPath("$.avatarUrl", is("http://test.com/new-avatar.jpg")))
+                .andExpect(jsonPath("$.birthHeightCm", is(50.0)))
+                .andExpect(jsonPath("$.birthWeightKg", is(3.5)));
 
         // 验证数据库中的数据已更新
         Baby updatedBaby = babyRepository.findById(existingBaby.getId()).orElse(null);
@@ -303,6 +303,6 @@ class BabyControllerTest extends BaseIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(toJson(updateRequest)))
                 .andDo(print())
-                .andExpected(status().isNotFound());
+                .andExpect(status().isNotFound());
     }
 }

@@ -104,12 +104,12 @@ class RecordControllerTest extends BaseIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(toJson(request)))
                 .andDo(print())
-                .andExpected(status().isOk())
-                .andExpected(jsonPath("$.type", is("BREASTFEEDING")))
-                .andExpected(jsonPath("$.durationMin", is(15)))
-                .andExpected(jsonPath("$.breastfeedingSide", is("LEFT")))
-                .andExpected(jsonPath("$.babyId", is(testBaby.getId().intValue())))
-                .andExpected(jsonPath("$.userId", is(testUser.getId().intValue())));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.type", is("BREASTFEEDING")))
+                .andExpect(jsonPath("$.durationMin", is(15)))
+                .andExpect(jsonPath("$.breastfeedingSide", is("LEFT")))
+                .andExpect(jsonPath("$.babyId", is(testBaby.getId().intValue())))
+                .andExpect(jsonPath("$.userId", is(testUser.getId().intValue())));
     }
 
     @Test
@@ -128,9 +128,9 @@ class RecordControllerTest extends BaseIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(toJson(request)))
                 .andDo(print())
-                .andExpected(status().isOk())
-                .andExpected(jsonPath("$.type", is("BOTTLE")))
-                .andExpected(jsonPath("$.amountMl", is(120.0)));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.type", is("BOTTLE")))
+                .andExpect(jsonPath("$.amountMl", is(120.0)));
     }
 
     @Test
@@ -150,10 +150,10 @@ class RecordControllerTest extends BaseIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(toJson(request)))
                 .andDo(print())
-                .andExpected(status().isOk())
-                .andExpected(jsonPath("$.type", is("SOLID")))
-                .andExpected(jsonPath("$.solidType", is("RICE_CEREAL")))
-                .andExpected(jsonPath("$.note", is("第一次尝试米糊")));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.type", is("SOLID")))
+                .andExpect(jsonPath("$.solidType", is("RICE_CEREAL")))
+                .andExpect(jsonPath("$.note", is("第一次尝试米糊")));
     }
 
     @Test
@@ -174,11 +174,11 @@ class RecordControllerTest extends BaseIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(toJson(request)))
                 .andDo(print())
-                .andExpected(status().isOk())
-                .andExpected(jsonPath("$.type", is("DIAPER")))
-                .andExpected(jsonPath("$.diaperTexture", is("SOFT")))
-                .andExpected(jsonPath("$.diaperColor", is("YELLOW")))
-                .andExpected(jsonPath("$.hasUrine", is(true)));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.type", is("DIAPER")))
+                .andExpect(jsonPath("$.diaperTexture", is("SOFT")))
+                .andExpect(jsonPath("$.diaperColor", is("YELLOW")))
+                .andExpect(jsonPath("$.hasUrine", is(true)));
     }
 
     @Test
@@ -199,11 +199,11 @@ class RecordControllerTest extends BaseIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(toJson(request)))
                 .andDo(print())
-                .andExpected(status().isOk())
-                .andExpected(jsonPath("$.type", is("GROWTH")))
-                .andExpected(jsonPath("$.heightCm", is(65.5)))
-                .andExpected(jsonPath("$.weightKg", is(7.2)))
-                .andExpected(jsonPath("$.note", is("满月体检")));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.type", is("GROWTH")))
+                .andExpect(jsonPath("$.heightCm", is(65.5)))
+                .andExpect(jsonPath("$.weightKg", is(7.2)))
+                .andExpect(jsonPath("$.note", is("满月体检")));
     }
 
     @Test
@@ -220,7 +220,7 @@ class RecordControllerTest extends BaseIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(toJson(request)))
                 .andDo(print())
-                .andExpected(status().isBadRequest());
+                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -252,10 +252,10 @@ class RecordControllerTest extends BaseIntegrationTest {
         mockMvc.perform(get("/families/{familyId}/records", testFamily.getId())
                         .header("Authorization", getAuthHeader()))
                 .andDo(print())
-                .andExpected(status().isOk())
-                .andExpected(jsonPath("$", hasSize(2)))
-                .andExpected(jsonPath("$[0].type", anyOf(is("BREASTFEEDING"), is("BOTTLE"))))
-                .andExpected(jsonPath("$[1].type", anyOf(is("BREASTFEEDING"), is("BOTTLE"))));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(2)))
+                .andExpect(jsonPath("$[0].type", anyOf(is("BREASTFEEDING"), is("BOTTLE"))))
+                .andExpect(jsonPath("$[1].type", anyOf(is("BREASTFEEDING"), is("BOTTLE"))));
     }
 
     @Test
@@ -287,9 +287,9 @@ class RecordControllerTest extends BaseIntegrationTest {
                         .param("type", "BREASTFEEDING")
                         .header("Authorization", getAuthHeader()))
                 .andDo(print())
-                .andExpected(status().isOk())
-                .andExpected(jsonPath("$", hasSize(1)))
-                .andExpected(jsonPath("$[0].type", is("BREASTFEEDING")));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].type", is("BREASTFEEDING")));
     }
 
     @Test
@@ -326,9 +326,9 @@ class RecordControllerTest extends BaseIntegrationTest {
                         .param("end", tomorrow.toString())
                         .header("Authorization", getAuthHeader()))
                 .andDo(print())
-                .andExpected(status().isOk())
-                .andExpected(jsonPath("$", hasSize(1)))
-                .andExpected(jsonPath("$[0].type", is("BOTTLE")));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].type", is("BOTTLE")));
     }
 
     @Test
@@ -359,9 +359,9 @@ class RecordControllerTest extends BaseIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(toJson(updateRequest)))
                 .andDo(print())
-                .andExpected(status().isOk())
-                .andExpected(jsonPath("$.durationMin", is(15)))
-                .andExpected(jsonPath("$.breastfeedingSide", is("RIGHT")));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.durationMin", is(15)))
+                .andExpect(jsonPath("$.breastfeedingSide", is("RIGHT")));
 
         // 验证数据库中的数据已更新
         Record updatedRecord = recordRepository.findById(existingRecord.getId()).orElse(null);
@@ -384,7 +384,7 @@ class RecordControllerTest extends BaseIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(toJson(updateRequest)))
                 .andDo(print())
-                .andExpected(status().isNotFound());
+                .andExpect(status().isNotFound());
     }
 
     @Test
@@ -405,7 +405,7 @@ class RecordControllerTest extends BaseIntegrationTest {
         mockMvc.perform(delete("/families/{familyId}/records/{recordId}", testFamily.getId(), existingRecord.getId())
                         .header("Authorization", getAuthHeader()))
                 .andDo(print())
-                .andExpected(status().isNoContent());
+                .andExpect(status().isNoContent());
 
         // 验证记录已被删除
         boolean recordExists = recordRepository.existsById(existingRecord.getId());
@@ -419,7 +419,7 @@ class RecordControllerTest extends BaseIntegrationTest {
         mockMvc.perform(delete("/families/{familyId}/records/{recordId}", testFamily.getId(), 99999L)
                         .header("Authorization", getAuthHeader()))
                 .andDo(print())
-                .andExpected(status().isNotFound());
+                .andExpect(status().isNotFound());
     }
 
     @Test
@@ -454,6 +454,6 @@ class RecordControllerTest extends BaseIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(toJson(updateRequest)))
                 .andDo(print())
-                .andExpected(status().isForbidden());
+                .andExpect(status().isForbidden());
     }
 }

@@ -1,6 +1,6 @@
 App({
   globalData: {
-    apiBaseUrl: 'http://127.0.0.1:8080/api',
+    apiBaseUrl: 'http://47.101.172.204:8080/api',
     userInfo: null,
     familyInfo: null,
     babyInfo: null,

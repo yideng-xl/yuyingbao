@@ -19,7 +19,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /**
  * 认证控制器测试
- * 测试微信登录相关功能
+ * 测试微信登录等相关功能
  */
 @AutoConfigureMockMvc
 @DisplayName("认证接口测试")
@@ -32,7 +32,7 @@ class AuthControllerTest extends BaseIntegrationTest {
     private UserRepository userRepository;
 
     @Test
-    @DisplayName("新用户微信登录 - 应该创建新用户并返回token")
+    @DisplayName("新用户微信登录 - 应该创建用户并返回token")
     void testWeChatLogin_NewUser_ShouldCreateUserAndReturnToken() throws Exception {
         // Given
         WeChatLoginRequest request = new WeChatLoginRequest();
@@ -46,7 +46,7 @@ class AuthControllerTest extends BaseIntegrationTest {
                         .content(toJson(request)))
                 .andDo(print())
                 .andExpect(status().isOk())
-                .andExpected(jsonPath("$.token", notNullValue()))
+                .andExpect(jsonPath("$.token", notNullValue()))
                 .andExpect(jsonPath("$.tokenType", is("Bearer")));
 
         // 验证用户是否被创建
@@ -82,7 +82,7 @@ class AuthControllerTest extends BaseIntegrationTest {
                         .content(toJson(request)))
                 .andDo(print())
                 .andExpect(status().isOk())
-                .andExpected(jsonPath("$.token", notNullValue()))
+                .andExpect(jsonPath("$.token", notNullValue()))
                 .andExpect(jsonPath("$.tokenType", is("Bearer")));
 
         // 验证没有创建新用户
@@ -121,7 +121,7 @@ class AuthControllerTest extends BaseIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andDo(print())
-                .andExpected(status().isBadRequest());
+                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -132,7 +132,7 @@ class AuthControllerTest extends BaseIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("invalid json"))
                 .andDo(print())
-                .andExpected(status().isBadRequest());
+                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -149,9 +149,9 @@ class AuthControllerTest extends BaseIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(toJson(request)))
                 .andDo(print())
-                .andExpected(status().isOk())
-                .andExpected(jsonPath("$.token", notNullValue()))
-                .andExpected(jsonPath("$.tokenType", is("Bearer")));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token", notNullValue()))
+                .andExpect(jsonPath("$.tokenType", is("Bearer")));
 
         // 验证用户创建
         User createdUser = userRepository.findByOpenId("test_code_minimal")
