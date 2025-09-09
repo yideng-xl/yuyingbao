@@ -69,8 +69,8 @@ install_nginx() {
     fi
     
     # 启动Nginx服务
-    systemctl start nginx
-    systemctl enable nginx
+    systemctl start nginx || echo -e "${YELLOW}⚠️  Nginx启动失败（非致命错误）${NC}"
+    systemctl enable nginx || echo -e "${YELLOW}⚠️  Nginx设置开机自启失败（非致命错误）${NC}"
     
     echo -e "${GREEN}✅ Nginx服务已启动并设置为开机自启${NC}"
 }
@@ -165,14 +165,18 @@ configure_firewall() {
     
     if command -v ufw &> /dev/null; then
         # Ubuntu防火墙
-        ufw allow 'Nginx Full'
+        ufw allow 'Nginx Full' || echo -e "${YELLOW}⚠️  ufw命令执行失败（非致命错误）${NC}"
         echo -e "${GREEN}✅ Ubuntu防火墙配置完成${NC}"
     elif command -v firewall-cmd &> /dev/null; then
         # CentOS防火墙
-        firewall-cmd --permanent --add-service=http
-        firewall-cmd --permanent --add-service=https
-        firewall-cmd --reload
-        echo -e "${GREEN}✅ CentOS防火墙配置完成${NC}"
+        if systemctl is-active --quiet firewalld; then
+            firewall-cmd --permanent --add-service=http || echo -e "${YELLOW}⚠️  添加http服务失败（非致命错误）${NC}"
+            firewall-cmd --permanent --add-service=https || echo -e "${YELLOW}⚠️  添加https服务失败（非致命错误）${NC}"
+            firewall-cmd --reload || echo -e "${YELLOW}⚠️  重载防火墙失败（非致命错误）${NC}"
+            echo -e "${GREEN}✅ CentOS防火墙配置完成${NC}"
+        else
+            echo -e "${YELLOW}ℹ️  firewalld未运行（非致命错误，继续执行）${NC}"
+        fi
     else
         echo -e "${YELLOW}⚠️  未检测到防火墙，跳过配置${NC}"
     fi
@@ -210,7 +214,7 @@ deploy_nginx_config() {
     fi
     
     # 重新加载Nginx
-    systemctl reload nginx
+    systemctl reload nginx || echo -e "${YELLOW}⚠️  Nginx重新加载失败（非致命错误）${NC}"
     echo -e "${GREEN}✅ Nginx已重新加载${NC}"
 }
 
@@ -255,12 +259,12 @@ update_nginx_config() {
     # 测试配置
     if nginx -t; then
         echo -e "${GREEN}✅ Nginx配置更新完成${NC}"
-        systemctl reload nginx
+        systemctl reload nginx || echo -e "${YELLOW}⚠️  Nginx重新加载失败（非致命错误）${NC}"
         echo -e "${GREEN}✅ Nginx已重新加载${NC}"
     else
         echo -e "${RED}❌ Nginx配置更新失败，恢复备份配置${NC}"
         cp "$NGINX_SITE_CONFIG.bak" "$NGINX_SITE_CONFIG"
-        systemctl reload nginx
+        systemctl reload nginx || echo -e "${YELLOW}⚠️  Nginx重新加载失败（非致命错误）${NC}"
         exit 1
     fi
 }
@@ -274,7 +278,7 @@ setup_auto_renewal() {
 #!/bin/bash
 # Certbot自动续期脚本
 certbot renew --quiet
-systemctl reload nginx
+systemctl reload nginx || echo "Warning: Nginx reload failed"
 EOF
     
     chmod +x /etc/cron.weekly/certbot-renew

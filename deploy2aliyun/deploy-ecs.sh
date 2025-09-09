@@ -766,7 +766,7 @@ configure_firewall() {
             sudo firewall-cmd --reload
             echo -e "${GREEN}✅ firewalld端口8080已开放${NC}"
         else
-            echo -e "${YELLOW}ℹ️  firewalld未运行${NC}"
+            echo -e "${YELLOW}ℹ️  firewalld未运行（非错误，继续执行）${NC}"
         fi
     elif command -v ufw &> /dev/null; then
         # Ubuntu/Debian - ufw
@@ -775,7 +775,7 @@ configure_firewall() {
             sudo ufw allow 8080/tcp
             echo -e "${GREEN}✅ ufw端口8080已开放${NC}"
         else
-            echo -e "${YELLOW}ℹ️  ufw未启用${NC}"
+            echo -e "${YELLOW}ℹ️  ufw未启用（非错误，继续执行）${NC}"
         fi
     elif command -v iptables &> /dev/null; then
         # 通用iptables
@@ -787,7 +787,7 @@ configure_firewall() {
         fi
         echo -e "${GREEN}✅ iptables端口8080已开放${NC}"
     else
-        echo -e "${YELLOW}ℹ️  未检测到防火墙管理工具${NC}"
+        echo -e "${YELLOW}ℹ️  未检测到防火墙管理工具（非错误，继续执行）${NC}"
     fi
     
     echo -e "${YELLOW}💡 请确保阿里云安全组也已开放8080端口${NC}"
@@ -870,32 +870,6 @@ cleanup_containers() {
 # 数据目录检查功能
 check_data_directory() {
     echo -e "${BLUE}📁 检查数据目录...${NC}"
-    
-    if [[ -d "./postgres_data" ]]; then
-        local size=$(du -sh "./postgres_data" 2>/dev/null | cut -f1 || echo "无法计算")
-        local owner=$(stat -c "%U:%G" "./postgres_data" 2>/dev/null || stat -f "%Su:%Sg" "./postgres_data" 2>/dev/null || echo "未知")
-        local perms=$(stat -c "%a" "./postgres_data" 2>/dev/null || stat -f "%A" "./postgres_data" 2>/dev/null || echo "未知")
-        
-        echo -e "${GREEN}✅ 数据目录存在${NC}"
-        echo -e "  路径: $(pwd)/postgres_data"
-        echo -e "  大小: ${size}"
-        echo -e "  权限: ${owner} (${perms})"
-        
-        # 检查权限是否正确
-        if [[ "$owner" == "999:999" ]] || [[ "$owner" == "postgres:postgres" ]]; then
-            echo -e "  ${GREEN}✅ 权限配置正确${NC}"
-        else
-            echo -e "  ${YELLOW}⚠️  权限可能需要调整${NC}"
-            echo -e "  ${YELLOW}建议执行: sudo chown 999:999 ./postgres_data${NC}"
-        fi
-    else
-        echo -e "${YELLOW}⚠️  数据目录不存在: ./postgres_data${NC}"
-        echo -e "  ${BLUE}部署时将自动创建${NC}"
-    fi
-    echo ""
-    
-    # 增强的数据目录检查功能 - 类似于test-container-cleanup.sh中的检查
-    echo -e "${BLUE}🔍 详细数据目录检查...${NC}"
     
     if [[ -d "./postgres_data" ]]; then
         local size=$(du -sh "./postgres_data" 2>/dev/null | cut -f1 || echo "无法计算")
