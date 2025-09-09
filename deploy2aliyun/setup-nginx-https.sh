@@ -193,8 +193,31 @@ deploy_nginx_config() {
         exit 1
     fi
     
+    # 确保目标目录存在
+    local sites_available_dir="/etc/nginx/sites-available"
+    local sites_enabled_dir="/etc/nginx/sites-enabled"
+    
+    if [[ ! -d "$sites_available_dir" ]]; then
+        echo -e "${YELLOW}⚠️  目录 $sites_available_dir 不存在，正在创建...${NC}"
+        mkdir -p "$sites_available_dir" || {
+            echo -e "${RED}❌ 无法创建目录: $sites_available_dir${NC}"
+            exit 1
+        }
+    fi
+    
+    if [[ ! -d "$sites_enabled_dir" ]]; then
+        echo -e "${YELLOW}⚠️  目录 $sites_enabled_dir 不存在，正在创建...${NC}"
+        mkdir -p "$sites_enabled_dir" || {
+            echo -e "${RED}❌ 无法创建目录: $sites_enabled_dir${NC}"
+            exit 1
+        }
+    fi
+    
     # 复制配置文件
-    cp "$NGINX_CONFIG_FILE" "$NGINX_SITE_CONFIG"
+    cp "$NGINX_CONFIG_FILE" "$NGINX_SITE_CONFIG" || {
+        echo -e "${RED}❌ 无法复制配置文件到: $NGINX_SITE_CONFIG${NC}"
+        exit 1
+    }
     echo -e "${GREEN}✅ 配置文件已复制到: $NGINX_SITE_CONFIG${NC}"
     
     # 创建软链接
@@ -202,7 +225,10 @@ deploy_nginx_config() {
         rm "$NGINX_SITE_ENABLED"
     fi
     
-    ln -s "$NGINX_SITE_CONFIG" "$NGINX_SITE_ENABLED"
+    ln -s "$NGINX_SITE_CONFIG" "$NGINX_SITE_ENABLED" || {
+        echo -e "${RED}❌ 无法创建软链接: $NGINX_SITE_ENABLED${NC}"
+        exit 1
+    }
     echo -e "${GREEN}✅ 已创建软链接: $NGINX_SITE_ENABLED${NC}"
     
     # 测试配置
