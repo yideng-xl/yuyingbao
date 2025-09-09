@@ -8,21 +8,21 @@
 
 | 文件 | 功能 | 使用场景 |
 |------|------|----------|
-| [`build-and-push.sh`](./build-and-push.sh) | 本地构建和推送 | 开发环境，构建镜像并推送到阿里云 |
-| [`deploy-ecs.sh`](./deploy-ecs.sh) | ECS部署 | 生产环境，在阿里云ECS上部署应用 |
+| [01_build-and-push.sh](./01_build-and-push.sh) | 本地构建和推送 | 开发环境，构建镜像并推送到阿里云 |
+| [02_deploy-ecs.sh](./02_deploy-ecs.sh) | ECS部署 | 生产环境，在阿里云ECS上部署应用 |
 
 ### 说明文档
 
 | 文件 | 内容 |
 |------|------|
-| [`BUILD_GUIDE.md`](./BUILD_GUIDE.md) | 构建脚本详细使用指南 |
-| [`DEPLOY_GUIDE.md`](./DEPLOY_GUIDE.md) | ECS部署脚本详细使用指南 |
+| [01_BUILD_GUIDE.md](./01_BUILD_GUIDE.md) | 构建脚本详细使用指南 |
+| [02_DEPLOY_GUIDE.md](./02_DEPLOY_GUIDE.md) | ECS部署脚本详细使用指南 |
 
 ### 其他文件
 
 | 文件 | 说明 |
 |------|------|
-| [`Dockerfile`](./Dockerfile) | Docker镜像构建文件 |
+| [Dockerfile](./Dockerfile) | Docker镜像构建文件 |
 
 ## 🚀 快速开始
 
@@ -31,33 +31,33 @@
 ```bash
 # 在开发环境执行
 cd deploy2aliyun
-./build-and-push.sh
+./01_build-and-push.sh
 ```
 
-详细说明请参考：[BUILD_GUIDE.md](./BUILD_GUIDE.md)
+详细说明请参考：[01_BUILD_GUIDE.md](./01_BUILD_GUIDE.md)
 
 ### 2. ECS部署
 
 ```bash
 # 在阿里云ECS服务器执行
-wget https://raw.githubusercontent.com/westxixia/yuyingbao/main/deploy2aliyun/deploy-ecs.sh
-chmod +x deploy-ecs.sh
-./deploy-ecs.sh
+wget https://raw.githubusercontent.com/westxixia/yuyingbao/main/deploy2aliyun/02_deploy-ecs.sh
+chmod +x 02_deploy-ecs.sh
+./02_deploy-ecs.sh
 ```
 
-详细说明请参考：[DEPLOY_GUIDE.md](./DEPLOY_GUIDE.md)
+详细说明请参考：[02_DEPLOY_GUIDE.md](./02_DEPLOY_GUIDE.md)
 
 ## 🔄 完整部署流程
 
 ```mermaid
 graph TB
-    A[开发环境] --> B[执行 build-and-push.sh]
+    A[开发环境] --> B[执行 01_build-and-push.sh]
     B --> C[构建应用镜像]
     B --> D[拉取PostgreSQL镜像]
     C --> E[推送到阿里云私有仓库]
     D --> E
     E --> F[ECS服务器]
-    F --> G[执行 deploy-ecs.sh]
+    F --> G[执行 02_deploy-ecs.sh]
     G --> H[清理旧容器]
     G --> I[创建数据目录]
     G --> J[拉取镜像]
@@ -87,11 +87,11 @@ graph TB
 - **配置一致性**：应用和数据库使用相同的连接配置，避免连接问题
 
 ### 🛠️ 增强管理命令
-- `./deploy-ecs.sh status` - 显示数据目录大小和状态
-- `./deploy-ecs.sh diagnose` - 网络诊断和修复
-- `./deploy-ecs.sh reset-data` - 彻底清理所有数据（危险操作）
-- `./fix-postgres-connection.sh` - 专门的数据库连接问题诊断
-- `./test-hosts-mapping.sh` - 检查hosts映射配置
+- `./02_deploy-ecs.sh status` - 显示数据目录大小和状态
+- `./02_deploy-ecs.sh diagnose` - 网络诊断和修复
+- `./02_deploy-ecs.sh reset-data` - 彻底清理所有数据（危险操作）
+- `./03_setup-nginx-https.sh diagnose` - 诊断和修复常见问题
+- `./03_setup-nginx-https.sh manual-install` - 手动安装SSL证书
 
 ### 🌐 智能网络修复
 - **DNS解析修复**：自动添加`--add-host="postgres:IP"`解决UnknownHostException
@@ -133,8 +133,8 @@ graph TB
 ## 📞 技术支持
 
 如需帮助，请查看：
-- [构建问题](./BUILD_GUIDE.md#🔧-故障排除)
-- [部署问题](./DEPLOY_GUIDE.md#🔧-故障排除)
+- [构建问题](./01_BUILD_GUIDE.md#🔧-故障排除)
+- [部署问题](./02_DEPLOY_GUIDE.md#🔧-故障排除)
 - [项目文档](../document/v0.5/)
 
 ---

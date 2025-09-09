@@ -13,7 +13,7 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 # 配置变量
-DOMAIN="yuyingbao.yideng.ltd"
+DEFAULT_DOMAIN="yuyingbao.yideng.ltd"
 NGINX_CONFIG_FILE="nginx-https.conf"
 NGINX_SITE_CONFIG="/etc/nginx/sites-available/yuyingbao"
 NGINX_SITE_ENABLED="/etc/nginx/sites-enabled/yuyingbao"
@@ -218,7 +218,12 @@ deploy_nginx_config() {
         echo -e "${RED}❌ 无法复制配置文件到: $NGINX_SITE_CONFIG${NC}"
         exit 1
     }
+    
+    # 动态更新配置文件中的域名
+    sed -i "s/yuyingbao\.yideng\.ltd/$DOMAIN/g" "$NGINX_SITE_CONFIG"
+    
     echo -e "${GREEN}✅ 配置文件已复制到: $NGINX_SITE_CONFIG${NC}"
+    echo -e "${GREEN}✅ 域名已更新为: $DOMAIN${NC}"
     
     # 创建软链接
     if [[ -f "$NGINX_SITE_ENABLED" ]]; then
@@ -244,6 +249,133 @@ deploy_nginx_config() {
     echo -e "${GREEN}✅ Nginx已重新加载${NC}"
 }
 
+# 检查域名解析
+check_domain_resolution() {
+    echo -e "${BLUE}🔍 检查域名解析...${NC}"
+    
+    if command -v nslookup &> /dev/null; then
+        if nslookup "$DOMAIN" &> /dev/null; then
+            echo -e "${GREEN}✅ 域名解析正常${NC}"
+            local resolved_ip=$(nslookup "$DOMAIN" | awk '/^Address: / { print $2 }' | tail -n 1)
+            echo -e "${CYAN}解析IP: $resolved_ip${NC}"
+        else
+            echo -e "${RED}❌ 域名解析失败${NC}"
+            return 1
+        fi
+    elif command -v dig &> /dev/null; then
+        if dig +short "$DOMAIN" &> /dev/null; then
+            echo -e "${GREEN}✅ 域名解析正常${NC}"
+            local resolved_ip=$(dig +short "$DOMAIN" | head -n 1)
+            echo -e "${CYAN}解析IP: $resolved_ip${NC}"
+        else
+            echo -e "${RED}❌ 域名解析失败${NC}"
+            return 1
+        fi
+    else
+        echo -e "${YELLOW}⚠️  未找到nslookup或dig命令，跳过域名解析检查${NC}"
+    fi
+}
+
+# 检查端口连通性
+check_port_connectivity() {
+    echo -e "${BLUE}🔍 检查端口连通性...${NC}"
+    
+    # 检查本地80端口是否可用
+    if netstat -tlnp | grep :80 &> /dev/null; then
+        echo -e "${GREEN}✅ 本地80端口可用${NC}"
+    else
+        echo -e "${YELLOW}⚠️  本地80端口可能被占用${NC}"
+    fi
+    
+    # 检查本地443端口是否可用
+    if netstat -tlnp | grep :443 &> /dev/null; then
+        echo -e "${GREEN}✅ 本地443端口可用${NC}"
+    else
+        echo -e "${YELLOW}⚠️  本地443端口可能被占用${NC}"
+    fi
+}
+
+# 诊断和修复常见问题
+diagnose_and_fix_issues() {
+    echo -e "${BLUE}🔍 诊断和修复常见问题...${NC}"
+    
+    # 如果DOMAIN变量未设置，询问用户输入
+    if [[ -z "$DOMAIN" ]]; then
+        echo -e "${BLUE}🔍 配置域名...${NC}"
+        echo -e "${YELLOW}请输入您的域名（默认: $DEFAULT_DOMAIN）:${NC}"
+        read -r user_domain
+        DOMAIN=${user_domain:-$DEFAULT_DOMAIN}
+        echo -e "${GREEN}✅ 使用域名: $DOMAIN${NC}"
+    fi
+    
+    # 1. 检查域名解析
+    check_domain_resolution
+    
+    # 2. 检查端口连通性
+    check_port_connectivity
+    
+    # 3. 检查防火墙状态
+    echo -e "${BLUE}🔍 检查防火墙状态...${NC}"
+    if command -v ufw &> /dev/null && ufw status | grep -q "Status: active"; then
+        echo -e "${GREEN}✅ UFW防火墙已启用${NC}"
+        if ufw status | grep -q "80/tcp"; then
+            echo -e "${GREEN}✅ 80端口已开放${NC}"
+        else
+            echo -e "${YELLOW}⚠️  80端口未开放，正在开放...${NC}"
+            ufw allow 80/tcp || echo -e "${YELLOW}⚠️  开放80端口失败${NC}"
+        fi
+        
+        if ufw status | grep -q "443/tcp"; then
+            echo -e "${GREEN}✅ 443端口已开放${NC}"
+        else
+            echo -e "${YELLOW}⚠️  443端口未开放，正在开放...${NC}"
+            ufw allow 443/tcp || echo -e "${YELLOW}⚠️  开放443端口失败${NC}"
+        fi
+    elif command -v firewall-cmd &> /dev/null && systemctl is-active --quiet firewalld; then
+        echo -e "${GREEN}✅ Firewalld防火墙已启用${NC}"
+        if firewall-cmd --list-ports | grep -q "80/tcp"; then
+            echo -e "${GREEN}✅ 80端口已开放${NC}"
+        else
+            echo -e "${YELLOW}⚠️  80端口未开放，正在开放...${NC}"
+            firewall-cmd --add-port=80/tcp --permanent || echo -e "${YELLOW}⚠️  开放80端口失败${NC}"
+        fi
+        
+        if firewall-cmd --list-ports | grep -q "443/tcp"; then
+            echo -e "${GREEN}✅ 443端口已开放${NC}"
+        else
+            echo -e "${YELLOW}⚠️  443端口未开放，正在开放...${NC}"
+            firewall-cmd --add-port=443/tcp --permanent || echo -e "${YELLOW}⚠️  开放443端口失败${NC}"
+        fi
+        
+        firewall-cmd --reload || echo -e "${YELLOW}⚠️  重载防火墙配置失败${NC}"
+    else
+        echo -e "${YELLOW}⚠️  未检测到活动的防火墙或使用其他防火墙工具${NC}"
+    fi
+    
+    # 4. 检查Nginx配置
+    echo -e "${BLUE}🔍 检查Nginx配置...${NC}"
+    if nginx -t; then
+        echo -e "${GREEN}✅ Nginx配置测试通过${NC}"
+    else
+        echo -e "${RED}❌ Nginx配置测试失败${NC}"
+        return 1
+    fi
+    
+    # 5. 检查Nginx是否正在运行
+    echo -e "${BLUE}🔍 检查Nginx运行状态...${NC}"
+    if systemctl is-active nginx &>/dev/null; then
+        echo -e "${GREEN}✅ Nginx正在运行${NC}"
+    else
+        echo -e "${YELLOW}⚠️  Nginx未运行，正在启动...${NC}"
+        systemctl start nginx || {
+            echo -e "${RED}❌ 启动Nginx失败${NC}"
+            return 1
+        }
+    fi
+    
+    echo -e "${GREEN}✅ 诊断完成${NC}"
+}
+
 # 获取SSL证书
 get_ssl_certificate() {
     echo -e "${BLUE}🔍 获取SSL证书...${NC}"
@@ -254,23 +386,112 @@ get_ssl_certificate() {
         return
     fi
     
+    # 进行诊断检查
+    check_domain_resolution
+    check_port_connectivity
+    
+    # 确保Nginx正在运行并加载了配置
+    echo -e "${BLUE}🔍 检查Nginx状态...${NC}"
+    if systemctl is-active nginx &>/dev/null; then
+        echo -e "${GREEN}✅ Nginx正在运行${NC}"
+        # 重新加载以确保配置生效
+        systemctl reload nginx || echo -e "${YELLOW}⚠️  Nginx重新加载失败（非致命错误）${NC}"
+    else
+        echo -e "${YELLOW}⚠️  Nginx未运行，正在启动...${NC}"
+        systemctl start nginx || {
+            echo -e "${RED}❌ 无法启动Nginx${NC}"
+            exit 1
+        }
+    fi
+    
+    # 等待Nginx完全启动
+    sleep 3
+    
+    # 测试Nginx配置
+    echo -e "${BLUE}🔍 测试Nginx配置...${NC}"
+    if nginx -t; then
+        echo -e "${GREEN}✅ Nginx配置测试通过${NC}"
+    else
+        echo -e "${RED}❌ Nginx配置测试失败${NC}"
+        exit 1
+    fi
+    
     echo -e "${YELLOW}请输入您的邮箱地址用于Let's Encrypt证书通知:${NC}"
     read -r email
     
     echo -e "${YELLOW}正在获取SSL证书...${NC}"
-    certbot --nginx -d "$DOMAIN" --email "$email" --agree-tos --non-interactive
     
-    if [[ $? -eq 0 ]]; then
+    # 首先尝试使用--nginx插件
+    if certbot --nginx -d "$DOMAIN" --email "$email" --agree-tos --non-interactive; then
         echo -e "${GREEN}✅ SSL证书获取成功${NC}"
     else
-        echo -e "${RED}❌ SSL证书获取失败${NC}"
-        exit 1
+        echo -e "${YELLOW}⚠️  使用nginx插件获取证书失败，尝试使用standalone模式...${NC}"
+        
+        # 停止Nginx以释放80端口
+        systemctl stop nginx || echo -e "${YELLOW}⚠️  停止Nginx失败（非致命错误）${NC}"
+        
+        # 使用standalone模式获取证书
+        if certbot certonly --standalone -d "$DOMAIN" --email "$email" --agree-tos --non-interactive; then
+            echo -e "${GREEN}✅ SSL证书获取成功${NC}"
+            # 重新启动Nginx
+            systemctl start nginx || echo -e "${YELLOW}⚠️  启动Nginx失败（非致命错误）${NC}"
+        else
+            echo -e "${RED}❌ SSL证书获取失败${NC}"
+            echo -e "${YELLOW}请检查以下事项:${NC}"
+            echo -e "${YELLOW}1. 域名是否正确解析到此服务器IP${NC}"
+            echo -e "${YELLOW}2. 服务器80端口是否在防火墙和安全组中开放${NC}"
+            echo -e "${YELLOW}3. 服务器是否可以从互联网访问${NC}"
+            
+            # 恢复Nginx
+            systemctl start nginx || echo -e "${YELLOW}⚠️  启动Nginx失败（非致命错误）${NC}"
+            exit 1
+        fi
     fi
+}
+
+# 手动安装SSL证书（当自动安装失败时使用）
+install_certificate_manually() {
+    echo -e "${BLUE}🔍 手动安装SSL证书...${NC}"
+    
+    # 询问域名配置
+    echo -e "${BLUE}🔍 配置域名...${NC}"
+    echo -e "${YELLOW}请输入您的域名（默认: $DEFAULT_DOMAIN）:${NC}"
+    read -r user_domain
+    DOMAIN=${user_domain:-$DEFAULT_DOMAIN}
+    echo -e "${GREEN}✅ 使用域名: $DOMAIN${NC}"
+    
+    # 更新Nginx配置文件路径（使用域名作为文件名）
+    NGINX_SITE_CONFIG="/etc/nginx/sites-available/${DOMAIN//./_}"
+    NGINX_SITE_ENABLED="/etc/nginx/sites-enabled/${DOMAIN//./_}"
+    
+    # 检查证书是否存在
+    if [[ ! -d "/etc/letsencrypt/live/$DOMAIN" ]]; then
+        echo -e "${RED}❌ 证书目录不存在: /etc/letsencrypt/live/$DOMAIN${NC}"
+        echo -e "${YELLOW}请先获取证书再尝试手动安装${NC}"
+        return 1
+    fi
+    
+    # 确保证书文件存在
+    if [[ ! -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ]] || [[ ! -f "/etc/letsencrypt/live/$DOMAIN/privkey.pem" ]]; then
+        echo -e "${RED}❌ 证书文件不存在${NC}"
+        return 1
+    fi
+    
+    # 更新Nginx配置
+    update_nginx_config
+    
+    echo -e "${GREEN}✅ SSL证书手动安装完成${NC}"
 }
 
 # 更新Nginx配置以使用Let's Encrypt证书
 update_nginx_config() {
     echo -e "${BLUE}🔍 更新Nginx配置以使用Let's Encrypt证书...${NC}"
+    
+    # 检查证书是否存在
+    if [[ ! -d "/etc/letsencrypt/live/$DOMAIN" ]]; then
+        echo -e "${YELLOW}⚠️  证书目录不存在，跳过配置更新${NC}"
+        return
+    fi
     
     # 备份原配置
     if [[ -f "$NGINX_SITE_CONFIG.bak" ]]; then
@@ -281,6 +502,14 @@ update_nginx_config() {
     # 更新证书路径
     sed -i "s|/etc/letsencrypt/live/yuyingbao.aijinseliunian.top/fullchain.pem|/etc/letsencrypt/live/$DOMAIN/fullchain.pem|g" "$NGINX_SITE_CONFIG"
     sed -i "s|/etc/letsencrypt/live/yuyingbao.aijinseliunian.top/privkey.pem|/etc/letsencrypt/live/$DOMAIN/privkey.pem|g" "$NGINX_SITE_CONFIG"
+    
+    # 确保新证书路径已更新
+    if ! grep -q "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" "$NGINX_SITE_CONFIG"; then
+        echo -e "${YELLOW}⚠️  证书路径未正确更新，手动添加...${NC}"
+        # 如果sed命令没有正确替换，手动添加
+        sed -i "s|ssl_certificate .*;|ssl_certificate /etc/letsencrypt/live/$DOMAIN/fullchain.pem;|g" "$NGINX_SITE_CONFIG"
+        sed -i "s|ssl_certificate_key .*;|ssl_certificate_key /etc/letsencrypt/live/$DOMAIN/privkey.pem;|g" "$NGINX_SITE_CONFIG"
+    fi
     
     # 测试配置
     if nginx -t; then
@@ -312,11 +541,16 @@ EOF
     
     # 立即测试续期
     echo -e "${BLUE}🔍 测试证书续期...${NC}"
-    certbot renew --dry-run
-    if [[ $? -eq 0 ]]; then
+    if certbot renew --dry-run; then
         echo -e "${GREEN}✅ 证书续期测试通过${NC}"
     else
-        echo -e "${YELLOW}⚠️  证书续期测试失败，但这不影响正常使用${NC}"
+        echo -e "${RED}❌ 证书续期测试失败${NC}"
+        echo -e "${YELLOW}这可能是因为:${NC}"
+        echo -e "${YELLOW}1. 域名解析问题${NC}"
+        echo -e "${YELLOW}2. 防火墙或安全组配置问题${NC}"
+        echo -e "${YELLOW}3. Nginx配置问题${NC}"
+        echo -e "${YELLOW}4. 证书尚未到期（通常在到期前30天才允许续期）${NC}"
+        echo -e "${YELLOW}但这不影响当前证书的正常使用${NC}"
     fi
 }
 
@@ -329,23 +563,72 @@ show_usage() {
     echo -e "${GREEN}1. 确保域名已正确解析到您的阿里云ECS服务器IP${NC}"
     echo -e "${GREEN}2. 确保服务器80和443端口已开放${NC}"
     echo -e "${GREEN}3. 运行此脚本: sudo ./setup-nginx-https.sh${NC}"
-    echo -e "${GREEN}4. 访问: https://$DOMAIN${NC}"
+    echo -e "${GREEN}4. 脚本会询问您的域名（默认: yuyingbao.yideng.ltd）${NC}"
+    echo -e "${GREEN}5. 访问: https://$DOMAIN${NC}"
+    echo ""
+    echo -e "${YELLOW}如果遇到证书获取或续期问题，请尝试以下方法:${NC}"
+    echo -e "${YELLOW}- 确保Nginx配置文件中的server_name与域名匹配${NC}"
+    echo -e "${YELLOW}- 手动安装证书: certbot install --cert-name $DOMAIN${NC}"
+    echo -e "${YELLOW}- 运行诊断: sudo ./setup-nginx-https.sh diagnose${NC}"
+    echo -e "${YELLOW}- 或者运行脚本后手动执行: sudo ./setup-nginx-https.sh manual-install${NC}"
     echo ""
     echo -e "${YELLOW}如果遇到问题，请检查:${NC}"
     echo -e "${YELLOW}- 域名解析是否正确${NC}"
     echo -e "${YELLOW}- 防火墙是否允许80/443端口${NC}"
     echo -e "${YELLOW}- 应用服务是否正常运行在8080端口${NC}"
+    echo -e "${YELLOW}- 服务器是否可以从互联网访问${NC}"
     echo ""
 }
 
 # 主函数
 main() {
+    # 检查命令行参数
+    case "${1:-}" in
+        "manual-install")
+            check_root
+            install_certificate_manually
+            return
+            ;;
+        "diagnose")
+            check_root
+            diagnose_and_fix_issues
+            return
+            ;;
+        "help"|"-h"|"--help")
+            echo "阿里云ECS Nginx HTTPS配置脚本"
+            echo ""
+            echo "用法: sudo $0 [选项]"
+            echo ""
+            echo "选项:"
+            echo "  (无参数)      执行完整HTTPS配置流程"
+            echo "  manual-install 手动安装已存在的SSL证书"
+            echo "  diagnose      诊断和修复常见问题"
+            echo "  help          显示此帮助信息"
+            echo ""
+            show_usage
+            return
+            ;;
+    esac
+    
     check_root
     check_os
+    
+    # 询问域名配置
+    echo -e "${BLUE}🔍 配置域名...${NC}"
+    echo -e "${YELLOW}请输入您的域名（默认: $DEFAULT_DOMAIN）:${NC}"
+    read -r user_domain
+    DOMAIN=${user_domain:-$DEFAULT_DOMAIN}
+    echo -e "${GREEN}✅ 使用域名: $DOMAIN${NC}"
+    
+    # 更新Nginx配置文件路径（使用域名作为文件名）
+    NGINX_SITE_CONFIG="/etc/nginx/sites-available/${DOMAIN//./_}"
+    NGINX_SITE_ENABLED="/etc/nginx/sites-enabled/${DOMAIN//./_}"
+    
     install_nginx
     install_certbot
     configure_firewall
     deploy_nginx_config
+    diagnose_and_fix_issues  # 在获取证书前进行诊断
     get_ssl_certificate
     update_nginx_config
     setup_auto_renewal
