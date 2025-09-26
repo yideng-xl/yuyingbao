@@ -599,9 +599,9 @@ main() {
     DOMAIN=${user_domain:-$DEFAULT_DOMAIN}
     echo -e "${GREEN}✅ 使用域名: $DOMAIN${NC}"
     
-    # 更新Nginx配置文件路径（使用域名作为文件名）
-    NGINX_SITE_CONFIG="/etc/nginx/conf.d/${DOMAIN//./_}"
-    NGINX_SITE_ENABLED="/etc/nginx/sites-enabled/${DOMAIN//./_}"
+    # 更新Nginx配置文件路径（使用域名作为文件名，并保持.conf后缀）
+    NGINX_SITE_CONFIG="/etc/nginx/conf.d/${DOMAIN//./_}.conf"
+    NGINX_SITE_ENABLED="/etc/nginx/sites-enabled/${DOMAIN//./_}.conf"
     
     install_nginx
     install_certbot
