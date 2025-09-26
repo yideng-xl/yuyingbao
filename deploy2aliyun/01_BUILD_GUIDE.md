@@ -1,8 +1,12 @@
 # 🚀 育婴宝项目构建指南
 
+## ⚠️ 重要说明
+
+此脚本用于在**本地开发环境**构建Docker镜像并推送到阿里云容器镜像服务。请确保在支持Docker的环境中运行此脚本（如Linux或macOS）。
+
 ## 📋 脚本功能
 
-[`01_build-and-push.sh`] 是育婴宝项目的统一构建和推送脚本，集成了以下功能：
+[`01_build-and-push.sh`](file:///Users/yideng/Workspaces/QoderWorkspaces/yuyingbao/deploy2aliyun/01_build-and-push.sh) 是育婴宝项目的统一构建和推送脚本，集成了以下功能：
 
 - ✅ **Docker环境检查**：自动检测Docker运行状态
 - ✅ **镜像源优化**：可选配置Docker镜像源加速

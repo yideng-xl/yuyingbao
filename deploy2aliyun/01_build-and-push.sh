@@ -29,14 +29,62 @@ ALIYUN_USERNAME="your-email@example.com"
 CONFIG_FILE="$(dirname "$0")/aliyun-config.json"
 if [[ -f "$CONFIG_FILE" ]]; then
     echo -e "${BLUE}🔍 加载阿里云配置文件...${NC}"
+    # 检查并安装jq（如果缺少）
+    if ! command -v jq >/dev/null 2>&1; then
+        echo -e "${YELLOW}⚠️  未安装 jq，正在尝试自动安装...${NC}"
+        
+        # 检测操作系统类型并安装jq
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            # macOS
+            if command -v brew >/dev/null 2>&1; then
+                brew install jq
+            else
+                echo -e "${RED}❌ 未安装Homebrew，请手动安装jq${NC}"
+                echo -e "${YELLOW}💡 macOS安装命令: brew install jq${NC}"
+                echo -e "${YELLOW}💡 或者先安装Homebrew: /bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"${NC}"
+                exit 1
+            fi
+        elif [[ -f /etc/redhat-release ]]; then
+            # CentOS/RHEL/Alibaba Cloud Linux
+            if command -v dnf >/dev/null 2>&1; then
+                sudo dnf install -y jq
+            elif command -v yum >/dev/null 2>&1; then
+                sudo yum install -y jq
+            else
+                echo -e "${RED}❌ 无法自动安装jq，请手动安装${NC}"
+                echo -e "${YELLOW}💡 CentOS/RHEL系统安装命令: sudo yum install -y jq${NC}"
+                echo -e "${YELLOW}💡 或者: sudo dnf install -y jq${NC}"
+                exit 1
+            fi
+        elif [[ -f /etc/debian_version ]]; then
+            # Ubuntu/Debian
+            sudo apt update
+            sudo apt install -y jq
+        else
+            echo -e "${RED}❌ 无法识别操作系统类型，请手动安装jq${NC}"
+            echo -e "${YELLOW}💡 Ubuntu/Debian系统安装命令: sudo apt install -y jq${NC}"
+            echo -e "${YELLOW}💡 CentOS/RHEL系统安装命令: sudo yum install -y jq${NC}"
+            echo -e "${YELLOW}💡 macOS安装命令: brew install jq${NC}"
+            exit 1
+        fi
+        
+        # 验证安装
+        if command -v jq >/dev/null 2>&1; then
+            echo -e "${GREEN}✅ jq安装成功${NC}"
+        else
+            echo -e "${RED}❌ jq安装失败，请手动安装${NC}"
+            exit 1
+        fi
+    fi
+    
     # 使用jq解析JSON配置文件
     if command -v jq >/dev/null 2>&1; then
         ALIYUN_REGISTRY=$(jq -r '.aliyun.registry' "$CONFIG_FILE" 2>/dev/null || echo "$ALIYUN_REGISTRY")
         ALIYUN_NAMESPACE=$(jq -r '.aliyun.namespace' "$CONFIG_FILE" 2>/dev/null || echo "$ALIYUN_NAMESPACE")
         ALIYUN_USERNAME=$(jq -r '.aliyun.username' "$CONFIG_FILE" 2>/dev/null || echo "$ALIYUN_USERNAME")
     else
-        echo -e "${YELLOW}⚠️  未安装 jq，无法解析 JSON 配置文件${NC}"
-        echo -e "${YELLOW}💡 请安装 jq: sudo apt install jq 或 sudo yum install jq${NC}"
+        echo -e "${RED}❌ jq不可用，无法解析JSON配置文件${NC}"
+        exit 1
     fi
 else
     echo -e "${YELLOW}⚠️  未找到阿里云配置文件 ${CONFIG_FILE}${NC}"
@@ -118,18 +166,51 @@ EOF
         
         echo -e "${GREEN}✅ Docker配置文件已更新${NC}"
         
-        # 重启Docker服务
+        # 重启Docker服务 - 根据操作系统类型选择正确的命令
         echo -e "${BLUE}🔄 重启Docker服务...${NC}"
-        sudo systemctl daemon-reload
-        sudo systemctl restart docker
+        
+        # 检测操作系统类型
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            # macOS
+            echo -e "${BLUE}💻 检测到macOS系统${NC}"
+            if command -v brew &> /dev/null; then
+                echo -e "${BLUE}🔄 使用Homebrew重启Docker...${NC}"
+                brew services restart docker || echo -e "${YELLOW}⚠️  Homebrew重启Docker失败${NC}"
+            else
+                echo -e "${YELLOW}⚠️  未检测到Homebrew，请手动重启Docker Desktop${NC}"
+            fi
+        elif command -v systemctl &> /dev/null; then
+            # Linux系统使用systemctl
+            echo -e "${BLUE}🐧 检测到Linux系统${NC}"
+            sudo systemctl daemon-reload
+            sudo systemctl restart docker
+        else
+            echo -e "${YELLOW}⚠️  无法确定系统类型或缺少必要的服务管理工具${NC}"
+            echo -e "${YELLOW}💡 请手动重启Docker服务${NC}"
+        fi
+        
+        # 等待Docker服务重启
         sleep 3
         
-        if sudo systemctl is-active --quiet docker; then
-            echo -e "${GREEN}✅ Docker服务重启成功${NC}"
-        else
-            echo -e "${RED}❌ Docker服务重启失败${NC}"
-            echo -e "${YELLOW}请检查配置文件和系统日志${NC}"
-            exit 1
+        # 检查Docker服务状态
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            # macOS上检查Docker进程
+            if pgrep -x "Docker" > /dev/null || docker info &> /dev/null; then
+                echo -e "${GREEN}✅ Docker服务重启成功${NC}"
+            else
+                echo -e "${RED}❌ Docker服务重启失败${NC}"
+                echo -e "${YELLOW}请检查Docker Desktop是否正常运行${NC}"
+                exit 1
+            fi
+        elif command -v systemctl &> /dev/null; then
+            # Linux系统检查
+            if sudo systemctl is-active --quiet docker; then
+                echo -e "${GREEN}✅ Docker服务重启成功${NC}"
+            else
+                echo -e "${RED}❌ Docker服务重启失败${NC}"
+                echo -e "${YELLOW}请检查配置文件和系统日志${NC}"
+                exit 1
+            fi
         fi
     fi
     echo ""

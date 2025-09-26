@@ -1,8 +1,12 @@
 # 🚀 育婴宝项目ECS部署指南
 
+## ⚠️ 重要说明
+
+此脚本用于在**阿里云ECS服务器**上部署育婴宝应用。请确保在目标ECS服务器上运行此脚本，而不是在本地开发环境。
+
 ## 📋 脚本功能
 
-[`02_deploy-ecs.sh`] 是育婴宝项目的一键ECS部署脚本，集成了以下功能：
+[`02_deploy-ecs.sh`](file:///Users/yideng/Workspaces/QoderWorkspaces/yuyingbao/deploy2aliyun/02_deploy-ecs.sh) 是育婴宝项目的一键ECS部署脚本，集成了以下功能：
 
 - ✅ **系统环境检查**：自动检测操作系统、内存、磁盘空间
 - ✅ **Docker自动安装**：支持CentOS/Ubuntu系统的Docker安装和配置
@@ -17,7 +21,7 @@
 
 ### 基本使用
 
-```bash
+```
 # 1. 上传脚本到ECS服务器
 scp 02_deploy-ecs.sh user@your-ecs-ip:/home/user/
 
@@ -37,7 +41,7 @@ chmod +x 02_deploy-ecs.sh
 
 ### 一键部署
 
-```bash
+```
 # 下载并执行（推荐）
 curl -fsSL https://raw.githubusercontent.com/westxixia/yuyingbao/main/deploy2aliyun/02_deploy-ecs.sh | bash
 ```
@@ -89,7 +93,7 @@ curl -fsSL https://raw.githubusercontent.com/westxixia/yuyingbao/main/deploy2ali
 
 脚本使用本地目录映射而不是Docker卷，确保数据安全：
 
-```bash
+```
 # 数据目录
 ./postgres_data  # PostgreSQL数据存储目录
 
@@ -106,7 +110,7 @@ curl -fsSL https://raw.githubusercontent.com/westxixia/yuyingbao/main/deploy2ali
 
 ### 数据管理命令
 
-```bash
+```
 # 查看数据目录大小
 du -sh ./postgres_data
 
@@ -140,7 +144,7 @@ tar -xzf postgres_backup_20240905.tar.gz
 
 ### 资源分配（2G内存服务器）
 
-```bash
+```
 # 应用容器
 内存限制: 1.5GB
 CPU限制: 1.5核心
@@ -154,7 +158,7 @@ CPU限制: 0.5核心
 
 ### 网络配置
 
-```bash
+```
 # Docker网络
 网络名称: yuyingbao-network
 驱动类型: bridge
@@ -168,7 +172,7 @@ CPU限制: 0.5核心
 
 脚本会自动创建 `.env` 文件，并支持自定义数据库配置：
 
-```bash
+```
 # 数据库配置
 DB_HOST=yuyingbao-postgres
 DB_PORT=5432
@@ -196,7 +200,7 @@ SPRING_PROFILES_ACTIVE=prod
 2. 应用容器启动时使用相同的数据库连接信息
 
 修改后，请重新运行部署脚本以应用新的配置：
-```bash
+```
 ./02_deploy-ecs.sh stop-all
 ./02_deploy-ecs.sh deploy
 ```
@@ -345,7 +349,7 @@ SPRING_PROFILES_ACTIVE=prod
 
 ### 健康检查
 
-```bash
+```
 # 检查服务状态
 curl http://localhost:8080/api/actuator/health
 
@@ -359,7 +363,7 @@ docker exec yuyingbao-postgres pg_isready -U yuyingbao -d yuyingbao
 
 ### 日志查看
 
-```bash
+```
 # 应用日志
 docker logs -f yuyingbao-server
 
@@ -374,7 +378,7 @@ journalctl -u docker.service -f
 
 ### 更新应用
 
-```bash
+```
 # 重新部署（自动停止旧版本）
 ./02_deploy-ecs.sh
 
@@ -387,7 +391,7 @@ docker rm yuyingbao-server
 
 ### 备份数据库
 
-```bash
+```
 # 创建数据库备份
 docker exec yuyingbao-postgres pg_dump -U yuyingbao yuyingbao > backup.sql
 
@@ -397,7 +401,7 @@ docker exec -i yuyingbao-postgres psql -U yuyingbao yuyingbao < backup.sql
 
 ### 清理资源
 
-```bash
+```
 # 清理未使用的镜像
 docker image prune -a
 
@@ -412,7 +416,7 @@ docker volume prune
 
 ### 系统监控
 
-```bash
+```
 # CPU使用率
 top -p $(pgrep -f yuyingbao-server)
 
@@ -426,7 +430,7 @@ docker system df
 
 ### 应用监控
 
-```bash
+```
 # 健康检查
 curl http://localhost:8080/api/actuator/health
 

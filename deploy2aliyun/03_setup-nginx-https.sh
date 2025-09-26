@@ -2,6 +2,7 @@
 
 # 阿里云ECS Nginx HTTPS配置脚本
 # 用于为育婴宝后端服务配置HTTPS支持
+# 注意：此脚本仅适用于阿里云ECS服务器，不适用于macOS或Windows本地环境
 
 set -e
 
@@ -41,6 +42,10 @@ check_os() {
     elif [[ -f /etc/debian_version ]]; then
         OS="ubuntu"
         echo -e "${GREEN}✅ 检测到Ubuntu/Debian系统${NC}"
+    elif [[ "$OSTYPE" == "darwin"* ]]; then
+        echo -e "${RED}❌ 此脚本不支持macOS系统${NC}"
+        echo -e "${YELLOW}💡 此脚本仅适用于阿里云ECS服务器${NC}"
+        exit 1
     else
         echo -e "${RED}❌ 不支持的操作系统${NC}"
         exit 1
@@ -68,11 +73,14 @@ install_nginx() {
         echo -e "${GREEN}✅ Nginx安装完成${NC}"
     fi
     
-    # 启动Nginx服务
-    systemctl start nginx || echo -e "${YELLOW}⚠️  Nginx启动失败（非致命错误）${NC}"
-    systemctl enable nginx || echo -e "${YELLOW}⚠️  Nginx设置开机自启失败（非致命错误）${NC}"
-    
-    echo -e "${GREEN}✅ Nginx服务已启动并设置为开机自启${NC}"
+    # 启动Nginx服务 - 仅在Linux系统上执行
+    if command -v systemctl &> /dev/null; then
+        systemctl start nginx || echo -e "${YELLOW}⚠️  Nginx启动失败（非致命错误）${NC}"
+        systemctl enable nginx || echo -e "${YELLOW}⚠️  Nginx设置开机自启失败（非致命错误）${NC}"
+        echo -e "${GREEN}✅ Nginx服务已启动并设置为开机自启${NC}"
+    else
+        echo -e "${YELLOW}⚠️  未检测到systemctl，跳过Nginx服务管理${NC}"
+    fi
 }
 
 # 安装Certbot (Let's Encrypt)
@@ -177,8 +185,10 @@ configure_firewall() {
         else
             echo -e "${YELLOW}ℹ️  firewalld未运行（非致命错误，继续执行）${NC}"
         fi
+    elif command -v systemctl &> /dev/null; then
+        echo -e "${YELLOW}⚠️  未检测到ufw或firewalld，跳过防火墙配置${NC}"
     else
-        echo -e "${YELLOW}⚠️  未检测到防火墙，跳过配置${NC}"
+        echo -e "${YELLOW}⚠️  未检测到防火墙管理工具，跳过配置${NC}"
     fi
 }
 
@@ -224,9 +234,13 @@ deploy_nginx_config() {
         exit 1
     fi
     
-    # 重新加载Nginx
-    systemctl reload nginx || echo -e "${YELLOW}⚠️  Nginx重新加载失败（非致命错误）${NC}"
-    echo -e "${GREEN}✅ Nginx已重新加载${NC}"
+    # 重新加载Nginx - 仅在Linux系统上执行
+    if command -v systemctl &> /dev/null; then
+        systemctl reload nginx || echo -e "${YELLOW}⚠️  Nginx重新加载失败（非致命错误）${NC}"
+        echo -e "${GREEN}✅ Nginx已重新加载${NC}"
+    else
+        echo -e "${YELLOW}⚠️  未检测到systemctl，跳过Nginx重新加载${NC}"
+    fi
 }
 
 # 检查域名解析
@@ -343,14 +357,20 @@ diagnose_and_fix_issues() {
     
     # 5. 检查Nginx是否正在运行
     echo -e "${BLUE}🔍 检查Nginx运行状态...${NC}"
-    if systemctl is-active nginx &>/dev/null; then
+    if command -v systemctl &> /dev/null && systemctl is-active nginx &>/dev/null; then
         echo -e "${GREEN}✅ Nginx正在运行${NC}"
+    elif ! command -v systemctl &> /dev/null; then
+        echo -e "${YELLOW}⚠️  未检测到systemctl，无法检查Nginx状态${NC}"
     else
         echo -e "${YELLOW}⚠️  Nginx未运行，正在启动...${NC}"
-        systemctl start nginx || {
-            echo -e "${RED}❌ 启动Nginx失败${NC}"
-            return 1
-        }
+        if command -v systemctl &> /dev/null; then
+            systemctl start nginx || {
+                echo -e "${RED}❌ 启动Nginx失败${NC}"
+                return 1
+            }
+        else
+            echo -e "${YELLOW}⚠️  未检测到systemctl，无法启动Nginx${NC}"
+        fi
     fi
     
     echo -e "${GREEN}✅ 诊断完成${NC}"
@@ -372,16 +392,22 @@ get_ssl_certificate() {
     
     # 确保Nginx正在运行并加载了配置
     echo -e "${BLUE}🔍 检查Nginx状态...${NC}"
-    if systemctl is-active nginx &>/dev/null; then
+    if command -v systemctl &> /dev/null && systemctl is-active nginx &>/dev/null; then
         echo -e "${GREEN}✅ Nginx正在运行${NC}"
         # 重新加载以确保配置生效
         systemctl reload nginx || echo -e "${YELLOW}⚠️  Nginx重新加载失败（非致命错误）${NC}"
+    elif ! command -v systemctl &> /dev/null; then
+        echo -e "${YELLOW}⚠️  未检测到systemctl，跳过Nginx状态检查${NC}"
     else
         echo -e "${YELLOW}⚠️  Nginx未运行，正在启动...${NC}"
-        systemctl start nginx || {
-            echo -e "${RED}❌ 无法启动Nginx${NC}"
-            exit 1
-        }
+        if command -v systemctl &> /dev/null; then
+            systemctl start nginx || {
+                echo -e "${RED}❌ 无法启动Nginx${NC}"
+                exit 1
+            }
+        else
+            echo -e "${YELLOW}⚠️  未检测到systemctl，无法启动Nginx${NC}"
+        fi
     fi
     
     # 等待Nginx完全启动
@@ -493,12 +519,20 @@ update_nginx_config() {
     # 测试配置
     if nginx -t; then
         echo -e "${GREEN}✅ Nginx配置更新完成${NC}"
-        systemctl reload nginx || echo -e "${YELLOW}⚠️  Nginx重新加载失败（非致命错误）${NC}"
-        echo -e "${GREEN}✅ Nginx已重新加载${NC}"
+        if command -v systemctl &> /dev/null; then
+            systemctl reload nginx || echo -e "${YELLOW}⚠️  Nginx重新加载失败（非致命错误）${NC}"
+            echo -e "${GREEN}✅ Nginx已重新加载${NC}"
+        else
+            echo -e "${YELLOW}⚠️  未检测到systemctl，跳过Nginx重新加载${NC}"
+        fi
     else
         echo -e "${RED}❌ Nginx配置更新失败，恢复备份配置${NC}"
         cp "$NGINX_SITE_CONFIG.bak" "$NGINX_SITE_CONFIG"
-        systemctl reload nginx || echo -e "${YELLOW}⚠️  Nginx重新加载失败（非致命错误）${NC}"
+        if command -v systemctl &> /dev/null; then
+            systemctl reload nginx || echo -e "${YELLOW}⚠️  Nginx重新加载失败（非致命错误）${NC}"
+        else
+            echo -e "${YELLOW}⚠️  未检测到systemctl，跳过Nginx重新加载${NC}"
+        fi
         exit 1
     fi
 }
@@ -512,7 +546,9 @@ setup_auto_renewal() {
 #!/bin/bash
 # Certbot自动续期脚本
 certbot renew --quiet
-systemctl reload nginx || echo "Warning: Nginx reload failed"
+if command -v systemctl &> /dev/null; then
+    systemctl reload nginx || echo "Warning: Nginx reload failed"
+fi
 EOF
     
     chmod +x /etc/cron.weekly/certbot-renew

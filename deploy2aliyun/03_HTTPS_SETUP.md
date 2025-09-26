@@ -1,5 +1,9 @@
 # 阿里云ECS HTTPS配置指南
 
+## ⚠️ 重要说明
+
+此脚本和配置文件专门用于在**阿里云ECS服务器**上为育婴宝后端服务配置HTTPS支持。请确保在目标ECS服务器上运行此脚本，而不是在本地开发环境。
+
 ## 概述
 
 本文档说明如何在阿里云ECS上为育婴宝后端服务配置HTTPS支持，使用Let's Encrypt免费SSL证书。
@@ -28,7 +32,7 @@ yuyingbao.conf
 
 ### 3. 运行配置脚本
 
-```bash
+```
 # 给脚本添加执行权限
 chmod +x 03_03_setup-nginx-https.sh
 
