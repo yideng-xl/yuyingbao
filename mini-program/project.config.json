@@ -1,5 +1,5 @@
 {
-  "description": "项目配置文件",
+  "description": "项目配置文件，appid已移至project.private.config.json文件中，避免敏感信息泄露",
   "packOptions": {
     "ignore": [
       {
@@ -54,7 +54,6 @@
   },
   "compileType": "miniprogram",
   "libVersion": "3.9.1",
-  // appid已移至project.private.config.json文件中，避免敏感信息泄露
   "projectname": "育婴宝",
   "isGameTourist": false,
   "condition": {

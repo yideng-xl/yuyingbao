@@ -1,4 +1,5 @@
 {
+  "description": "微信小程序appid，此文件不会被提交到代码仓库",
   "libVersion": "3.10.1",
   "projectname": "%E8%82%B2%E5%A9%B4%E5%AE%9D",
   "condition": {},
@@ -21,6 +22,5 @@
     "bigPackageSizeSupport": false,
     "useIsolateContext": true
   },
-  // 微信小程序appid，此文件不会被提交到代码仓库
   "appid": "wx830daa31e0b4a81f"
 }
