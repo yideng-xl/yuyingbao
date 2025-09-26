@@ -254,20 +254,21 @@ build_image() {
 build_postgres_image() {
     echo -e "${BLUE}📥 处理PostgreSQL镜像...${NC}"
     
-    local postgres_image="postgres:16"
+    # 仅从阿里云私有仓库拉取PostgreSQL镜像
+    local aliyun_postgres_image="${ALIYUN_REGISTRY}/${ALIYUN_NAMESPACE}/postgres:16"
     local pulled_image=""
     
     # 首先检查本地是否已有PostgreSQL镜像
-    echo -e "${CYAN}检查本地PostgreSQL镜像: ${postgres_image}${NC}"
+    echo -e "${CYAN}检查本地PostgreSQL镜像: ${aliyun_postgres_image}${NC}"
     
-    if docker images "$postgres_image" | grep -q "postgres"; then
-        echo -e "${GREEN}✅ 发现本地PostgreSQL镜像: ${postgres_image}${NC}"
-        pulled_image="$postgres_image"
+    if docker images "$aliyun_postgres_image" | grep -q "postgres"; then
+        echo -e "${GREEN}✅ 发现本地PostgreSQL镜像: ${aliyun_postgres_image}${NC}"
+        pulled_image="$aliyun_postgres_image"
     else
-        echo -e "${YELLOW}⚠️  本地未找到PostgreSQL镜像，尝试拉取...${NC}"
+        echo -e "${YELLOW}⚠️  本地未找到PostgreSQL镜像，尝试从阿里云私有仓库拉取...${NC}"
         
-        # 尝试拉取PostgreSQL 16镜像，最多重试3次
-        echo -e "${CYAN}拉取PostgreSQL 16镜像: ${postgres_image}${NC}"
+        # 尝试从阿里云私有仓库拉取PostgreSQL 16镜像，最多重试3次
+        echo -e "${CYAN}拉取PostgreSQL 16镜像: ${aliyun_postgres_image}${NC}"
         
         local attempts=0
         local max_attempts=3
@@ -275,13 +276,13 @@ build_postgres_image() {
         while [ $attempts -lt $max_attempts ]; do
             echo -e "${YELLOW}尝试 $((attempts + 1))/$max_attempts${NC}"
             
-            if timeout 300 docker pull "$postgres_image"; then
-                echo -e "${GREEN}✅ 拉取成功: ${postgres_image}${NC}"
-                pulled_image="$postgres_image"
+            if timeout 300 docker pull "$aliyun_postgres_image"; then
+                echo -e "${GREEN}✅ 从阿里云私有仓库拉取成功: ${aliyun_postgres_image}${NC}"
+                pulled_image="$aliyun_postgres_image"
                 break
             else
                 attempts=$((attempts + 1))
-                echo -e "${YELLOW}⚠️  拉取失败 (${attempts}/${max_attempts}): ${postgres_image}${NC}"
+                echo -e "${YELLOW}⚠️  从阿里云私有仓库拉取失败 (${attempts}/${max_attempts}): ${aliyun_postgres_image}${NC}"
                 
                 if [ $attempts -lt $max_attempts ]; then
                     echo -e "${BLUE}等待5秒后重试...${NC}"
@@ -294,10 +295,8 @@ build_postgres_image() {
     if [[ -z "$pulled_image" ]]; then
         echo -e "${RED}❌ PostgreSQL镜像获取失败！${NC}"
         echo -e "${YELLOW}💡 解决建议:${NC}"
-        echo -e "1. 检查网络连接: ping registry-1.docker.io"
-        echo -e "2. 检查Docker镜像源配置: docker info | grep 'Registry Mirrors'"
-        echo -e "3. 重新运行本脚本并选择配置镜像源"
-        echo -e "4. 手动拉取镜像: docker pull postgres:16"
+        echo -e "1. 确保已将PostgreSQL镜像推送到阿里云私有仓库"
+        echo -e "2. 检查网络连接和阿里云认证信息"
         echo -e "${CYAN}🚀 将继续构建应用镜像，但不包含PostgreSQL镜像${NC}"
         return 1
     fi
