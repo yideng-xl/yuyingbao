@@ -453,7 +453,7 @@ deploy_postgres() {
         -e POSTGRES_DB=${db_name} \
         -e POSTGRES_USER=${db_user} \
         -e POSTGRES_PASSWORD=${db_password} \
-        -e POSTGRES_INITDB_ARGS="--encoding=UTF-8 --lc-collate=C --lc-ctype=C" \
+        -e POSTGRES_INITDB_ARGS="--encoding=UTF8 --lc-collate=C --lc-ctype=C" \
         -v "$(pwd)/postgres_data":/var/lib/postgresql/data \
         ${POSTGRES_IMAGE}
     
