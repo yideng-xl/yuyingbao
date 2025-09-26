@@ -62,9 +62,9 @@ cp aliyun-config.json.example aliyun-config.json
 
 ```bash
 # 镜像仓库地址
-ALIYUN_REGISTRY="crpi-zyq1wc1umfuictwx.cn-shanghai.personal.cr.aliyuncs.com"
-ALIYUN_NAMESPACE="aires-docker"
-ALIYUN_USERNAME="xulei0331@126.com"
+ALIYUN_REGISTRY="your-registry.cn-shanghai.personal.cr.aliyuncs.com"
+ALIYUN_NAMESPACE="your-namespace"
+ALIYUN_USERNAME="your-email@example.com"
 ```
 
 ### Docker镜像源配置
@@ -97,7 +97,7 @@ ALIYUN_USERNAME="xulei0331@126.com"
 2. **阿里云登录失败**
    ```bash
    # 确认登录信息
-   用户名：xulei0331@126.com
+   用户名：your-email@example.com
    密码：访问凭证密码或Personal Access Token
    ```
 
@@ -135,10 +135,10 @@ sudo systemctl restart docker
 
 # 手动拉取PostgreSQL镜像
 docker pull postgres:16
-docker tag postgres:16 crpi-zyq1wc1umfuictwx.cn-shanghai.personal.cr.aliyuncs.com/aires-docker/postgres:16
+docker tag postgres:16 your-registry.cn-shanghai.personal.cr.aliyuncs.com/your-namespace/postgres:16
 
 # 手动登录阿里云
-docker login crpi-zyq1wc1umfuictwx.cn-shanghai.personal.cr.aliyuncs.com -u xulei0331@126.com
+docker login your-registry.cn-shanghai.personal.cr.aliyuncs.com -u your-email@example.com
 ```
 
 ## 📋 输出信息
@@ -149,10 +149,10 @@ docker login crpi-zyq1wc1umfuictwx.cn-shanghai.personal.cr.aliyuncs.com -u xulei
 🎉 构建和推送完成！
 
 📋 部署信息：
-镜像地址: crpi-zyq1wc1umfuictwx.cn-shanghai.personal.cr.aliyuncs.com/aires-docker/yuyingbao:v0.5.0
-构建版本: crpi-zyq1wc1umfuictwx.cn-shanghai.personal.cr.aliyuncs.com/aires-docker/yuyingbao:v0.5.0-20240905120000
-最新版本: crpi-zyq1wc1umfuictwx.cn-shanghai.personal.cr.aliyuncs.com/aires-docker/yuyingbao:latest
-PostgreSQL镜像: crpi-zyq1wc1umfuictwx.cn-shanghai.personal.cr.aliyuncs.com/aires-docker/postgres:16
+镜像地址: your-registry.cn-shanghai.personal.cr.aliyuncs.com/your-namespace/yuyingbao:v0.5.0
+构建版本: your-registry.cn-shanghai.personal.cr.aliyuncs.com/your-namespace/yuyingbao:v0.5.0-20240905120000
+最新版本: your-registry.cn-shanghai.personal.cr.aliyuncs.com/your-namespace/yuyingbao:latest
+PostgreSQL镜像: your-registry.cn-shanghai.personal.cr.aliyuncs.com/your-namespace/postgres:16
 ```
 
 ## 🚀 下一步
