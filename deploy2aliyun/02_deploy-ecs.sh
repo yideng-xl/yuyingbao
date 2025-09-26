@@ -416,9 +416,9 @@ deploy_postgres() {
     echo -e "${BLUE}🐘 启动PostgreSQL数据库容器...${NC}"
     
     # 确保环境变量已加载，如果未设置则使用默认值
-    local db_name=${DB_NAME:-yuyingbao}
-    local db_user=${DB_USERNAME:-yuyingbao}
-    local db_password=${DB_PASSWORD:-YuyingBao2024@Database}
+    local db_name="${DB_NAME:-yuyingbao}"
+    local db_user="${DB_USERNAME:-yuyingbao}"
+    local db_password="${DB_PASSWORD:-YuyingBao2024@Database}"
     
     # 检查是否已有数据库容器运行
     if docker ps | grep -q "yuyingbao-postgres"; then
@@ -450,9 +450,9 @@ deploy_postgres() {
         -p 5432:5432 \
         --memory=512m \
         --cpus=0.5 \
-        -e POSTGRES_DB=${db_name} \
-        -e POSTGRES_USER=${db_user} \
-        -e POSTGRES_PASSWORD=${db_password} \
+        -e POSTGRES_DB="${db_name}" \
+        -e POSTGRES_USER="${db_user}" \
+        -e POSTGRES_PASSWORD="${db_password}" \
         -e POSTGRES_INITDB_ARGS="--encoding=UTF8 --lc-collate=C --lc-ctype=C" \
         -v "$(pwd)/postgres_data":/var/lib/postgresql/data \
         ${POSTGRES_IMAGE}
