@@ -14,8 +14,8 @@ NC='\033[0m'
 
 # 配置变量
 DEFAULT_DOMAIN="yuyingbao.yideng.ltd"
-NGINX_CONFIG_FILE="nginx-https.conf"
-NGINX_SITE_CONFIG="/etc/nginx/sites-available/yuyingbao"
+NGINX_CONFIG_FILE="yuyingbao.conf"
+NGINX_SITE_CONFIG="/etc/nginx/conf.d/yuyingbao.conf"
 NGINX_SITE_ENABLED="/etc/nginx/sites-enabled/yuyingbao"
 
 echo -e "${BLUE}======================================${NC}"
@@ -194,26 +194,17 @@ deploy_nginx_config() {
     fi
     
     # 确保目标目录存在
-    local sites_available_dir="/etc/nginx/sites-available"
-    local sites_enabled_dir="/etc/nginx/sites-enabled"
+    local conf_d_dir="/etc/nginx/conf.d"
     
-    if [[ ! -d "$sites_available_dir" ]]; then
-        echo -e "${YELLOW}⚠️  目录 $sites_available_dir 不存在，正在创建...${NC}"
-        mkdir -p "$sites_available_dir" || {
-            echo -e "${RED}❌ 无法创建目录: $sites_available_dir${NC}"
+    if [[ ! -d "$conf_d_dir" ]]; then
+        echo -e "${YELLOW}⚠️  目录 $conf_d_dir 不存在，正在创建...${NC}"
+        mkdir -p "$conf_d_dir" || {
+            echo -e "${RED}❌ 无法创建目录: $conf_d_dir${NC}"
             exit 1
         }
     fi
     
-    if [[ ! -d "$sites_enabled_dir" ]]; then
-        echo -e "${YELLOW}⚠️  目录 $sites_enabled_dir 不存在，正在创建...${NC}"
-        mkdir -p "$sites_enabled_dir" || {
-            echo -e "${RED}❌ 无法创建目录: $sites_enabled_dir${NC}"
-            exit 1
-        }
-    fi
-    
-    # 复制配置文件
+    # 复制配置文件（使用.conf后缀）
     cp "$NGINX_CONFIG_FILE" "$NGINX_SITE_CONFIG" || {
         echo -e "${RED}❌ 无法复制配置文件到: $NGINX_SITE_CONFIG${NC}"
         exit 1
@@ -224,17 +215,6 @@ deploy_nginx_config() {
     
     echo -e "${GREEN}✅ 配置文件已复制到: $NGINX_SITE_CONFIG${NC}"
     echo -e "${GREEN}✅ 域名已更新为: $DOMAIN${NC}"
-    
-    # 创建软链接
-    if [[ -f "$NGINX_SITE_ENABLED" ]]; then
-        rm "$NGINX_SITE_ENABLED"
-    fi
-    
-    ln -s "$NGINX_SITE_CONFIG" "$NGINX_SITE_ENABLED" || {
-        echo -e "${RED}❌ 无法创建软链接: $NGINX_SITE_ENABLED${NC}"
-        exit 1
-    }
-    echo -e "${GREEN}✅ 已创建软链接: $NGINX_SITE_ENABLED${NC}"
     
     # 测试配置
     if nginx -t; then
@@ -460,9 +440,8 @@ install_certificate_manually() {
     DOMAIN=${user_domain:-$DEFAULT_DOMAIN}
     echo -e "${GREEN}✅ 使用域名: $DOMAIN${NC}"
     
-    # 更新Nginx配置文件路径（使用域名作为文件名）
-    NGINX_SITE_CONFIG="/etc/nginx/sites-available/${DOMAIN//./_}"
-    NGINX_SITE_ENABLED="/etc/nginx/sites-enabled/${DOMAIN//./_}"
+    # 更新Nginx配置文件路径
+    NGINX_SITE_CONFIG="/etc/nginx/conf.d/${DOMAIN//./_}.conf"
     
     # 检查证书是否存在
     if [[ ! -d "/etc/letsencrypt/live/$DOMAIN" ]]; then
@@ -621,7 +600,7 @@ main() {
     echo -e "${GREEN}✅ 使用域名: $DOMAIN${NC}"
     
     # 更新Nginx配置文件路径（使用域名作为文件名）
-    NGINX_SITE_CONFIG="/etc/nginx/sites-available/${DOMAIN//./_}"
+    NGINX_SITE_CONFIG="/etc/nginx/conf.d/${DOMAIN//./_}"
     NGINX_SITE_ENABLED="/etc/nginx/sites-enabled/${DOMAIN//./_}"
     
     install_nginx

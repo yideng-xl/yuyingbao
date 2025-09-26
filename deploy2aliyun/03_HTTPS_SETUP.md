@@ -6,8 +6,8 @@
 
 ## 配置文件说明
 
-1. `nginx-https.conf` - Nginx HTTPS配置文件
-2. `setup-nginx-https.sh` - 自动化配置脚本
+1. `yuyingbao.conf` - Nginx HTTPS配置文件
+2. `03_setup-nginx-https.sh` - 自动化配置脚本
 
 ## 部署步骤
 
@@ -22,18 +22,18 @@
 
 将以下文件上传到阿里云ECS服务器：
 ```bash
-nginx-https.conf
-setup-nginx-https.sh
+yuyingbao.conf
+03_setup-nginx-https.sh
 ```
 
 ### 3. 运行配置脚本
 
 ```bash
 # 给脚本添加执行权限
-chmod +x setup-nginx-https.sh
+chmod +x 03_setup-nginx-https.sh
 
 # 运行配置脚本（需要root权限）
-sudo ./setup-nginx-https.sh
+sudo ./03_setup-nginx-https.sh
 ```
 
 ### 4. 脚本执行过程
@@ -65,10 +65,9 @@ sudo ./setup-nginx-https.sh
 
 ### 2. 配置Nginx
 
-将`nginx-https.conf`复制到Nginx配置目录：
+将`yuyingbao.conf`复制到Nginx配置目录：
 ```bash
-sudo cp nginx-https.conf /etc/nginx/sites-available/yuyingbao
-sudo ln -s /etc/nginx/sites-available/yuyingbao /etc/nginx/sites-enabled/
+sudo cp yuyingbao.conf /etc/nginx/conf.d/
 ```
 
 ### 3. 获取SSL证书
