@@ -22,13 +22,13 @@
 ### 基本使用
 
 ```
-# 1. 上传脚本到ECS服务器
-scp 02_deploy-ecs.sh user@your-ecs-ip:/home/user/
+# 1. 下载部署脚本到ECS服务器
+curl -fsSL https://raw.githubusercontent.com/westxixia/yuyingbao/main/deploy2aliyun/02_deploy-ecs.sh -o 02_deploy-ecs.sh
 
-# 2. 登录ECS服务器
-ssh user@your-ecs-ip
+# 2. 下载阿里云配置示例文件
+curl -fsSL https://raw.githubusercontent.com/westxixia/yuyingbao/main/deploy2aliyun/aliyun-config.json.example -o aliyun-config.json.example
 
-# 3. 复制阿里云配置示例文件并填写您的配置信息
+# 3. 复制并编辑阿里云配置文件
 cp aliyun-config.json.example aliyun-config.json
 # 编辑 aliyun-config.json 文件，填写您的阿里云配置信息
 
@@ -39,12 +39,14 @@ chmod +x 02_deploy-ecs.sh
 ./02_deploy-ecs.sh
 ```
 
-### 一键部署
+### 一键部署（简化版）
 
 ```
 # 下载并执行（推荐）
 curl -fsSL https://raw.githubusercontent.com/westxixia/yuyingbao/main/deploy2aliyun/02_deploy-ecs.sh | bash
 ```
+
+> ⚠️ **注意**：一键部署方式不会自动配置阿里云认证信息，如需完整功能请使用基本使用方式。
 
 ## 📊 部署流程
 

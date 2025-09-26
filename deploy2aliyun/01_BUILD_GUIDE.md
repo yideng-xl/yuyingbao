@@ -23,7 +23,10 @@
 # 进入部署目录
 cd /path/to/yuyingbao/deploy2aliyun
 
-# 复制阿里云配置示例文件并填写您的配置信息
+# 下载阿里云配置示例文件
+curl -fsSL https://raw.githubusercontent.com/westxixia/yuyingbao/main/deploy2aliyun/aliyun-config.json.example -o aliyun-config.json.example
+
+# 复制并编辑阿里云配置文件
 cp aliyun-config.json.example aliyun-config.json
 # 编辑 aliyun-config.json 文件，填写您的阿里云配置信息
 
