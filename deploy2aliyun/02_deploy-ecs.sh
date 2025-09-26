@@ -16,13 +16,30 @@ CYAN='\033[0;36m'
 NC='\033[0m'
 
 # 配置变量
-DOCKER_IMAGE="crpi-zyq1wc1umfuictwx.cn-shanghai.personal.cr.aliyuncs.com/aires-docker/yuyingbao:latest"
+DOCKER_IMAGE="latest"
 CONTAINER_NAME="yuyingbao-server"
 NETWORK_NAME="yuyingbao-network"
-ALIYUN_REGISTRY="crpi-zyq1wc1umfuictwx.cn-shanghai.personal.cr.aliyuncs.com"
-ALIYUN_NAMESPACE="aires-docker"
-ALIYUN_USERNAME="xulei0331@126.com"
 POSTGRES_IMAGE="postgres:16"  # 默认PostgreSQL镜像，会在拉取时动态更新
+
+# 默认阿里云镜像仓库配置（示例值）
+ALIYUN_REGISTRY="your-registry.cn-shanghai.personal.cr.aliyuncs.com"
+ALIYUN_NAMESPACE="your-namespace"
+ALIYUN_REPO="yuyingbao"
+ALIYUN_USERNAME="your-email@example.com"
+
+# 检查并加载阿里云配置文件
+CONFIG_FILE="$(dirname "$0")/aliyun-config"
+if [[ -f "$CONFIG_FILE" ]]; then
+    echo -e "${BLUE}🔍 加载阿里云配置文件...${NC}"
+    source "$CONFIG_FILE"
+    
+    # 更新DOCKER_IMAGE变量以使用实际配置
+    DOCKER_IMAGE="${ALIYUN_REGISTRY}/${ALIYUN_NAMESPACE}/${ALIYUN_REPO}:latest"
+else
+    echo -e "${YELLOW}⚠️  未找到阿里云配置文件 ${CONFIG_FILE}${NC}"
+    echo -e "${YELLOW}💡 请复制 aliyun-config.example 为 aliyun-config 并填写您的配置信息${NC}"
+    echo ""
+fi
 
 echo -e "${BLUE}======================================${NC}"
 echo -e "${BLUE}    阿里云ECS一键部署脚本${NC}"

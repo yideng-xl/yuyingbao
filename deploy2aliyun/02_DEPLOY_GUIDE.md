@@ -24,10 +24,14 @@ scp 02_deploy-ecs.sh user@your-ecs-ip:/home/user/
 # 2. 登录ECS服务器
 ssh user@your-ecs-ip
 
-# 3. 给脚本执行权限
+# 3. 复制阿里云配置示例文件并填写您的配置信息
+cp aliyun-config.example aliyun-config
+# 编辑 aliyun-config 文件，填写您的阿里云配置信息
+
+# 4. 给脚本执行权限
 chmod +x 02_deploy-ecs.sh
 
-# 4. 执行部署
+# 5. 执行部署
 ./02_deploy-ecs.sh
 ```
 

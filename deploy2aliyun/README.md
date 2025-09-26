@@ -49,7 +49,7 @@ chmod +x 02_deploy-ecs.sh
 
 ## 🔄 完整部署流程
 
-```mermaid
+```
 graph TB
     A[开发环境] --> B[执行 01_build-and-push.sh]
     B --> C[构建应用镜像]

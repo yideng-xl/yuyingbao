@@ -1,0 +1,8 @@
+#!/bin/bash
+# 阿里云配置示例文件
+# 请将此文件复制为 aliyun-config 并填写您的实际配置信息
+
+# 阿里云镜像仓库配置
+ALIYUN_REGISTRY="your-registry.cn-shanghai.personal.cr.aliyuncs.com"
+ALIYUN_NAMESPACE="your-namespace"
+ALIYUN_USERNAME="your-email@example.com"

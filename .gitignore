@@ -71,3 +71,6 @@ coverage/
 *.key
 secrets/
 .env.production
+
+# 阿里云配置文件
+aliyun-config

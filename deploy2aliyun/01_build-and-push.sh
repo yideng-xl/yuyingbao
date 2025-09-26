@@ -19,11 +19,22 @@ VERSION="v0.5.0"
 BUILD_DATE=$(date +"%Y%m%d%H%M%S")
 GIT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 
-# 阿里云镜像仓库配置
-ALIYUN_REGISTRY="crpi-zyq1wc1umfuictwx.cn-shanghai.personal.cr.aliyuncs.com"
-ALIYUN_NAMESPACE="aires-docker"  # 命名空间
+# 默认阿里云镜像仓库配置（示例值）
+ALIYUN_REGISTRY="your-registry.cn-shanghai.personal.cr.aliyuncs.com"
+ALIYUN_NAMESPACE="your-namespace"
 ALIYUN_REPO="yuyingbao"
-ALIYUN_USERNAME="xulei0331@126.com"
+ALIYUN_USERNAME="your-email@example.com"
+
+# 检查并加载阿里云配置文件
+CONFIG_FILE="$(dirname "$0")/aliyun-config"
+if [[ -f "$CONFIG_FILE" ]]; then
+    echo -e "${BLUE}🔍 加载阿里云配置文件...${NC}"
+    source "$CONFIG_FILE"
+else
+    echo -e "${YELLOW}⚠️  未找到阿里云配置文件 ${CONFIG_FILE}${NC}"
+    echo -e "${YELLOW}💡 请复制 aliyun-config.example 为 aliyun-config 并填写您的配置信息${NC}"
+    echo ""
+fi
 
 # 完整镜像名称
 FULL_IMAGE_NAME="${ALIYUN_REGISTRY}/${ALIYUN_NAMESPACE}/${ALIYUN_REPO}"
