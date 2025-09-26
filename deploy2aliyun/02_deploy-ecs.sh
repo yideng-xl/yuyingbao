@@ -375,6 +375,7 @@ pull_postgres_image() {
             echo -e "${RED}❌ 从公共仓库拉取失败: ${public_postgres_image}${NC}"
         fi
     fi
+    
     if [[ -z "$pulled_image" ]]; then
         echo -e "${RED}❌ PostgreSQL 16镜像拉取完全失败${NC}"
         echo -e "${YELLOW}💡 解决建议:${NC}"
@@ -1027,7 +1028,7 @@ show_help() {
 }
 
 # 命令行参数处理
-case "${1:-}" in
+case "${1:-deploy}" in
     "deploy")
         check_root
         show_system_info
@@ -1035,6 +1036,7 @@ case "${1:-}" in
         install_docker
         login_aliyun_registry
         pull_images
+        pull_postgres_image  # 确保拉取PostgreSQL镜像
         setup_data_directory
         deploy_postgres
         wait_for_postgres
