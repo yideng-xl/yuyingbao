@@ -20,7 +20,7 @@
 cd /path/to/yuyingbao/deploy2aliyun
 
 # 执行构建和推送
-./build-and-push.sh
+./01_build-and-push.sh
 ```
 
 ### 交互式配置

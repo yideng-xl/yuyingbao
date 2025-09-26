@@ -25,10 +25,10 @@ scp deploy-ecs.sh user@your-ecs-ip:/home/user/
 ssh user@your-ecs-ip
 
 # 3. 给脚本执行权限
-chmod +x deploy-ecs.sh
+chmod +x 02_deploy-ecs.sh
 
 # 4. 执行部署
-./deploy-ecs.sh
+./02_deploy-ecs.sh
 ```
 
 ### 一键部署
@@ -372,13 +372,13 @@ journalctl -u docker.service -f
 
 ```bash
 # 重新部署（自动停止旧版本）
-./deploy-ecs.sh
+./02_deploy-ecs.sh
 
 # 手动更新镜像
 docker pull crpi-zyq1wc1umfuictwx.cn-shanghai.personal.cr.aliyuncs.com/aires-docker/yuyingbao:latest
 docker stop yuyingbao-server
 docker rm yuyingbao-server
-# 然后重新运行deploy-ecs.sh
+# 然后重新运行02_deploy-ecs.sh
 ```
 
 ### 备份数据库
