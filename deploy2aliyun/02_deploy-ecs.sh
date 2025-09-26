@@ -439,7 +439,7 @@ deploy_postgres() {
     if docker ps | grep -q "yuyingbao-postgres"; then
         echo -e "${GREEN}✅ PostgreSQL容器已在运行，检查数据库连接...${NC}"
         # 验证数据库是否真正可用
-        if docker exec yuyingbao-postgres pg_isready -U ${db_user} -d ${db_name} &>/dev/null; then
+        if docker exec yuyingbao-postgres pg_isready -U "${db_user}" -d "${db_name}" &>/dev/null; then
             echo -e "${GREEN}✅ 数据库连接正常${NC}"
             return 0
         else
@@ -493,12 +493,12 @@ deploy_postgres() {
             fi
             
             # 检查数据库是否可以接受连接
-            if docker exec yuyingbao-postgres pg_isready -U ${db_user} -d ${db_name} &>/dev/null; then
+            if docker exec yuyingbao-postgres pg_isready -U "${db_user}" -d "${db_name}" &>/dev/null; then
                 echo ""
                 echo -e "${GREEN}✅ 数据库接受连接，继续检查完整性...${NC}"
                 
                 # 进一步验证数据库是否完全可用
-                if docker exec yuyingbao-postgres psql -U ${db_user} -d ${db_name} -c "SELECT 1;" &>/dev/null; then
+                if docker exec yuyingbao-postgres psql -U "${db_user}" -d "${db_name}" -c "SELECT 1;" &>/dev/null; then
                     echo -e "${GREEN}✅ 数据库完全可用！${NC}"
                     
                     # 额外等待5秒确保稳定
@@ -547,12 +547,12 @@ wait_for_postgres() {
         fi
         
         # 检查数据库是否可以接受连接
-        if docker exec yuyingbao-postgres pg_isready -U ${DB_USERNAME} -d ${DB_NAME} &>/dev/null; then
+        if docker exec yuyingbao-postgres pg_isready -U "${DB_USERNAME}" -d "${DB_NAME}" &>/dev/null; then
             echo ""
             echo -e "${GREEN}✅ 数据库接受连接，继续检查完整性...${NC}"
             
             # 进一步验证数据库是否完全可用
-            if docker exec yuyingbao-postgres psql -U ${DB_USERNAME} -d ${DB_NAME} -c "SELECT 1;" &>/dev/null; then
+            if docker exec yuyingbao-postgres psql -U "${DB_USERNAME}" -d "${DB_NAME}" -c "SELECT 1;" &>/dev/null; then
                 echo -e "${GREEN}✅ 数据库完全可用！${NC}"
                 
                 # 额外等待5秒确保稳定
@@ -588,7 +588,7 @@ start_application() {
     
     # 再次验证数据库连接
     echo -e "${BLUE}🔍 启动前再次验证数据库连接...${NC}"
-    if ! docker exec yuyingbao-postgres pg_isready -U ${db_user} -d ${db_name} &>/dev/null; then
+    if ! docker exec yuyingbao-postgres pg_isready -U "${db_user}" -d "${db_name}" &>/dev/null; then
         echo -e "${RED}❌ 数据库连接验证失败，无法启动应用${NC}"
         return 1
     fi
