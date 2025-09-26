@@ -172,7 +172,7 @@ CPU限制: 0.5核心
 
 ### 环境变量配置
 
-脚本会自动创建 `.env` 文件，并支持自定义数据库配置：
+脚本会自动创建 `.env` 文件，并支持自定义敏感配置：
 
 ```
 # 数据库配置
@@ -182,22 +182,30 @@ DB_NAME=yuyingbao
 DB_USERNAME=yuyingbao
 DB_PASSWORD=YuyingBao2024@Database
 
-# JWT配置
-JWT_SECRET=your_jwt_secret_key_32_characters_long
+# JWT配置 (请修改为您的安全密钥)
+JWT_SECRET=
 JWT_EXPIRATION=86400000
 
-# 微信小程序配置
-WECHAT_APP_ID=your_wechat_app_id
-WECHAT_APP_SECRET=your_wechat_app_secret
+# 微信小程序配置 (请填写您的实际配置)
+WECHAT_APP_ID=
+WECHAT_APP_SECRET=
 
 # 服务配置
 SERVER_PORT=8080
 SPRING_PROFILES_ACTIVE=prod
 ```
 
-**自定义数据库配置：**
+**安全提醒：**
 
-您可以修改 `.env` 文件中的数据库配置信息，脚本会自动使用这些配置来：
+为了保护您的敏感信息：
+1. 请务必修改 `.env` 文件中的 `JWT_SECRET` 为一个安全的32字符密钥
+2. 请填写您的微信小程序 `WECHAT_APP_ID` 和 `WECHAT_APP_SECRET`
+3. `.env` 文件已添加到 `.gitignore`，不会被提交到代码仓库
+4. 请妥善保管此文件，避免泄露敏感信息
+
+**自定义配置：**
+
+您可以修改 `.env` 文件中的配置信息，脚本会自动使用这些配置来：
 1. 创建PostgreSQL容器时设置数据库名称、用户名和密码
 2. 应用容器启动时使用相同的数据库连接信息
 
