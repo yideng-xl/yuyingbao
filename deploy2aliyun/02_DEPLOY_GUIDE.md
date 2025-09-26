@@ -2,7 +2,7 @@
 
 ## 📋 脚本功能
 
-[`deploy-ecs.sh`] 是育婴宝项目的一键ECS部署脚本，集成了以下功能：
+[`02_deploy-ecs.sh`] 是育婴宝项目的一键ECS部署脚本，集成了以下功能：
 
 - ✅ **系统环境检查**：自动检测操作系统、内存、磁盘空间
 - ✅ **Docker自动安装**：支持CentOS/Ubuntu系统的Docker安装和配置
@@ -19,7 +19,7 @@
 
 ```bash
 # 1. 上传脚本到ECS服务器
-scp deploy-ecs.sh user@your-ecs-ip:/home/user/
+scp 02_deploy-ecs.sh user@your-ecs-ip:/home/user/
 
 # 2. 登录ECS服务器
 ssh user@your-ecs-ip
@@ -35,7 +35,7 @@ chmod +x 02_deploy-ecs.sh
 
 ```bash
 # 下载并执行（推荐）
-curl -fsSL https://raw.githubusercontent.com/westxixia/yuyingbao/main/deploy2aliyun/deploy-ecs.sh | bash
+curl -fsSL https://raw.githubusercontent.com/westxixia/yuyingbao/main/deploy2aliyun/02_deploy-ecs.sh | bash
 ```
 
 ## 📊 部署流程
@@ -110,12 +110,12 @@ du -sh ./postgres_data
 tar -czf postgres_backup_$(date +%Y%m%d).tar.gz postgres_data/
 
 # 恢复数据（需先停止容器）
-./deploy-ecs.sh stop-all
+./02_deploy-ecs.sh stop-all
 tar -xzf postgres_backup_20240905.tar.gz
-./deploy-ecs.sh deploy
+./02_deploy-ecs.sh deploy
 
 # 彻底清理所有数据（危险操作）
-./deploy-ecs.sh reset-data
+./02_deploy-ecs.sh reset-data
 ```
 
 ## ⚙️ 配置说明
@@ -193,8 +193,8 @@ SPRING_PROFILES_ACTIVE=prod
 
 修改后，请重新运行部署脚本以应用新的配置：
 ```bash
-./deploy-ecs.sh stop-all
-./deploy-ecs.sh deploy
+./02_deploy-ecs.sh stop-all
+./02_deploy-ecs.sh deploy
 ```
 
 ## 🔧 故障排除
@@ -270,7 +270,7 @@ SPRING_PROFILES_ACTIVE=prod
    
    # 如果仍有问题，使用诊断脚本
    ./fix-postgres-connection.sh
-   ./deploy-ecs.sh diagnose
+   ./02_deploy-ecs.sh diagnose
    ```
    
    这个修改解决了DNS解析问题，现在应用可以直接通过Docker内部网络找到PostgreSQL容器。
@@ -289,13 +289,13 @@ SPRING_PROFILES_ACTIVE=prod
    ```
    
    **涉及文件：**
-   - [`deploy-ecs.sh`](./deploy-ecs.sh)
+   - [`02_deploy-ecs.sh`](./02_deploy-ecs.sh)
    - [`fix-postgres-connection.sh`](./fix-postgres-connection.sh)
    
    **验证修复：**
    ```bash
    # 执行网络诊断
-   ./deploy-ecs.sh diagnose
+   ./02_deploy-ecs.sh diagnose
    
    # 或使用专用诊断脚本
    ./fix-postgres-connection.sh
@@ -320,12 +320,12 @@ SPRING_PROFILES_ACTIVE=prod
    ls -la postgres_data/
    
    # 如果目录不为空但初始化失败，清空重新初始化
-   ./deploy-ecs.sh stop-all
+   ./02_deploy-ecs.sh stop-all
    sudo rm -rf postgres_data/*
-   ./deploy-ecs.sh deploy
+   ./02_deploy-ecs.sh deploy
    
    # 如果需要完全重置（数据将丢失）
-   ./deploy-ecs.sh reset-data
+   ./02_deploy-ecs.sh reset-data
    ```
 
 8. **防火墙配置问题**
@@ -482,14 +482,14 @@ sudo nginx -t && sudo systemctl reload nginx
    ```bash
    # 上传以下文件到服务器
    nginx-https.conf
-   setup-nginx-https.sh
+   03_setup-nginx-https.sh
    ```
 4. 运行HTTPS配置脚本：
    ```bash
-   chmod +x setup-nginx-https.sh
+   chmod +x 03_setup-nginx-https.sh
    
    # 运行主配置脚本（会自动处理阿里云ECS特定问题）
-   sudo ./setup-nginx-https.sh
+   sudo ./03_setup-nginx-https.sh
    ```
 
 ### 8.2 手动配置HTTPS
