@@ -344,15 +344,12 @@ pull_images() {
 pull_postgres_image() {
     echo -e "${BLUE}📥 拉取PostgreSQL镜像...${NC}"
     
-    # 优先尝试从阿里云私有仓库拉取
+    # 仅从阿里云私有仓库拉取
     local aliyun_postgres_image="${ALIYUN_REGISTRY}/${ALIYUN_NAMESPACE}/postgres:16"
-    
-    # 备用公共镜像
-    local public_postgres_image="postgres:16"
     
     local pulled_image=""
     
-    # 先尝试阿里云私有仓库
+    # 尝试从阿里云私有仓库拉取
     echo -e "${CYAN}尝试从阿里云私有仓库拉取PostgreSQL镜像...${NC}"
     echo -e "${CYAN}尝试拉取镜像: ${aliyun_postgres_image}${NC}"
     
@@ -360,29 +357,9 @@ pull_postgres_image() {
         echo -e "${GREEN}✅ 从阿里云私有仓库拉取成功: ${aliyun_postgres_image}${NC}"
         pulled_image="$aliyun_postgres_image"
     else
-        echo -e "${YELLOW}⚠️  从阿里云私有仓库拉取失败: ${aliyun_postgres_image}${NC}"
-    fi
-    
-    # 如果私有仓库失败，尝试公共镜像
-    if [[ -z "$pulled_image" ]]; then
-        echo -e "${CYAN}尝试从公共仓库拉取PostgreSQL镜像...${NC}"
-        echo -e "${CYAN}尝试拉取镜像: ${public_postgres_image}${NC}"
-        
-        if timeout 300 docker pull "$public_postgres_image"; then
-            echo -e "${GREEN}✅ 从公共仓库拉取成功: ${public_postgres_image}${NC}"
-            pulled_image="$public_postgres_image"
-        else
-            echo -e "${RED}❌ 从公共仓库拉取失败: ${public_postgres_image}${NC}"
-        fi
-    fi
-    
-    if [[ -z "$pulled_image" ]]; then
-        echo -e "${RED}❌ PostgreSQL 16镜像拉取完全失败${NC}"
-        echo -e "${YELLOW}💡 解决建议:${NC}"
-        echo -e "1. 检查网络连接: ping registry-1.docker.io"
-        echo -e "2. 检查Docker镜像源配置: docker info | grep 'Registry Mirrors'"
-        echo -e "3. 手动配置镜像源或重新运行本脚本"
-        echo -e "4. 尝试重新启动Docker: sudo systemctl restart docker"
+        echo -e "${RED}❌ 从阿里云私有仓库拉取失败: ${aliyun_postgres_image}${NC}"
+        echo -e "${YELLOW}💡 请确保已将PostgreSQL镜像推送到阿里云私有仓库${NC}"
+        echo -e "${YELLOW}💡 或检查网络连接和阿里云认证信息${NC}"
         return 1
     fi
     
