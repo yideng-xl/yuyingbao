@@ -360,7 +360,22 @@ pull_postgres_image() {
         echo -e "${RED}❌ 从阿里云私有仓库拉取失败: ${aliyun_postgres_image}${NC}"
         echo -e "${YELLOW}💡 请确保已将PostgreSQL镜像推送到阿里云私有仓库${NC}"
         echo -e "${YELLOW}💡 或检查网络连接和阿里云认证信息${NC}"
-        return 1
+        # 即使拉取失败，也尝试使用本地已有的镜像
+        if docker images "$aliyun_postgres_image" --format "table {{.Repository}}:{{.Tag}}" | grep -q "$aliyun_postgres_image"; then
+            echo -e "${GREEN}✅ 使用本地已有的镜像: ${aliyun_postgres_image}${NC}"
+            pulled_image="$aliyun_postgres_image"
+        else
+            # 如果阿里云私有仓库拉取失败且本地没有镜像，尝试使用默认的官方镜像
+            echo -e "${YELLOW}⚠️  尝试使用默认的官方PostgreSQL镜像${NC}"
+            local default_postgres_image="postgres:16"
+            if timeout 180 docker pull "$default_postgres_image"; then
+                echo -e "${GREEN}✅ 拉取默认PostgreSQL镜像成功: ${default_postgres_image}${NC}"
+                pulled_image="$default_postgres_image"
+            else
+                echo -e "${RED}❌ 拉取默认PostgreSQL镜像失败${NC}"
+                return 1
+            fi
+        fi
     fi
     
     # 更新全局PostgreSQL镜像变量
