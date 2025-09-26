@@ -1,6 +1,6 @@
 App({
   globalData: {
-    apiBaseUrl: 'http://47.101.172.204:8080/api',
+    apiBaseUrl: 'https://yuyingbao.yideng.ltd/api',
     userInfo: null,
     familyInfo: null,
     babyInfo: null,

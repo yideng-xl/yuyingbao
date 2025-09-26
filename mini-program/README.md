@@ -129,7 +129,7 @@
 - `POST /auth/wechat/login-complete`：完整登录（推荐）
 
 #### 请求示例
-```javascript
+```
 // 完整登录请求
 {
   "code": "wx_login_code",
@@ -196,11 +196,12 @@
 ### 安装步骤
 1. 克隆项目到本地
 2. 使用微信开发者工具打开项目
-3. 在 `project.config.json` 中配置您的 AppID
-4. 编译运行项目
+3. 复制 `project.config.json.example` 为 `project.private.config.json`
+4. 在 `project.private.config.json` 中配置您的 AppID
+5. 编译运行项目
 
 ### 配置说明
-1. **AppID配置**：在 `project.config.json` 中修改 `appid` 字段
+1. **AppID配置**：在 `project.private.config.json` 中修改 `appid` 字段（此文件不会被提交到代码仓库）
 2. **后端接口**：在 `app.js` 中配置后端API地址
 3. **图片资源**：在 `images/` 目录下添加所需图片
 

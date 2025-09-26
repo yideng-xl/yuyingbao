@@ -48,6 +48,7 @@ node_modules/
 mini-program/.vscode/
 mini-program/unpackage/
 mini-program/node_modules/
+mini-program/project.private.config.json
 
 # Maven
 .m2/
