@@ -20,8 +20,8 @@
 cd /path/to/yuyingbao/deploy2aliyun
 
 # 复制阿里云配置示例文件并填写您的配置信息
-cp aliyun-config.example aliyun-config
-# 编辑 aliyun-config 文件，填写您的阿里云配置信息
+cp aliyun-config.json.example aliyun-config.json
+# 编辑 aliyun-config.json 文件，填写您的阿里云配置信息
 
 # 执行构建和推送
 ./01_build-and-push.sh

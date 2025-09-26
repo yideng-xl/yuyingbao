@@ -28,16 +28,23 @@ ALIYUN_REPO="yuyingbao"
 ALIYUN_USERNAME="your-email@example.com"
 
 # 检查并加载阿里云配置文件
-CONFIG_FILE="$(dirname "$0")/aliyun-config"
+CONFIG_FILE="$(dirname "$0")/aliyun-config.json"
 if [[ -f "$CONFIG_FILE" ]]; then
     echo -e "${BLUE}🔍 加载阿里云配置文件...${NC}"
-    source "$CONFIG_FILE"
-    
-    # 更新DOCKER_IMAGE变量以使用实际配置
-    DOCKER_IMAGE="${ALIYUN_REGISTRY}/${ALIYUN_NAMESPACE}/${ALIYUN_REPO}:latest"
+    # 使用jq解析JSON配置文件
+    if command -v jq >/dev/null 2>&1; then
+        ALIYUN_REGISTRY=$(jq -r '.aliyun.registry' "$CONFIG_FILE" 2>/dev/null || echo "$ALIYUN_REGISTRY")
+        ALIYUN_NAMESPACE=$(jq -r '.aliyun.namespace' "$CONFIG_FILE" 2>/dev/null || echo "$ALIYUN_NAMESPACE")
+        ALIYUN_USERNAME=$(jq -r '.aliyun.username' "$CONFIG_FILE" 2>/dev/null || echo "$ALIYUN_USERNAME")
+        # 更新DOCKER_IMAGE变量以使用实际配置
+        DOCKER_IMAGE="${ALIYUN_REGISTRY}/${ALIYUN_NAMESPACE}/${ALIYUN_REPO}:latest"
+    else
+        echo -e "${YELLOW}⚠️  未安装 jq，无法解析 JSON 配置文件${NC}"
+        echo -e "${YELLOW}💡 请安装 jq: sudo apt install jq 或 sudo yum install jq${NC}"
+    fi
 else
     echo -e "${YELLOW}⚠️  未找到阿里云配置文件 ${CONFIG_FILE}${NC}"
-    echo -e "${YELLOW}💡 请复制 aliyun-config.example 为 aliyun-config 并填写您的配置信息${NC}"
+    echo -e "${YELLOW}💡 请复制 aliyun-config.json.example 为 aliyun-config.json 并填写您的配置信息${NC}"
     echo ""
 fi
 

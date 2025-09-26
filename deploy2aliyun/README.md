@@ -140,3 +140,48 @@ graph TB
 ---
 
 © 2024 育婴宝项目 - 简化的部署解决方案
+```
+
+```
+# 部署脚本使用说明
+
+## 阿里云配置
+
+为了保护敏感信息，阿里云的配置信息（如镜像仓库地址、命名空间、用户名）不会直接硬编码在脚本中。
+
+### 配置步骤
+
+1. 复制配置示例文件：
+   ```bash
+   cp aliyun-config.json.example aliyun-config.json
+   ```
+
+2. 编辑 `aliyun-config.json` 文件，填写您的实际阿里云配置信息：
+   ```json
+   {
+     "description": "阿里云配置文件，此文件不会被提交到代码仓库",
+     "aliyun": {
+       "registry": "your-registry.cn-shanghai.personal.cr.aliyuncs.com",
+       "namespace": "your-namespace",
+       "username": "your-email@example.com"
+     }
+   }
+   ```
+
+3. 确保 `aliyun-config.json` 文件具有适当的权限：
+   ```bash
+   chmod 600 aliyun-config.json
+   ```
+
+### 安全注意事项
+
+- `aliyun-config.json` 文件包含敏感信息，请勿提交到代码仓库
+- `.gitignore` 文件已配置忽略 `aliyun-config.json`，防止意外提交
+- 建议定期更新阿里云访问凭证以确保安全
+
+### 依赖工具
+
+脚本使用 `jq` 工具来解析 JSON 配置文件。如果系统中未安装 `jq`，请先安装：
+
+- Ubuntu/Debian: `sudo apt install jq`
+- CentOS/RHEL: `sudo yum install jq`

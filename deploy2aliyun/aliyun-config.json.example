@@ -1,0 +1,8 @@
+{
+  "description": "阿里云配置文件示例，开发者需要在aliyun-config.json文件中配置自己的阿里云信息",
+  "aliyun": {
+    "registry": "your-registry.cn-shanghai.personal.cr.aliyuncs.com",
+    "namespace": "your-namespace",
+    "username": "your-email@example.com"
+  }
+}
