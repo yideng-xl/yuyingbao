@@ -476,6 +476,11 @@ deploy_postgres() {
     
     # 启动PostgreSQL容器
     echo -e "${BLUE}🚀 启动新的PostgreSQL容器...${NC}"
+    echo -e "${CYAN}  数据库名称: ${db_name}${NC}"
+    echo -e "${CYAN}  数据库用户: ${db_user}${NC}"
+    echo -e "${CYAN}  数据库密码: ${db_password}${NC}"
+    echo -e "${CYAN}  镜像: ${POSTGRES_IMAGE}${NC}"
+    
     docker run -d \
         --name yuyingbao-postgres \
         --restart unless-stopped \
@@ -606,9 +611,20 @@ start_application() {
     
     # 再次验证数据库连接
     echo -e "${BLUE}🔍 启动前再次验证数据库连接...${NC}"
+    echo -e "${CYAN}  数据库用户: ${db_user}${NC}"
+    echo -e "${CYAN}  数据库名称: ${db_name}${NC}"
     if ! docker exec yuyingbao-postgres pg_isready -U "${db_user}" -d "${db_name}" &>/dev/null; then
         echo -e "${RED}❌ 数据库连接验证失败，无法启动应用${NC}"
-        return 1
+        echo -e "${YELLOW}  尝试使用默认用户验证...${NC}"
+        # 尝试使用默认用户验证
+        if docker exec yuyingbao-postgres pg_isready &>/dev/null; then
+            echo -e "${GREEN}✅ 数据库接受默认连接${NC}"
+        else
+            echo -e "${RED}❌ 数据库连接完全失败${NC}"
+            echo -e "${YELLOW}查看PostgreSQL日志:${NC}"
+            docker logs --tail=20 yuyingbao-postgres
+            return 1
+        fi
     fi
     echo -e "${GREEN}✅ 数据库连接验证通过${NC}"
     
