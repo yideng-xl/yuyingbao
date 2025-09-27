@@ -24,6 +24,8 @@
 | 文件 | 说明 |
 |------|------|
 | [Dockerfile](https://github.com/westxixia/yuyingbao/blob/main/deploy2aliyun/Dockerfile) | Docker镜像构建文件 |
+| [yuyingbao.conf](https://github.com/westxixia/yuyingbao/blob/main/deploy2aliyun/yuyingbao.conf) | Nginx HTTPS配置文件 |
+| [03_setup-nginx-https.sh](https://github.com/westxixia/yuyingbao/blob/main/deploy2aliyun/03_setup-nginx-https.sh) | HTTPS自动化配置脚本 |
 
 ## 📚 部署文档索引
 
@@ -56,6 +58,23 @@ chmod +x 02_deploy-ecs.sh
 
 详细说明请参考：[02_DEPLOY_GUIDE.md](https://github.com/westxixia/yuyingbao/blob/main/deploy2aliyun/02_DEPLOY_GUIDE.md)
 
+### 3. HTTPS配置
+
+```bash
+# 在阿里云ECS服务器执行
+# 首先下载HTTPS配置文件
+wget https://raw.githubusercontent.com/westxixia/yuyingbao/main/deploy2aliyun/yuyingbao.conf
+wget https://raw.githubusercontent.com/westxixia/yuyingbao/main/deploy2aliyun/03_setup-nginx-https.sh
+
+# 给脚本添加执行权限
+chmod +x 03_setup-nginx-https.sh
+
+# 运行HTTPS配置脚本
+sudo ./03_setup-nginx-https.sh
+```
+
+详细说明请参考：[03_HTTPS_SETUP.md](https://github.com/westxixia/yuyingbao/blob/main/deploy2aliyun/03_HTTPS_SETUP.md)
+
 ## 🔄 完整部署流程
 
 ```
@@ -75,6 +94,9 @@ graph TB
     J --> K
     K --> L[部署应用]
     L --> M[服务运行]
+    M --> N[执行 03_setup-nginx-https.sh]
+    N --> O[配置HTTPS证书]
+    O --> P[服务HTTPS可用]
 ```
 
 ## 🗄️ 新增功能亮点

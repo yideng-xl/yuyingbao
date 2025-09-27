@@ -223,14 +223,58 @@ deploy_nginx_config() {
     # 动态更新配置文件中的域名
     sed -i "s/yuyingbao\.yideng\.ltd/$DOMAIN/g" "$NGINX_SITE_CONFIG"
     
+    # 创建临时配置，移除SSL相关配置以避免证书不存在的错误
+    # 先备份原配置
+    cp "$NGINX_SITE_CONFIG" "$NGINX_SITE_CONFIG.with_ssl"
+    
+    # 创建HTTP-only配置用于初始测试
+    awk '
+    /^server {/,/server_name .*;/ {
+        if (/listen 443/) {
+            in_https_server = 1
+            next
+        }
+        if (in_https_server && /^}/) {
+            in_https_server = 0
+            next
+        }
+        if (in_https_server) next
+        
+        if (/listen 80;/) {
+            print
+            print "    # 临时重定向HTTP到应用端口，证书获取后再更新为HTTPS重定向"
+            print "    location / {"
+            print "        proxy_pass http://127.0.0.1:8080;"
+            print "        proxy_set_header Host $host;"
+            print "        proxy_set_header X-Real-IP $remote_addr;"
+            print "        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;"
+            print "        proxy_set_header X-Forwarded-Proto $scheme;"
+            print "    }"
+            next
+        }
+        if (/return 301 https/) {
+            # 跳过HTTPS重定向
+            next
+        }
+        print
+    }
+    !/^server {/,/server_name .*;/ {
+        print
+    }
+    ' "$NGINX_SITE_CONFIG.with_ssl" > "$NGINX_SITE_CONFIG"
+    
     echo -e "${GREEN}✅ 配置文件已复制到: $NGINX_SITE_CONFIG${NC}"
     echo -e "${GREEN}✅ 域名已更新为: $DOMAIN${NC}"
+    echo -e "${YELLOW}⚠️  注意：SSL配置已临时移除，证书获取后会自动恢复${NC}"
     
     # 测试配置
     if nginx -t; then
         echo -e "${GREEN}✅ Nginx配置测试通过${NC}"
     else
         echo -e "${RED}❌ Nginx配置测试失败${NC}"
+        # 显示配置文件内容以便调试
+        echo -e "${YELLOW}配置文件内容:${NC}"
+        cat "$NGINX_SITE_CONFIG"
         exit 1
     fi
     
@@ -453,6 +497,28 @@ get_ssl_certificate() {
             exit 1
         fi
     fi
+    
+    # 证书获取成功后，恢复完整的HTTPS配置
+    echo -e "${BLUE}🔍 恢复完整的HTTPS配置...${NC}"
+    if [[ -f "$NGINX_SITE_CONFIG.with_ssl" ]]; then
+        # 恢复完整的配置
+        cp "$NGINX_SITE_CONFIG.with_ssl" "$NGINX_SITE_CONFIG"
+        
+        # 更新域名
+        sed -i "s/yuyingbao\.yideng\.ltd/$DOMAIN/g" "$NGINX_SITE_CONFIG"
+        
+        # 测试配置
+        if nginx -t; then
+            echo -e "${GREEN}✅ Nginx HTTPS配置恢复完成${NC}"
+            systemctl reload nginx || echo -e "${YELLOW}⚠️  Nginx重新加载失败（非致命错误）${NC}"
+            echo -e "${GREEN}✅ Nginx已重新加载${NC}"
+        else
+            echo -e "${RED}❌ Nginx HTTPS配置恢复失败${NC}"
+            exit 1
+        fi
+    else
+        echo -e "${YELLOW}⚠️  完整配置文件备份不存在，跳过配置恢复${NC}"
+    fi
 }
 
 # 手动安装SSL证书（当自动安装失败时使用）
@@ -498,6 +564,12 @@ update_nginx_config() {
         return
     fi
     
+    # 检查配置文件是否存在
+    if [[ ! -f "$NGINX_SITE_CONFIG" ]]; then
+        echo -e "${YELLOW}⚠️  Nginx配置文件不存在，跳过配置更新${NC}"
+        return
+    fi
+    
     # 备份原配置
     if [[ -f "$NGINX_SITE_CONFIG.bak" ]]; then
         rm "$NGINX_SITE_CONFIG.bak"
@@ -505,6 +577,8 @@ update_nginx_config() {
     cp "$NGINX_SITE_CONFIG" "$NGINX_SITE_CONFIG.bak"
     
     # 更新证书路径
+    sed -i "s|/etc/letsencrypt/live/yuyingbao.yideng.ltd/fullchain.pem|/etc/letsencrypt/live/$DOMAIN/fullchain.pem|g" "$NGINX_SITE_CONFIG"
+    sed -i "s|/etc/letsencrypt/live/yuyingbao.yideng.ltd/privkey.pem|/etc/letsencrypt/live/$DOMAIN/privkey.pem|g" "$NGINX_SITE_CONFIG"
     sed -i "s|/etc/letsencrypt/live/yuyingbao.aijinseliunian.top/fullchain.pem|/etc/letsencrypt/live/$DOMAIN/fullchain.pem|g" "$NGINX_SITE_CONFIG"
     sed -i "s|/etc/letsencrypt/live/yuyingbao.aijinseliunian.top/privkey.pem|/etc/letsencrypt/live/$DOMAIN/privkey.pem|g" "$NGINX_SITE_CONFIG"
     
@@ -515,6 +589,10 @@ update_nginx_config() {
         sed -i "s|ssl_certificate .*;|ssl_certificate /etc/letsencrypt/live/$DOMAIN/fullchain.pem;|g" "$NGINX_SITE_CONFIG"
         sed -i "s|ssl_certificate_key .*;|ssl_certificate_key /etc/letsencrypt/live/$DOMAIN/privkey.pem;|g" "$NGINX_SITE_CONFIG"
     fi
+    
+    # 更新server_name
+    sed -i "s|server_name yuyingbao.yideng.ltd;|server_name $DOMAIN;|g" "$NGINX_SITE_CONFIG"
+    sed -i "s|server_name yuyingbao.aijinseliunian.top;|server_name $DOMAIN;|g" "$NGINX_SITE_CONFIG"
     
     # 测试配置
     if nginx -t; then
@@ -527,6 +605,8 @@ update_nginx_config() {
         fi
     else
         echo -e "${RED}❌ Nginx配置更新失败，恢复备份配置${NC}"
+        echo -e "${YELLOW}Nginx错误信息:${NC}"
+        nginx -t
         cp "$NGINX_SITE_CONFIG.bak" "$NGINX_SITE_CONFIG"
         if command -v systemctl &> /dev/null; then
             systemctl reload nginx || echo -e "${YELLOW}⚠️  Nginx重新加载失败（非致命错误）${NC}"

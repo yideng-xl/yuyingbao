@@ -35,7 +35,7 @@ curl -fsSL https://raw.githubusercontent.com/westxixia/yuyingbao/main/deploy2ali
 
 ### 3. 运行配置脚本
 
-```
+```bash
 # 给脚本添加执行权限
 chmod +x 03_setup-nginx-https.sh
 
@@ -49,9 +49,10 @@ sudo ./03_setup-nginx-https.sh
 1. 检查并安装Nginx
 2. 安装Certbot (Let's Encrypt客户端)
 3. 配置防火墙允许HTTP/HTTPS流量
-4. 部署Nginx配置文件
+4. 部署Nginx配置文件（临时HTTP配置）
 5. 获取SSL证书
-6. 设置证书自动续期
+6. 更新Nginx配置为完整的HTTPS配置
+7. 设置证书自动续期
 
 ## 手动配置方式
 
