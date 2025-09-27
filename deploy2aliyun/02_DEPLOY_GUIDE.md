@@ -6,7 +6,7 @@
 
 ## 📋 脚本功能
 
-[`02_deploy-ecs.sh`](file:///Users/yideng/Workspaces/QoderWorkspaces/yuyingbao/deploy2aliyun/02_deploy-ecs.sh) 是育婴宝项目的一键ECS部署脚本，集成了以下功能：
+[02_deploy-ecs.sh](https://github.com/westxixia/yuyingbao/blob/main/deploy2aliyun/02_deploy-ecs.sh) 是育婴宝项目的一键ECS部署脚本，集成了以下功能：
 
 - ✅ **系统环境检查**：自动检测操作系统、内存、磁盘空间
 - ✅ **Docker自动安装**：支持CentOS/Ubuntu系统的Docker安装和配置
@@ -36,6 +36,7 @@ cp aliyun-config.json.example aliyun-config.json
 # 编辑 aliyun-config.json 文件，填写您的阿里云配置信息
 
 # 5. 复制并编辑环境变量配置文件
+mkdir deploy2aliyun
 cp .env.example deploy2aliyun/.env
 # 编辑 deploy2aliyun/.env 文件，填写您的敏感配置信息
 
@@ -305,8 +306,8 @@ SPRING_PROFILES_ACTIVE=prod
    ```
    
    **涉及文件：**
-   - [`02_deploy-ecs.sh`](./02_deploy-ecs.sh)
-   - [`fix-postgres-connection.sh`](./fix-postgres-connection.sh)
+   - [02_deploy-ecs.sh](https://github.com/westxixia/yuyingbao/blob/main/deploy2aliyun/02_deploy-ecs.sh)
+   - [fix-postgres-connection.sh](https://github.com/westxixia/yuyingbao/blob/main/deploy2aliyun/fix-postgres-connection.sh)
    
    **验证修复：**
    ```bash
@@ -497,7 +498,7 @@ sudo nginx -t && sudo systemctl reload nginx
 3. 上传HTTPS配置文件：
    ```bash
    # 上传以下文件到服务器
-   nginx-https.conf
+   yuyingbao.conf
    03_setup-nginx-https.sh
    ```
 4. 运行HTTPS配置脚本：
@@ -510,7 +511,7 @@ sudo nginx -t && sudo systemctl reload nginx
 
 ### 8.2 手动配置HTTPS
 
-如果您需要手动配置，请参考 [HTTPS_SETUP.md](HTTPS_SETUP.md) 文件。
+如果您需要手动配置，请参考 [HTTPS_SETUP.md](https://github.com/westxixia/yuyingbao/blob/main/deploy2aliyun/HTTPS_SETUP.md) 文件。
 
 ## 9. 验证部署
 

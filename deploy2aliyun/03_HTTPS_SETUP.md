@@ -27,17 +27,17 @@
 将以下文件上传到阿里云ECS服务器：
 ```bash
 yuyingbao.conf
-03_03_setup-nginx-https.sh
+03_setup-nginx-https.sh
 ```
 
 ### 3. 运行配置脚本
 
 ```
 # 给脚本添加执行权限
-chmod +x 03_03_setup-nginx-https.sh
+chmod +x 03_setup-nginx-https.sh
 
 # 运行配置脚本（需要root权限）
-sudo ./03_03_setup-nginx-https.sh
+sudo ./03_setup-nginx-https.sh
 ```
 
 ### 4. 脚本执行过程

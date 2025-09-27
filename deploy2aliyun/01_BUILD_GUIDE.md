@@ -6,7 +6,7 @@
 
 ## 📋 脚本功能
 
-[`01_build-and-push.sh`](file:///Users/yideng/Workspaces/QoderWorkspaces/yuyingbao/deploy2aliyun/01_build-and-push.sh) 是育婴宝项目的统一构建和推送脚本，集成了以下功能：
+[01_build-and-push.sh](https://github.com/westxixia/yuyingbao/blob/main/deploy2aliyun/01_build-and-push.sh) 是育婴宝项目的统一构建和推送脚本，集成了以下功能：
 
 - ✅ **Docker环境检查**：自动检测Docker运行状态
 - ✅ **镜像源优化**：可选配置Docker镜像源加速
@@ -164,7 +164,7 @@ PostgreSQL镜像: your-registry.cn-shanghai.personal.cr.aliyuncs.com/your-namesp
 
 ## 🚀 下一步
 
-构建完成后，使用 [`02_deploy-ecs.sh`] 脚本在阿里云ECS上部署应用。
+构建完成后，使用 [02_deploy-ecs.sh](https://github.com/westxixia/yuyingbao/blob/main/deploy2aliyun/02_deploy-ecs.sh) 脚本在阿里云ECS上部署应用。
 
 ## 💡 最佳实践
 

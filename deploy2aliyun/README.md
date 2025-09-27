@@ -8,21 +8,30 @@
 
 | 文件 | 功能 | 使用场景 |
 |------|------|----------|
-| [01_build-and-push.sh](./01_build-and-push.sh) | 本地构建和推送 | 开发环境，构建镜像并推送到阿里云 |
-| [02_deploy-ecs.sh](./02_deploy-ecs.sh) | ECS部署 | 生产环境，在阿里云ECS上部署应用 |
+| [01_build-and-push.sh](https://github.com/westxixia/yuyingbao/blob/main/deploy2aliyun/01_build-and-push.sh) | 本地构建和推送 | 开发环境，构建镜像并推送到阿里云 |
+| [02_deploy-ecs.sh](https://github.com/westxixia/yuyingbao/blob/main/deploy2aliyun/02_deploy-ecs.sh) | ECS部署 | 生产环境，在阿里云ECS上部署应用 |
 
 ### 说明文档
 
 | 文件 | 内容 |
 |------|------|
-| [01_BUILD_GUIDE.md](./01_BUILD_GUIDE.md) | 构建脚本详细使用指南 |
-| [02_DEPLOY_GUIDE.md](./02_DEPLOY_GUIDE.md) | ECS部署脚本详细使用指南 |
+| [01_BUILD_GUIDE.md](https://github.com/westxixia/yuyingbao/blob/main/deploy2aliyun/01_BUILD_GUIDE.md) | 构建脚本详细使用指南 |
+| [02_DEPLOY_GUIDE.md](https://github.com/westxixia/yuyingbao/blob/main/deploy2aliyun/02_DEPLOY_GUIDE.md) | ECS部署脚本详细使用指南 |
+| [03_HTTPS_SETUP.md](https://github.com/westxixia/yuyingbao/blob/main/deploy2aliyun/03_HTTPS_SETUP.md) | HTTPS配置详细使用指南 |
 
 ### 其他文件
 
 | 文件 | 说明 |
 |------|------|
-| [Dockerfile](./Dockerfile) | Docker镜像构建文件 |
+| [Dockerfile](https://github.com/westxixia/yuyingbao/blob/main/deploy2aliyun/Dockerfile) | Docker镜像构建文件 |
+
+## 📚 部署文档索引
+
+请根据您的需求选择相应的指南：
+
+1. **构建镜像**：查看 [01_BUILD_GUIDE.md](https://github.com/westxixia/yuyingbao/blob/main/deploy2aliyun/01_BUILD_GUIDE.md)
+2. **部署应用**：查看 [02_DEPLOY_GUIDE.md](https://github.com/westxixia/yuyingbao/blob/main/deploy2aliyun/02_DEPLOY_GUIDE.md)
+3. **配置HTTPS**：查看 [03_HTTPS_SETUP.md](https://github.com/westxixia/yuyingbao/blob/main/deploy2aliyun/03_HTTPS_SETUP.md)
 
 ## 🚀 快速开始
 
@@ -34,7 +43,7 @@ cd deploy2aliyun
 ./01_build-and-push.sh
 ```
 
-详细说明请参考：[01_BUILD_GUIDE.md](./01_BUILD_GUIDE.md)
+详细说明请参考：[01_BUILD_GUIDE.md](https://github.com/westxixia/yuyingbao/blob/main/deploy2aliyun/01_BUILD_GUIDE.md)
 
 ### 2. ECS部署
 
@@ -45,7 +54,7 @@ chmod +x 02_deploy-ecs.sh
 ./02_deploy-ecs.sh
 ```
 
-详细说明请参考：[02_DEPLOY_GUIDE.md](./02_DEPLOY_GUIDE.md)
+详细说明请参考：[02_DEPLOY_GUIDE.md](https://github.com/westxixia/yuyingbao/blob/main/deploy2aliyun/02_DEPLOY_GUIDE.md)
 
 ## 🔄 完整部署流程
 
@@ -133,16 +142,14 @@ graph TB
 ## 📞 技术支持
 
 如需帮助，请查看：
-- [构建问题](./01_BUILD_GUIDE.md#🔧-故障排除)
-- [部署问题](./02_DEPLOY_GUIDE.md#🔧-故障排除)
+- [构建问题](https://github.com/westxixia/yuyingbao/blob/main/deploy2aliyun/01_BUILD_GUIDE.md#🔧-故障排除)
+- [部署问题](https://github.com/westxixia/yuyingbao/blob/main/deploy2aliyun/02_DEPLOY_GUIDE.md#🔧-故障排除)
 - [项目文档](../document/v0.5/)
 
 ---
 
 © 2024 育婴宝项目 - 简化的部署解决方案
-```
 
-```
 # 部署脚本使用说明
 
 ## 阿里云配置
