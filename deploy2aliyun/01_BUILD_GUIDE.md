@@ -6,7 +6,7 @@
 
 ## 📋 脚本功能
 
-[01_build-and-push.sh](https://github.com/westxixia/yuyingbao/blob/main/deploy2aliyun/01_build-and-push.sh) 是育婴宝项目的统一构建和推送脚本，集成了以下功能：
+[01_build-and-push.sh](https://github.com/yideng-xl/yuyingbao/blob/main/deploy2aliyun/01_build-and-push.sh) 是育婴宝项目的统一构建和推送脚本，集成了以下功能：
 
 - ✅ **Docker环境检查**：自动检测Docker运行状态
 - ✅ **镜像源优化**：可选配置Docker镜像源加速
@@ -24,7 +24,7 @@
 cd /path/to/yuyingbao/deploy2aliyun
 
 # 下载阿里云配置示例文件
-curl -fsSL https://raw.githubusercontent.com/westxixia/yuyingbao/main/deploy2aliyun/aliyun-config.json.example -o aliyun-config.json.example
+curl -fsSL https://raw.githubusercontent.com/yideng-xl/yuyingbao/main/deploy2aliyun/aliyun-config.json.example -o aliyun-config.json.example
 
 # 复制并编辑阿里云配置文件
 cp aliyun-config.json.example aliyun-config.json
@@ -164,7 +164,7 @@ PostgreSQL镜像: your-registry.cn-shanghai.personal.cr.aliyuncs.com/your-namesp
 
 ## 🚀 下一步
 
-构建完成后，使用 [02_deploy-ecs.sh](https://github.com/westxixia/yuyingbao/blob/main/deploy2aliyun/02_deploy-ecs.sh) 脚本在阿里云ECS上部署应用。
+构建完成后，使用 [02_deploy-ecs.sh](https://github.com/yideng-xl/yuyingbao/blob/main/deploy2aliyun/02_deploy-ecs.sh) 脚本在阿里云ECS上部署应用。
 
 ## 💡 最佳实践
 

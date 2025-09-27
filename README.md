@@ -35,53 +35,32 @@
 
 ## 🚀 快速开始
 
-### 环境要求
+```
+# 克隆项目
+git clone https://github.com/yideng-xl/yuyingbao.git
+cd yuyingbao
 
-- **Java**: JDK 17+
-- **Maven**: 3.9.11+
-- **PostgreSQL**: 17+
-- **Docker**: 最新版本（可选）
+# 使用自动化脚本配置环境（macOS）
+../install-homebrew.sh
+../switch-homebrew-mirror.sh
+../install-java-maven.sh
+../verify-java-maven.sh
 
-### 安装步骤
+# 使用Docker启动PostgreSQL
+docker-compose up -d postgres
 
-1. **克隆项目**
-   ```bash
-   git clone https://github.com/westxixia/yuyingbao.git
-   cd yuyingbao
-   ```
+cp .env.example .env
+# 编辑.env文件，配置数据库连接等信息
 
-2. **配置开发环境**
-   ```bash
-   # 使用自动化脚本配置环境（macOS）
-   ../install-homebrew.sh
-   ../switch-homebrew-mirror.sh
-   ../install-java-maven.sh
-   ../verify-java-maven.sh
-   ```
+cd server
+mvn clean install
+mvn spring-boot:run
 
-3. **配置数据库**
-   ```bash
-   # 使用Docker启动PostgreSQL
-   docker-compose up -d postgres
-   ```
+# 使用微信开发者工具导入 `mini-program` 目录
+# 配置小程序AppID
+# 修改API基础地址
 
-4. **配置环境变量**
-   ```bash
-   cp .env.example .env
-   # 编辑.env文件，配置数据库连接等信息
-   ```
-
-5. **启动后端服务**
-   ```bash
-   cd server
-   mvn clean install
-   mvn spring-boot:run
-   ```
-
-6. **配置微信小程序**
-   - 使用微信开发者工具导入 `mini-program` 目录
-   - 配置小程序AppID
-   - 修改API基础地址
+```
 
 ## 📱 功能模块
 
@@ -212,8 +191,8 @@ yuyingbao/
 
 ## 📞 联系我们
 
-- 项目地址: [https://github.com/westxixia/yuyingbao](https://github.com/westxixia/yuyingbao)
-- 问题反馈: [Issues](https://github.com/westxixia/yuyingbao/issues)
+- 项目地址: [https://github.com/yideng-xl/yuyingbao](https://github.com/yideng-xl/yuyingbao)
+- 问题反馈: [Issues](https://github.com/yideng-xl/yuyingbao/issues)
 
 ---
 

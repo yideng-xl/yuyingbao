@@ -125,9 +125,7 @@ Spring Boot 3.3.2
 ### 问题报告
 如果您在使用文档过程中发现问题，请通过以下方式反馈：
 
-- **GitHub Issues**: https://github.com/westxixia/yuyingbao/issues
-- **邮箱**: xulei0331@126.com
-- **标签**: 使用 `documentation` 标签
+- **GitHub Issues**: https://github.com/yideng-xl/yuyingbao/issues
 
 ### 改进建议
 我们欢迎您提出文档改进建议：
@@ -167,4 +165,4 @@ Spring Boot 3.3.2
 
 *文档版本: v0.6*  
 *最后更新: 2024年9月27日*  
-*维护人员: westxixia*
+*维护人员: yideng-xl*

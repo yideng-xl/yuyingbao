@@ -199,7 +199,7 @@
 ## 📞 支持和反馈
 
 ### 问题反馈
-- **GitHub Issues**: https://github.com/westxixia/yuyingbao/issues
+- **GitHub Issues**: https://github.com/yideng-xl/yuyingbao/issues
 - **邮箱**: xulei0331@126.com
 
 ### 文档资源
@@ -209,11 +209,11 @@
 
 ## 📝 开发团队
 
-- **项目负责人**: westxixia
-- **后端开发**: westxixia
-- **前端开发**: westxixia
-- **数据库设计**: westxixia
-- **测试**: westxixia
+- **项目负责人**: yideng-xl
+- **后端开发**: yideng-xl
+- **前端开发**: yideng-xl
+- **数据库设计**: yideng-xl
+- **测试**: yideng-xl
 
 ## 📄 许可证
 
@@ -227,4 +227,4 @@
 
 *发布说明版本: v0.5.0*  
 *文档更新时间: 2024年8月29日*  
-*维护人员: westxixia*
+*维护人员: yideng-xl*

@@ -119,7 +119,7 @@ Spring Boot 3.3.2
 ### 问题报告
 如果您在使用文档过程中发现问题，请通过以下方式反馈：
 
-- **GitHub Issues**: https://github.com/westxixia/yuyingbao/issues
+- **GitHub Issues**: https://github.com/yideng-xl/yuyingbao/issues
 - **邮箱**: xulei0331@126.com
 - **标签**: 使用 `documentation` 标签
 
@@ -161,4 +161,4 @@ Spring Boot 3.3.2
 
 *文档版本: v0.5*  
 *最后更新: 2024年8月29日*  
-*维护人员: westxixia*
+*维护人员: yideng-xl*

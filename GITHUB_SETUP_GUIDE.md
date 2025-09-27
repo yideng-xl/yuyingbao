@@ -29,9 +29,9 @@ git push -u origin main
 
 #### 方式二：在 URL 中包含用户名
 
-```bash
+```
 # 更新远程仓库 URL
-git remote set-url origin https://westxixia@github.com/westxixia/yuyingbao.git
+git remote set-url origin https://yideng-xl@github.com/yideng-xl/yuyingbao.git
 
 # 推送（只需要输入 token 作为密码）
 git push -u origin main
@@ -45,7 +45,7 @@ git config --global credential.helper store
 
 # 首次推送时输入认证信息
 git push -u origin main
-# 用户名：westxixia
+# 用户名：yideng-xl
 # 密码：您的 Personal Access Token
 
 # 认证信息会被保存，后续推送无需再次输入
@@ -166,7 +166,7 @@ git push origin main
 ```bash
 # 如果需要重新配置远程仓库
 git remote remove origin
-git remote add origin https://github.com/westxixia/yuyingbao.git
+git remote add origin https://github.com/yideng-xl/yuyingbao.git
 ```
 
 ## 📦 版本发布最佳实践

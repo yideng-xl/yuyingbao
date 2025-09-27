@@ -27,10 +27,10 @@
 在阿里云ECS服务器上执行以下命令下载所需文件：
 ```bash
 # 下载Nginx配置文件
-curl -fsSL https://raw.githubusercontent.com/westxixia/yuyingbao/main/deploy2aliyun/yuyingbao.conf -o yuyingbao.conf
+curl -fsSL https://raw.githubusercontent.com/yideng-xl/yuyingbao/main/deploy2aliyun/yuyingbao.conf -o yuyingbao.conf
 
 # 下载HTTPS配置脚本
-curl -fsSL https://raw.githubusercontent.com/westxixia/yuyingbao/main/deploy2aliyun/03_setup-nginx-https.sh -o 03_setup-nginx-https.sh
+curl -fsSL https://raw.githubusercontent.com/yideng-xl/yuyingbao/main/deploy2aliyun/03_setup-nginx-https.sh -o 03_setup-nginx-https.sh
 ```
 
 ### 3. 运行配置脚本

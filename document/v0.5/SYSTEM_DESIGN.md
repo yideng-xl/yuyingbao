@@ -4,8 +4,8 @@
 
 - **版本号**: v0.5
 - **发布日期**: 2024年8月
-- **文档作者**: westxixia
-- **项目仓库**: https://github.com/westxixia/yuyingbao
+- **文档作者**: yideng-xl
+- **项目仓库**: https://github.com/yideng-xl/yuyingbao
 
 ## 1. 项目概述
 

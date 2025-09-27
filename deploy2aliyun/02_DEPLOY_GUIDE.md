@@ -6,7 +6,7 @@
 
 ## 📋 脚本功能
 
-[02_deploy-ecs.sh](https://github.com/westxixia/yuyingbao/blob/main/deploy2aliyun/02_deploy-ecs.sh) 是育婴宝项目的一键ECS部署脚本，集成了以下功能：
+[02_deploy-ecs.sh](https://github.com/yideng-xl/yuyingbao/blob/main/deploy2aliyun/02_deploy-ecs.sh) 是育婴宝项目的一键ECS部署脚本，集成了以下功能：
 
 - ✅ **系统环境检查**：自动检测操作系统、内存、磁盘空间
 - ✅ **Docker自动安装**：支持CentOS/Ubuntu系统的Docker安装和配置
@@ -23,13 +23,13 @@
 
 ```
 # 1. 下载部署脚本到ECS服务器
-curl -fsSL https://raw.githubusercontent.com/westxixia/yuyingbao/main/deploy2aliyun/02_deploy-ecs.sh -o 02_deploy-ecs.sh
+curl -fsSL https://raw.githubusercontent.com/yideng-xl/yuyingbao/main/deploy2aliyun/02_deploy-ecs.sh -o 02_deploy-ecs.sh
 
 # 2. 下载阿里云配置示例文件
-curl -fsSL https://raw.githubusercontent.com/westxixia/yuyingbao/main/deploy2aliyun/aliyun-config.json.example -o aliyun-config.json.example
+curl -fsSL https://raw.githubusercontent.com/yideng-xl/yuyingbao/main/deploy2aliyun/aliyun-config.json.example -o aliyun-config.json.example
 
 # 3. 下载环境变量配置示例文件
-curl -fsSL https://raw.githubusercontent.com/westxixia/yuyingbao/main/deploy2aliyun/.env.example -o .env.example
+curl -fsSL https://raw.githubusercontent.com/yideng-xl/yuyingbao/main/deploy2aliyun/.env.example -o .env.example
 
 # 4. 复制并编辑阿里云配置文件
 cp aliyun-config.json.example aliyun-config.json
@@ -306,8 +306,8 @@ SPRING_PROFILES_ACTIVE=prod
    ```
    
    **涉及文件：**
-   - [02_deploy-ecs.sh](https://github.com/westxixia/yuyingbao/blob/main/deploy2aliyun/02_deploy-ecs.sh)
-   - [fix-postgres-connection.sh](https://github.com/westxixia/yuyingbao/blob/main/deploy2aliyun/fix-postgres-connection.sh)
+   - [02_deploy-ecs.sh](https://github.com/yideng-xl/yuyingbao/blob/main/deploy2aliyun/02_deploy-ecs.sh)
+   - [fix-postgres-connection.sh](https://github.com/yideng-xl/yuyingbao/blob/main/deploy2aliyun/fix-postgres-connection.sh)
    
    **验证修复：**
    ```bash
@@ -498,10 +498,10 @@ sudo nginx -t && sudo systemctl reload nginx
 3. 从GitHub下载HTTPS配置文件：
    ```bash
    # 下载Nginx配置文件
-   curl -fsSL https://raw.githubusercontent.com/westxixia/yuyingbao/main/deploy2aliyun/yuyingbao.conf -o yuyingbao.conf
+   curl -fsSL https://raw.githubusercontent.com/yideng-xl/yuyingbao/main/deploy2aliyun/yuyingbao.conf -o yuyingbao.conf
    
    # 下载HTTPS配置脚本
-   curl -fsSL https://raw.githubusercontent.com/westxixia/yuyingbao/main/deploy2aliyun/03_setup-nginx-https.sh -o 03_setup-nginx-https.sh
+   curl -fsSL https://raw.githubusercontent.com/yideng-xl/yuyingbao/main/deploy2aliyun/03_setup-nginx-https.sh -o 03_setup-nginx-https.sh
    ```
 4. 运行HTTPS配置脚本：
    ```bash
@@ -513,7 +513,7 @@ sudo nginx -t && sudo systemctl reload nginx
 
 ### 8.2 手动配置HTTPS
 
-如果您需要手动配置，请参考 [03_HTTPS_SETUP.md](https://github.com/westxixia/yuyingbao/blob/main/deploy2aliyun/03_HTTPS_SETUP.md) 文件。
+如果您需要手动配置，请参考 [03_HTTPS_SETUP.md](https://github.com/yideng-xl/yuyingbao/blob/main/deploy2aliyun/03_HTTPS_SETUP.md) 文件。
 
 ## 9. 验证部署
 
