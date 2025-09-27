@@ -28,14 +28,21 @@ curl -fsSL https://raw.githubusercontent.com/westxixia/yuyingbao/main/deploy2ali
 # 2. 下载阿里云配置示例文件
 curl -fsSL https://raw.githubusercontent.com/westxixia/yuyingbao/main/deploy2aliyun/aliyun-config.json.example -o aliyun-config.json.example
 
-# 3. 复制并编辑阿里云配置文件
+# 3. 下载环境变量配置示例文件
+curl -fsSL https://raw.githubusercontent.com/westxixia/yuyingbao/main/deploy2aliyun/.env.example -o .env.example
+
+# 4. 复制并编辑阿里云配置文件
 cp aliyun-config.json.example aliyun-config.json
 # 编辑 aliyun-config.json 文件，填写您的阿里云配置信息
 
-# 4. 给脚本执行权限
+# 5. 复制并编辑环境变量配置文件
+cp .env.example deploy2aliyun/.env
+# 编辑 deploy2aliyun/.env 文件，填写您的敏感配置信息
+
+# 6. 给脚本执行权限
 chmod +x 02_deploy-ecs.sh
 
-# 5. 执行部署
+# 7. 执行部署
 ./02_deploy-ecs.sh
 ```
 
