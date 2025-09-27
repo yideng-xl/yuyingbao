@@ -495,11 +495,13 @@ sudo nginx -t && sudo systemctl reload nginx
 
 1. 确保域名已正确解析到您的阿里云ECS服务器IP
 2. 确保服务器80和443端口已开放
-3. 上传HTTPS配置文件：
+3. 从GitHub下载HTTPS配置文件：
    ```bash
-   # 上传以下文件到服务器
-   yuyingbao.conf
-   03_setup-nginx-https.sh
+   # 下载Nginx配置文件
+   curl -fsSL https://raw.githubusercontent.com/westxixia/yuyingbao/main/deploy2aliyun/yuyingbao.conf -o yuyingbao.conf
+   
+   # 下载HTTPS配置脚本
+   curl -fsSL https://raw.githubusercontent.com/westxixia/yuyingbao/main/deploy2aliyun/03_setup-nginx-https.sh -o 03_setup-nginx-https.sh
    ```
 4. 运行HTTPS配置脚本：
    ```bash
@@ -511,7 +513,7 @@ sudo nginx -t && sudo systemctl reload nginx
 
 ### 8.2 手动配置HTTPS
 
-如果您需要手动配置，请参考 [HTTPS_SETUP.md](https://github.com/westxixia/yuyingbao/blob/main/deploy2aliyun/HTTPS_SETUP.md) 文件。
+如果您需要手动配置，请参考 [03_HTTPS_SETUP.md](https://github.com/westxixia/yuyingbao/blob/main/deploy2aliyun/03_HTTPS_SETUP.md) 文件。
 
 ## 9. 验证部署
 

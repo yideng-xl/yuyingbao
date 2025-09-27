@@ -22,12 +22,15 @@
 - 服务器80和443端口已开放
 - 应用服务正常运行在8080端口
 
-### 2. 上传配置文件
+### 2. 从GitHub下载配置文件
 
-将以下文件上传到阿里云ECS服务器：
+在阿里云ECS服务器上执行以下命令下载所需文件：
 ```bash
-yuyingbao.conf
-03_setup-nginx-https.sh
+# 下载Nginx配置文件
+curl -fsSL https://raw.githubusercontent.com/westxixia/yuyingbao/main/deploy2aliyun/yuyingbao.conf -o yuyingbao.conf
+
+# 下载HTTPS配置脚本
+curl -fsSL https://raw.githubusercontent.com/westxixia/yuyingbao/main/deploy2aliyun/03_setup-nginx-https.sh -o 03_setup-nginx-https.sh
 ```
 
 ### 3. 运行配置脚本
