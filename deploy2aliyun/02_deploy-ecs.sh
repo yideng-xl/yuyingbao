@@ -419,23 +419,13 @@ setup_data_directory() {
         fi
     fi
     
-    # 创建.env文件用于应用容器环境变量
-    echo -e "${BLUE}🔧 创建应用环境变量文件...${NC}"
-    cat > deploy2aliyun/.env << EOF
-DB_HOST=yuyingbao-postgres
-DB_PORT=5432
-DB_NAME=yuyingbao
-DB_USERNAME=yuyingbao
-DB_PASSWORD=YuyingBao2024@Database
-JWT_SECRET=
-JWT_EXPIRATION=86400000
-WECHAT_APP_ID=
-WECHAT_APP_SECRET=
-SERVER_PORT=8080
-SPRING_PROFILES_ACTIVE=prod
-EOF
-    echo -e "${GREEN}✅ 应用环境变量文件创建成功${NC}"
-    echo -e "${YELLOW}💡 请编辑 deploy2aliyun/.env 文件，填写您的敏感配置信息${NC}"
+    # 检查.env文件是否存在
+    if [[ ! -f "deploy2aliyun/.env" ]]; then
+        echo -e "${RED}❌ 未找到 deploy2aliyun/.env 文件${NC}"
+        echo -e "${YELLOW}💡 请先复制 deploy2aliyun/.env.example 为 deploy2aliyun/.env 并填写您的配置信息${NC}"
+        echo -e "${YELLOW}💡 或参考部署文档中的基本使用步骤${NC}"
+        exit 1
+    fi
     
     # 显示数据目录信息
     echo -e "${CYAN}ℹ️  PostgreSQL数据将存储在: $(pwd)/$data_dir${NC}"
