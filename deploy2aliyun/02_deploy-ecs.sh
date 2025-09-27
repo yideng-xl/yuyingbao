@@ -421,7 +421,7 @@ setup_data_directory() {
     
     # 创建.env文件用于应用容器环境变量
     echo -e "${BLUE}🔧 创建应用环境变量文件...${NC}"
-    cat > .env << EOF
+    cat > deploy2aliyun/.env << EOF
 DB_HOST=yuyingbao-postgres
 DB_PORT=5432
 DB_NAME=yuyingbao
@@ -435,7 +435,7 @@ SERVER_PORT=8080
 SPRING_PROFILES_ACTIVE=prod
 EOF
     echo -e "${GREEN}✅ 应用环境变量文件创建成功${NC}"
-    echo -e "${YELLOW}💡 请编辑 .env 文件，填写您的敏感配置信息${NC}"
+    echo -e "${YELLOW}💡 请编辑 deploy2aliyun/.env 文件，填写您的敏感配置信息${NC}"
     
     # 显示数据目录信息
     echo -e "${CYAN}ℹ️  PostgreSQL数据将存储在: $(pwd)/$data_dir${NC}"
@@ -637,7 +637,7 @@ start_application() {
         -p 8080:8080 \
         --memory=1.5g \
         --cpus=1.5 \
-        --env-file .env \
+        --env-file deploy2aliyun/.env \
         -e SPRING_PROFILES_ACTIVE=prod \
         -e SERVER_TOMCAT_THREADS_MAX=50 \
         -e SERVER_TOMCAT_ACCEPT_COUNT=100 \
