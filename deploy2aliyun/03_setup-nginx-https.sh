@@ -227,41 +227,25 @@ deploy_nginx_config() {
     # 先备份原配置
     cp "$NGINX_SITE_CONFIG" "$NGINX_SITE_CONFIG.with_ssl"
     
-    # 创建HTTP-only配置用于初始测试
-    awk '
-    /^server {/,/server_name .*;/ {
-        if (/listen 443/) {
-            in_https_server = 1
-            next
-        }
-        if (in_https_server && /^}/) {
-            in_https_server = 0
-            next
-        }
-        if (in_https_server) next
-        
-        if (/listen 80;/) {
-            print
-            print "    # 临时重定向HTTP到应用端口，证书获取后再更新为HTTPS重定向"
-            print "    location / {"
-            print "        proxy_pass http://127.0.0.1:8080;"
-            print "        proxy_set_header Host $host;"
-            print "        proxy_set_header X-Real-IP $remote_addr;"
-            print "        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;"
-            print "        proxy_set_header X-Forwarded-Proto $scheme;"
-            print "    }"
-            next
-        }
-        if (/return 301 https/) {
-            # 跳过HTTPS重定向
-            next
-        }
-        print
+    # 创建一个简单的HTTP配置用于初始测试
+    cat > "$NGINX_SITE_CONFIG" << EOF
+# Nginx HTTP配置文件 - 育婴宝后端服务
+# 临时配置，证书获取后会自动更新为HTTPS配置
+
+server {
+    listen 80;
+    server_name $DOMAIN;
+
+    # 临时代理HTTP到应用端口，证书获取后再更新为HTTPS重定向
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
     }
-    !/^server {/,/server_name .*;/ {
-        print
-    }
-    ' "$NGINX_SITE_CONFIG.with_ssl" > "$NGINX_SITE_CONFIG"
+}
+EOF
     
     echo -e "${GREEN}✅ 配置文件已复制到: $NGINX_SITE_CONFIG${NC}"
     echo -e "${GREEN}✅ 域名已更新为: $DOMAIN${NC}"
@@ -474,6 +458,27 @@ get_ssl_certificate() {
     # 首先尝试使用--nginx插件
     if certbot --nginx -d "$DOMAIN" --email "$email" --agree-tos --non-interactive; then
         echo -e "${GREEN}✅ SSL证书获取成功${NC}"
+        # 证书获取成功后，恢复完整的HTTPS配置
+        echo -e "${BLUE}🔍 恢复完整的HTTPS配置...${NC}"
+        if [[ -f "$NGINX_SITE_CONFIG.with_ssl" ]]; then
+            # 恢复完整的配置
+            cp "$NGINX_SITE_CONFIG.with_ssl" "$NGINX_SITE_CONFIG"
+            
+            # 更新域名
+            sed -i "s/yuyingbao\.yideng\.ltd/$DOMAIN/g" "$NGINX_SITE_CONFIG"
+            
+            # 测试配置
+            if nginx -t; then
+                echo -e "${GREEN}✅ Nginx HTTPS配置恢复完成${NC}"
+                systemctl reload nginx || echo -e "${YELLOW}⚠️  Nginx重新加载失败（非致命错误）${NC}"
+                echo -e "${GREEN}✅ Nginx已重新加载${NC}"
+            else
+                echo -e "${RED}❌ Nginx HTTPS配置恢复失败${NC}"
+                exit 1
+            fi
+        else
+            echo -e "${YELLOW}⚠️  完整配置文件备份不存在，跳过配置恢复${NC}"
+        fi
     else
         echo -e "${YELLOW}⚠️  使用nginx插件获取证书失败，尝试使用standalone模式...${NC}"
         
@@ -485,6 +490,28 @@ get_ssl_certificate() {
             echo -e "${GREEN}✅ SSL证书获取成功${NC}"
             # 重新启动Nginx
             systemctl start nginx || echo -e "${YELLOW}⚠️  启动Nginx失败（非致命错误）${NC}"
+            
+            # 证书获取成功后，恢复完整的HTTPS配置
+            echo -e "${BLUE}🔍 恢复完整的HTTPS配置...${NC}"
+            if [[ -f "$NGINX_SITE_CONFIG.with_ssl" ]]; then
+                # 恢复完整的配置
+                cp "$NGINX_SITE_CONFIG.with_ssl" "$NGINX_SITE_CONFIG"
+                
+                # 更新域名
+                sed -i "s/yuyingbao\.yideng\.ltd/$DOMAIN/g" "$NGINX_SITE_CONFIG"
+                
+                # 测试配置
+                if nginx -t; then
+                    echo -e "${GREEN}✅ Nginx HTTPS配置恢复完成${NC}"
+                    systemctl reload nginx || echo -e "${YELLOW}⚠️  Nginx重新加载失败（非致命错误）${NC}"
+                    echo -e "${GREEN}✅ Nginx已重新加载${NC}"
+                else
+                    echo -e "${RED}❌ Nginx HTTPS配置恢复失败${NC}"
+                    exit 1
+                fi
+            else
+                echo -e "${YELLOW}⚠️  完整配置文件备份不存在，跳过配置恢复${NC}"
+            fi
         else
             echo -e "${RED}❌ SSL证书获取失败${NC}"
             echo -e "${YELLOW}请检查以下事项:${NC}"
@@ -496,28 +523,6 @@ get_ssl_certificate() {
             systemctl start nginx || echo -e "${YELLOW}⚠️  启动Nginx失败（非致命错误）${NC}"
             exit 1
         fi
-    fi
-    
-    # 证书获取成功后，恢复完整的HTTPS配置
-    echo -e "${BLUE}🔍 恢复完整的HTTPS配置...${NC}"
-    if [[ -f "$NGINX_SITE_CONFIG.with_ssl" ]]; then
-        # 恢复完整的配置
-        cp "$NGINX_SITE_CONFIG.with_ssl" "$NGINX_SITE_CONFIG"
-        
-        # 更新域名
-        sed -i "s/yuyingbao\.yideng\.ltd/$DOMAIN/g" "$NGINX_SITE_CONFIG"
-        
-        # 测试配置
-        if nginx -t; then
-            echo -e "${GREEN}✅ Nginx HTTPS配置恢复完成${NC}"
-            systemctl reload nginx || echo -e "${YELLOW}⚠️  Nginx重新加载失败（非致命错误）${NC}"
-            echo -e "${GREEN}✅ Nginx已重新加载${NC}"
-        else
-            echo -e "${RED}❌ Nginx HTTPS配置恢复失败${NC}"
-            exit 1
-        fi
-    else
-        echo -e "${YELLOW}⚠️  完整配置文件备份不存在，跳过配置恢复${NC}"
     fi
 }
 
@@ -565,34 +570,17 @@ update_nginx_config() {
     fi
     
     # 检查配置文件是否存在
-    if [[ ! -f "$NGINX_SITE_CONFIG" ]]; then
-        echo -e "${YELLOW}⚠️  Nginx配置文件不存在，跳过配置更新${NC}"
+    if [[ ! -f "$NGINX_SITE_CONFIG.with_ssl" ]]; then
+        echo -e "${YELLOW}⚠️  完整Nginx配置文件备份不存在，跳过配置更新${NC}"
         return
     fi
     
-    # 备份原配置
-    if [[ -f "$NGINX_SITE_CONFIG.bak" ]]; then
-        rm "$NGINX_SITE_CONFIG.bak"
-    fi
-    cp "$NGINX_SITE_CONFIG" "$NGINX_SITE_CONFIG.bak"
+    # 恢复完整的HTTPS配置
+    cp "$NGINX_SITE_CONFIG.with_ssl" "$NGINX_SITE_CONFIG"
     
-    # 更新证书路径
-    sed -i "s|/etc/letsencrypt/live/yuyingbao.yideng.ltd/fullchain.pem|/etc/letsencrypt/live/$DOMAIN/fullchain.pem|g" "$NGINX_SITE_CONFIG"
-    sed -i "s|/etc/letsencrypt/live/yuyingbao.yideng.ltd/privkey.pem|/etc/letsencrypt/live/$DOMAIN/privkey.pem|g" "$NGINX_SITE_CONFIG"
-    sed -i "s|/etc/letsencrypt/live/yuyingbao.aijinseliunian.top/fullchain.pem|/etc/letsencrypt/live/$DOMAIN/fullchain.pem|g" "$NGINX_SITE_CONFIG"
-    sed -i "s|/etc/letsencrypt/live/yuyingbao.aijinseliunian.top/privkey.pem|/etc/letsencrypt/live/$DOMAIN/privkey.pem|g" "$NGINX_SITE_CONFIG"
-    
-    # 确保新证书路径已更新
-    if ! grep -q "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" "$NGINX_SITE_CONFIG"; then
-        echo -e "${YELLOW}⚠️  证书路径未正确更新，手动添加...${NC}"
-        # 如果sed命令没有正确替换，手动添加
-        sed -i "s|ssl_certificate .*;|ssl_certificate /etc/letsencrypt/live/$DOMAIN/fullchain.pem;|g" "$NGINX_SITE_CONFIG"
-        sed -i "s|ssl_certificate_key .*;|ssl_certificate_key /etc/letsencrypt/live/$DOMAIN/privkey.pem;|g" "$NGINX_SITE_CONFIG"
-    fi
-    
-    # 更新server_name
-    sed -i "s|server_name yuyingbao.yideng.ltd;|server_name $DOMAIN;|g" "$NGINX_SITE_CONFIG"
-    sed -i "s|server_name yuyingbao.aijinseliunian.top;|server_name $DOMAIN;|g" "$NGINX_SITE_CONFIG"
+    # 更新域名
+    sed -i "s/yuyingbao\.yideng\.ltd/$DOMAIN/g" "$NGINX_SITE_CONFIG"
+    sed -i "s/yuyingbao\.aijinseliunian\.top/$DOMAIN/g" "$NGINX_SITE_CONFIG"
     
     # 测试配置
     if nginx -t; then
@@ -604,15 +592,9 @@ update_nginx_config() {
             echo -e "${YELLOW}⚠️  未检测到systemctl，跳过Nginx重新加载${NC}"
         fi
     else
-        echo -e "${RED}❌ Nginx配置更新失败，恢复备份配置${NC}"
+        echo -e "${RED}❌ Nginx配置更新失败${NC}"
         echo -e "${YELLOW}Nginx错误信息:${NC}"
         nginx -t
-        cp "$NGINX_SITE_CONFIG.bak" "$NGINX_SITE_CONFIG"
-        if command -v systemctl &> /dev/null; then
-            systemctl reload nginx || echo -e "${YELLOW}⚠️  Nginx重新加载失败（非致命错误）${NC}"
-        else
-            echo -e "${YELLOW}⚠️  未检测到systemctl，跳过Nginx重新加载${NC}"
-        fi
         exit 1
     fi
 }
