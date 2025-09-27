@@ -557,6 +557,14 @@ wait_for_postgres() {
     echo -e "${BLUE}⏳ 等待PostgreSQL数据库启动...${NC}"
     echo -e "${CYAN}   这可能需要30-60秒，请耐心等待...${NC}"
     
+    # 确保环境变量已加载，如果未设置则使用默认值
+    local db_name=${DB_NAME:-yuyingbao}
+    local db_user=${DB_USERNAME:-yuyingbao}
+    local db_password=${DB_PASSWORD:-YuyingBao2024@Database}
+    
+    echo -e "${CYAN}  等待数据库启动 - 数据库用户: ${db_user}${NC}"
+    echo -e "${CYAN}  等待数据库启动 - 数据库名称: ${db_name}${NC}"
+    
     local db_attempts=0
     local max_db_attempts=60  # 增加到60次（2分钟）
     
@@ -571,14 +579,14 @@ wait_for_postgres() {
         fi
         
         # 检查数据库是否可以接受连接
-        if docker exec yuyingbao-postgres pg_isready -U "${DB_USERNAME}" -d "${DB_NAME}" &>/dev/null; then
+        if docker exec yuyingbao-postgres pg_isready -U "${db_user}" -d "${db_name}" &>/dev/null; then
             echo ""
             echo -e "${GREEN}✅ 数据库接受连接，继续检查完整性...${NC}"
             
             # 进一步验证数据库是否完全可用
             echo -e "${BLUE}🔍 执行数据库连接测试查询...${NC}"
-            echo -e "${CYAN}  命令: docker exec yuyingbao-postgres psql -U \"${DB_USERNAME}\" -d \"${DB_NAME}\" -c \"SELECT 1;\"${NC}"
-            local psql_result=$(docker exec yuyingbao-postgres psql -U "${DB_USERNAME}" -d "${DB_NAME}" -c "SELECT 1;" 2>&1)
+            echo -e "${CYAN}  命令: docker exec yuyingbao-postgres psql -U \"${db_user}\" -d \"${db_name}\" -c \"SELECT 1;\"${NC}"
+            local psql_result=$(docker exec yuyingbao-postgres psql -U "${db_user}" -d "${db_name}" -c "SELECT 1;" 2>&1)
             local psql_exit_code=$?
             
             if [[ $psql_exit_code -eq 0 ]]; then
