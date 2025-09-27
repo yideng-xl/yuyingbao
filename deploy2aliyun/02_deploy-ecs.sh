@@ -511,8 +511,15 @@ deploy_postgres() {
                 echo -e "${GREEN}✅ 数据库接受连接，继续检查完整性...${NC}"
                 
                 # 进一步验证数据库是否完全可用
-                if docker exec yuyingbao-postgres psql -U "${db_user}" -d "${db_name}" -c "SELECT 1;" &>/dev/null; then
+                echo -e "${BLUE}🔍 执行数据库连接测试查询...${NC}"
+                echo -e "${CYAN}  命令: docker exec yuyingbao-postgres psql -U \"${db_user}\" -d \"${db_name}\" -c \"SELECT 1;\"${NC}"
+                local psql_result=$(docker exec yuyingbao-postgres psql -U "${db_user}" -d "${db_name}" -c "SELECT 1;" 2>&1)
+                local psql_exit_code=$?
+                
+                if [[ $psql_exit_code -eq 0 ]]; then
                     echo -e "${GREEN}✅ 数据库完全可用！${NC}"
+                    echo -e "${CYAN}  查询结果:${NC}"
+                    echo "$psql_result" | sed 's/^/    /'
                     
                     # 额外等待5秒确保稳定
                     echo -e "${BLUE}⏳ 额外等待5秒确保数据库稳定...${NC}"
@@ -520,6 +527,10 @@ deploy_postgres() {
                     
                     return 0
                 else
+                    echo -e "${RED}❌ 数据库连接测试失败${NC}"
+                    echo -e "${CYAN}  退出码: $psql_exit_code${NC}"
+                    echo -e "${CYAN}  错误信息:${NC}"
+                    echo "$psql_result" | sed 's/^/    /'
                     echo -e "${YELLOW}⚠️  数据库尚未完全准备好，继续等待...${NC}"
                 fi
             fi
@@ -565,8 +576,15 @@ wait_for_postgres() {
             echo -e "${GREEN}✅ 数据库接受连接，继续检查完整性...${NC}"
             
             # 进一步验证数据库是否完全可用
-            if docker exec yuyingbao-postgres psql -U "${DB_USERNAME}" -d "${DB_NAME}" -c "SELECT 1;" &>/dev/null; then
+            echo -e "${BLUE}🔍 执行数据库连接测试查询...${NC}"
+            echo -e "${CYAN}  命令: docker exec yuyingbao-postgres psql -U \"${DB_USERNAME}\" -d \"${DB_NAME}\" -c \"SELECT 1;\"${NC}"
+            local psql_result=$(docker exec yuyingbao-postgres psql -U "${DB_USERNAME}" -d "${DB_NAME}" -c "SELECT 1;" 2>&1)
+            local psql_exit_code=$?
+            
+            if [[ $psql_exit_code -eq 0 ]]; then
                 echo -e "${GREEN}✅ 数据库完全可用！${NC}"
+                echo -e "${CYAN}  查询结果:${NC}"
+                echo "$psql_result" | sed 's/^/    /'
                 
                 # 额外等待5秒确保稳定
                 echo -e "${BLUE}⏳ 额外等待5秒确保数据库稳定...${NC}"
@@ -574,6 +592,10 @@ wait_for_postgres() {
                 
                 return 0
             else
+                echo -e "${RED}❌ 数据库连接测试失败${NC}"
+                echo -e "${CYAN}  退出码: $psql_exit_code${NC}"
+                echo -e "${CYAN}  错误信息:${NC}"
+                echo "$psql_result" | sed 's/^/    /'
                 echo -e "${YELLOW}⚠️  数据库尚未完全准备好，继续等待...${NC}"
             fi
         fi
