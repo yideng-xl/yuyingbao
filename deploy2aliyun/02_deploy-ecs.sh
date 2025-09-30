@@ -1046,6 +1046,279 @@ check_data_directory() {
     echo ""
 }
 
+# 升级部署功能
+upgrade_application() {
+    echo -e "${BLUE}🔄 开始升级部署...${NC}"
+    echo -e "${CYAN}此操作将保留数据库数据，仅更新应用容器${NC}"
+    echo ""
+    
+    # 检查当前运行状态
+    echo -e "${BLUE}📊 检查当前部署状态...${NC}"
+    
+    local app_running=false
+    local db_running=false
+    
+    if docker ps | grep -q "${CONTAINER_NAME}"; then
+        app_running=true
+        echo -e "${GREEN}✅ 应用容器正在运行${NC}"
+    else
+        echo -e "${YELLOW}⚠️  应用容器未运行${NC}"
+    fi
+    
+    if docker ps | grep -q "yuyingbao-postgres"; then
+        db_running=true
+        echo -e "${GREEN}✅ 数据库容器正在运行${NC}"
+    else
+        echo -e "${YELLOW}⚠️  数据库容器未运行${NC}"
+    fi
+    
+    # 如果数据库未运行，询问是否要启动
+    if [ "$db_running" = false ]; then
+        echo -e "${YELLOW}数据库容器未运行，升级过程需要数据库${NC}"
+        echo -e "${YELLOW}是否启动数据库容器？(y/N)${NC}"
+        read -r start_db
+        if [[ "$start_db" =~ ^[Yy]$ ]]; then
+            echo -e "${BLUE}🐘 启动数据库容器...${NC}"
+            if ! deploy_postgres; then
+                echo -e "${RED}❌ 数据库启动失败，升级中止${NC}"
+                return 1
+            fi
+            if ! wait_for_postgres; then
+                echo -e "${RED}❌ 数据库启动超时，升级中止${NC}"
+                return 1
+            fi
+        else
+            echo -e "${RED}❌ 升级需要数据库运行，操作取消${NC}"
+            return 1
+        fi
+    fi
+    
+    # 备份当前应用容器信息（如果存在）
+    if [ "$app_running" = true ]; then
+        echo -e "${BLUE}💾 备份当前应用容器信息...${NC}"
+        local current_image=$(docker inspect ${CONTAINER_NAME} --format='{{.Config.Image}}' 2>/dev/null || echo "未知")
+        local current_created=$(docker inspect ${CONTAINER_NAME} --format='{{.Created}}' 2>/dev/null || echo "未知")
+        echo -e "${CYAN}当前镜像: ${current_image}${NC}"
+        echo -e "${CYAN}创建时间: ${current_created}${NC}"
+        echo ""
+    fi
+    
+    # 拉取最新镜像
+    echo -e "${BLUE}📥 拉取最新应用镜像...${NC}"
+    echo -e "${CYAN}镜像: ${DOCKER_IMAGE}${NC}"
+    
+    local old_image_id=""
+    if docker images ${DOCKER_IMAGE} --format "{{.ID}}" | head -1 >/dev/null 2>&1; then
+        old_image_id=$(docker images ${DOCKER_IMAGE} --format "{{.ID}}" | head -1)
+    fi
+    
+    if ! docker pull ${DOCKER_IMAGE}; then
+        echo -e "${RED}❌ 镜像拉取失败，升级中止${NC}"
+        return 1
+    fi
+    
+    local new_image_id=$(docker images ${DOCKER_IMAGE} --format "{{.ID}}" | head -1)
+    
+    # 检查镜像是否有更新
+    if [ "$old_image_id" = "$new_image_id" ] && [ -n "$old_image_id" ]; then
+        echo -e "${YELLOW}⚠️  镜像无更新，但仍继续升级流程${NC}"
+        echo -e "${CYAN}镜像ID: ${new_image_id}${NC}"
+    else
+        echo -e "${GREEN}✅ 发现镜像更新${NC}"
+        if [ -n "$old_image_id" ]; then
+            echo -e "${CYAN}旧镜像ID: ${old_image_id}${NC}"
+        fi
+        echo -e "${CYAN}新镜像ID: ${new_image_id}${NC}"
+    fi
+    
+    # 停止当前应用容器
+    if [ "$app_running" = true ]; then
+        echo -e "${BLUE}⏹️  停止当前应用容器...${NC}"
+        if docker stop ${CONTAINER_NAME}; then
+            echo -e "${GREEN}✅ 应用容器已停止${NC}"
+        else
+            echo -e "${RED}❌ 应用容器停止失败${NC}"
+            return 1
+        fi
+        
+        # 删除旧容器
+        echo -e "${BLUE}🗑️  删除旧应用容器...${NC}"
+        if docker rm ${CONTAINER_NAME}; then
+            echo -e "${GREEN}✅ 旧应用容器已删除${NC}"
+        else
+            echo -e "${RED}❌ 旧应用容器删除失败${NC}"
+            return 1
+        fi
+    fi
+    
+    # 验证数据库连接
+    echo -e "${BLUE}🔍 验证数据库连接...${NC}"
+    local db_name=${DB_NAME:-yuyingbao}
+    local db_user=${DB_USERNAME:-yuyingbao}
+    
+    if ! docker exec yuyingbao-postgres pg_isready -U "${db_user}" -d "${db_name}" &>/dev/null; then
+        echo -e "${RED}❌ 数据库连接验证失败${NC}"
+        echo -e "${YELLOW}尝试修复数据库连接...${NC}"
+        diagnose_and_fix_network
+        
+        # 再次尝试连接
+        if ! docker exec yuyingbao-postgres pg_isready -U "${db_user}" -d "${db_name}" &>/dev/null; then
+            echo -e "${RED}❌ 数据库连接仍然失败，升级中止${NC}"
+            return 1
+        fi
+    fi
+    echo -e "${GREEN}✅ 数据库连接验证通过${NC}"
+    
+    # 启动新的应用容器
+    echo -e "${BLUE}🚀 启动新的应用容器...${NC}"
+    if ! start_application; then
+        echo -e "${RED}❌ 新应用容器启动失败${NC}"
+        return 1
+    fi
+    
+    # 等待应用启动
+    echo -e "${BLUE}⏳ 等待新应用启动...${NC}"
+    if ! wait_for_application; then
+        echo -e "${RED}❌ 新应用启动失败或超时${NC}"
+        echo -e "${YELLOW}查看应用日志: docker logs -f ${CONTAINER_NAME}${NC}"
+        return 1
+    fi
+    
+    # 升级完成
+    echo -e "${GREEN}🎉 升级部署完成！${NC}"
+    echo ""
+    echo -e "${BLUE}📋 升级后状态:${NC}"
+    echo -e "${CYAN}新镜像: ${DOCKER_IMAGE}${NC}"
+    echo -e "${CYAN}新镜像ID: ${new_image_id}${NC}"
+    echo -e "${CYAN}容器名称: ${CONTAINER_NAME}${NC}"
+    
+    # 显示当前容器状态
+    echo ""
+    echo -e "${BLUE}📊 当前容器状态:${NC}"
+    docker ps --filter "name=yuyingbao" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}\t{{.Image}}"
+    
+    # 健康检查
+    echo ""
+    echo -e "${BLUE}🔍 健康检查...${NC}"
+    sleep 5  # 等待几秒确保应用完全启动
+    
+    if curl -f -s http://localhost:8080/api/actuator/health &>/dev/null; then
+        echo -e "${GREEN}✅ 应用健康检查通过${NC}"
+        local health_response=$(curl -s http://localhost:8080/api/actuator/health 2>/dev/null)
+        if echo "$health_response" | grep -q '"status":"UP"'; then
+            echo -e "${GREEN}✅ 应用运行状态正常${NC}"
+        fi
+    else
+        echo -e "${YELLOW}⚠️  健康检查暂时失败，应用可能仍在启动中${NC}"
+        echo -e "${YELLOW}请稍后手动检查: curl http://localhost:8080/api/actuator/health${NC}"
+    fi
+    
+    # 清理旧镜像（可选）
+    if [ -n "$old_image_id" ] && [ "$old_image_id" != "$new_image_id" ]; then
+        echo ""
+        echo -e "${YELLOW}💡 检测到旧镜像，是否清理？(y/N)${NC}"
+        read -r cleanup_old
+        if [[ "$cleanup_old" =~ ^[Yy]$ ]]; then
+            echo -e "${BLUE}🧹 清理旧镜像...${NC}"
+            if docker rmi "$old_image_id" 2>/dev/null; then
+                echo -e "${GREEN}✅ 旧镜像已清理${NC}"
+            else
+                echo -e "${YELLOW}⚠️  旧镜像清理失败（可能被其他容器使用）${NC}"
+            fi
+        fi
+    fi
+    
+    echo ""
+    echo -e "${GREEN}🎯 升级部署成功完成！${NC}"
+    echo -e "${CYAN}应用地址: http://$(curl -s ifconfig.me 2>/dev/null || echo 'YOUR_SERVER_IP'):8080${NC}"
+    echo -e "${CYAN}健康检查: http://$(curl -s ifconfig.me 2>/dev/null || echo 'YOUR_SERVER_IP'):8080/api/actuator/health${NC}"
+}
+
+# 智能部署选择功能
+smart_deploy() {
+    echo -e "${BLUE}🤖 智能部署检测...${NC}"
+    
+    local app_exists=false
+    local db_exists=false
+    
+    # 检查是否存在应用容器
+    if docker ps -a --format "table {{.Names}}" | grep -q "^${CONTAINER_NAME}$"; then
+        app_exists=true
+    fi
+    
+    # 检查是否存在数据库容器
+    if docker ps -a --format "table {{.Names}}" | grep -q "^yuyingbao-postgres$"; then
+        db_exists=true
+    fi
+    
+    if [ "$app_exists" = true ] || [ "$db_exists" = true ]; then
+        echo -e "${YELLOW}🔍 检测到现有部署：${NC}"
+        if [ "$app_exists" = true ]; then
+            echo -e "  ✓ 应用容器存在"
+        fi
+        if [ "$db_exists" = true ]; then
+            echo -e "  ✓ 数据库容器存在"
+        fi
+        echo ""
+        echo -e "${YELLOW}选择部署模式：${NC}"
+        echo -e "  1) 升级部署 (保留数据，仅更新应用) [推荐]"
+        echo -e "  2) 全新部署 (完全重新部署，数据将丢失)"
+        echo -e "  3) 取消操作"
+        echo ""
+        echo -n "请选择 [1]: "
+        read -r deploy_choice
+        
+        case "${deploy_choice:-1}" in
+            1)
+                echo -e "${GREEN}📈 选择升级部署模式${NC}"
+                upgrade_application
+                ;;
+            2)
+                echo -e "${RED}⚠️  选择全新部署模式${NC}"
+                echo -e "${YELLOW}这将删除所有现有容器和数据，是否确认？(y/N)${NC}"
+                read -r confirm_fresh
+                if [[ "$confirm_fresh" =~ ^[Yy]$ ]]; then
+                    cleanup_containers
+                    full_deploy
+                else
+                    echo -e "${YELLOW}操作取消${NC}"
+                    exit 0
+                fi
+                ;;
+            3)
+                echo -e "${YELLOW}操作取消${NC}"
+                exit 0
+                ;;
+            *)
+                echo -e "${RED}❌ 无效选择，操作取消${NC}"
+                exit 1
+                ;;
+        esac
+    else
+        echo -e "${GREEN}🆕 检测到首次部署，执行全新部署${NC}"
+        full_deploy
+    fi
+}
+
+# 完整部署功能（重构原有deploy功能）
+full_deploy() {
+    echo -e "${BLUE}🚀 执行完整部署...${NC}"
+    check_root
+    show_system_info
+    check_system_resources
+    install_docker
+    login_aliyun_registry
+    pull_images
+    pull_postgres_image
+    setup_data_directory
+    deploy_postgres
+    wait_for_postgres
+    start_application
+    wait_for_application
+    configure_firewall
+    show_completion_message
+}
+
 # 显示帮助信息
 show_help() {
     echo "阿里云ECS部署脚本 - 育婴宝后端服务"
@@ -1053,43 +1326,55 @@ show_help() {
     echo "用法: $0 [选项]"
     echo ""
     echo "选项:"
-    echo "  deploy    执行完整部署 (默认)"
-    echo "  stop      停止应用容器"
-    echo "  stop-all  停止所有容器（包括数据库）"
-    echo "  status    查看部署状态"
-    echo "  reset-data 彻底清理所有数据（危险操作）"
-    echo "  diagnose  网络诊断和修复（整合了网络连接问题诊断和hosts映射测试）"
-    echo "  cleanup   清理旧镜像和容器（整合了容器清理功能）"
-    echo "  check-data 检查数据目录（整合了数据目录检查功能）"
-    echo "  help      显示此帮助信息"
+    echo "  deploy        智能部署 (默认) - 自动检测环境并选择部署模式"
+    echo "  upgrade       升级部署 - 保留数据库，仅更新应用容器"
+    echo "  fresh         全新部署 - 完全重新部署（数据将丢失）"
+    echo "  stop          停止应用容器"
+    echo "  stop-all      停止所有容器（包括数据库）"
+    echo "  status        查看部署状态"
+    echo "  reset-data    彻底清理所有数据（危险操作）"
+    echo "  diagnose      网络诊断和修复（整合了网络连接问题诊断和hosts映射测试）"
+    echo "  cleanup       清理旧镜像和容器（整合了容器清理功能）"
+    echo "  check-data    检查数据目录（整合了数据目录检查功能）"
+    echo "  help          显示此帮助信息"
     echo ""
     echo "示例:"
-    echo "  $0 deploy     # 执行完整部署"
+    echo "  $0            # 智能部署（推荐）"
+    echo "  $0 deploy     # 智能部署（推荐）"
+    echo "  $0 upgrade    # 升级部署（保留数据）"
+    echo "  $0 fresh      # 全新部署（数据将清空）"
     echo "  $0 stop       # 停止应用容器"
     echo "  $0 status     # 查看部署状态"
     echo "  $0 diagnose   # 网络问题诊断（包含增强的网络诊断和DNS解析测试）"
     echo "  $0 cleanup    # 清理容器（包含详细的容器状态检查）"
     echo "  $0 check-data # 检查数据目录（包含详细的权限和大小检查）"
     echo ""
+    echo "部署模式说明:"
+    echo "  🤖 智能部署: 自动检测现有部署，提供升级/全新部署选择"
+    echo "  📈 升级部署: 保留PostgreSQL数据，仅更新应用容器"
+    echo "  🆕 全新部署: 清空所有容器和数据，完全重新部署"
+    echo ""
 }
 
 # 命令行参数处理
 case "${1:-deploy}" in
     "deploy")
-        check_root
-        show_system_info
-        check_system_resources
-        install_docker
-        login_aliyun_registry
-        pull_images
-        pull_postgres_image  # 确保拉取PostgreSQL镜像
-        setup_data_directory
-        deploy_postgres
-        wait_for_postgres
-        start_application
-        wait_for_application
-        configure_firewall
-        show_completion_message
+        smart_deploy
+        ;;
+    "upgrade")
+        upgrade_application
+        ;;
+    "fresh")
+        echo -e "${RED}⚠️  全新部署将删除所有现有容器和数据！${NC}"
+        echo -e "${YELLOW}是否确认继续？(y/N)${NC}"
+        read -r confirm_fresh
+        if [[ "$confirm_fresh" =~ ^[Yy]$ ]]; then
+            cleanup_containers
+            full_deploy
+        else
+            echo -e "${YELLOW}操作取消${NC}"
+            exit 0
+        fi
         ;;
     "stop")
         echo -e "${BLUE}⏹️  停止应用容器...${NC}"
