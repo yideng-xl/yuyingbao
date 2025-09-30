@@ -81,7 +81,10 @@ curl -fsSL https://raw.githubusercontent.com/yideng-xl/yuyingbao/main/deploy2ali
 
 # 4. 复制并编辑阿里云配置文件
 cp aliyun-config.json.example aliyun-config.json
-# 编辑 aliyun-config.json 文件，填写您的阿里云配置信息
+# 编辑 aliyun-config.json 文件，填写您的阿里云配置信息：
+# - registry: 您的阿里云镜像仓库地址
+# - namespace: 您的命名空间
+# - username: 您的阿里云用户名
 
 # 5. 复制并编辑环境变量配置文件
 mkdir deploy2aliyun
@@ -108,12 +111,12 @@ chmod +x 02_deploy-ecs.sh
 - 启动并验证Docker服务
 
 ### 3. 阿里云镜像仓库登录
-- 交互式登录阿里云容器镜像服务
+- 交互式登录阿里云容器镜像服务（使用 aliyun-config.json 中的配置）
 - 验证登录状态
 
 ### 4. 镜像拉取阶段
 - 智能拉取PostgreSQL镜像（优先私有仓库）
-- 拉取应用镜像
+- 拉取应用镜像（使用 aliyun-config.json 中的仓库配置）
 - 验证镜像完整性
 
 ### 5. 数据库部署
@@ -217,6 +220,26 @@ CPU限制: 0.5核心
 数据库端口: 5432 (内部访问)
 ```
 
+### 阿里云镜像仓库配置
+
+脚本使用 `aliyun-config.json` 文件管理敏感信息：
+
+```json
+{
+  "description": "阿里云配置文件示例，开发者需要在aliyun-config.json文件中配置自己的阿里云信息",
+  "aliyun": {
+    "registry": "your-registry.cn-shanghai.personal.cr.aliyuncs.com",
+    "namespace": "your-namespace",
+    "username": "your-email@example.com"
+  }
+}
+```
+
+**安全提醒：**
+- `aliyun-config.json` 文件已添加到 `.gitignore`，不会被提交到代码仓库
+- 请务必填写您的实际阿里云配置信息
+- 请妥善保管此文件，避免泄露敏感信息
+
 ### 环境变量配置
 
 脚本会自动创建 `deploy2aliyun/.env` 文件，并支持自定义敏感配置：
@@ -286,10 +309,10 @@ SPRING_PROFILES_ACTIVE=prod
    ping registry-1.docker.io
    
    # 检查登录状态
-   docker login your-registry.cn-shanghai.personal.cr.aliyuncs.com
+   docker login <YOUR_ALIYUN_REGISTRY>  # 从 aliyun-config.json 中获取
    
    # 手动拉取镜像
-   docker pull your-registry/namespace/yuyingbao:latest
+   docker pull <YOUR_ALIYUN_REGISTRY>/<YOUR_NAMESPACE>/yuyingbao:latest
    ```
 
 3. **数据库连接在升级后失败**
