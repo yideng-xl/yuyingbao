@@ -333,6 +333,7 @@
 .logout-section {
   padding: 0 30rpx 30rpx;
   margin-top: 20rpx;
+  text-align: center;
 }
 
 .debug-card {
