@@ -363,9 +363,9 @@ Page({
         const babies = list.map(b => {
           console.log('Processing baby:', b);
           return this.mapBabyInfo(b);
-        });
+        }).sort((a, b) => a.id - b.id); // 按照宝宝ID升序排序
         
-        console.log('Mapped babies:', babies);
+        console.log('Mapped and sorted babies:', babies);
         
         // 选择默认宝宝（优先使用全局数据中的，否则选择第一个）
         let selectedBaby = babies[0];
@@ -479,8 +479,8 @@ Page({
         gender: selectedBaby.gender && selectedBaby.gender.toUpperCase ? selectedBaby.gender.toUpperCase() : 'BOY',
         birthDate: selectedBaby.birthDate,
         avatarUrl: selectedBaby.avatar,
-        birthHeightCm: selectedBaby.height || '',
-        birthWeightKg: selectedBaby.weight || ''
+        birthHeightCm: selectedBaby.birthHeightCm || selectedBaby.height || '',
+        birthWeightKg: selectedBaby.birthWeightKg || selectedBaby.weight || ''
       } : {
         name: '',
         gender: 'BOY',
@@ -507,8 +507,8 @@ Page({
         gender: baby.gender ? baby.gender.toUpperCase() : 'BOY',
         birthDate: baby.birthDate,
         avatarUrl: baby.avatar,
-        birthHeightCm: baby.height ? baby.height.toString() : '',
-        birthWeightKg: baby.weight ? baby.weight.toString() : ''
+        birthHeightCm: baby.birthHeightCm || baby.height ? (baby.birthHeightCm || baby.height).toString() : '',
+        birthWeightKg: baby.birthWeightKg || baby.weight ? (baby.birthWeightKg || baby.weight).toString() : ''
       }
     });
     
@@ -609,8 +609,8 @@ Page({
         gender: baby.gender.toUpperCase(),
         birthDate: baby.birthDate,
         avatarUrl: baby.avatar,
-        birthHeightCm: baby.height || '',
-        birthWeightKg: baby.weight || ''
+        birthHeightCm: baby.birthHeightCm || baby.height || '',
+        birthWeightKg: baby.birthWeightKg || baby.weight || ''
       }
     });
   },
@@ -692,37 +692,7 @@ Page({
     });
   },
 
-  // 宝宝表单输入事件
-  onBabyNameInput(e) {
-    this.setData({
-      'babyForm.name': e.detail.value
-    });
-  },
 
-  onBabyGenderChange(e) {
-    const genders = ['BOY', 'GIRL'];
-    this.setData({
-      'babyForm.gender': genders[e.detail.value]
-    });
-  },
-
-  onBabyBirthDateChange(e) {
-    this.setData({
-      'babyForm.birthDate': e.detail.value
-    });
-  },
-
-  onBabyHeightInput(e) {
-    this.setData({
-      'babyForm.birthHeightCm': e.detail.value
-    });
-  },
-
-  onBabyWeightInput(e) {
-    this.setData({
-      'babyForm.birthWeightKg': e.detail.value
-    });
-  },
 
   // 保存宝宝信息
   saveBabyInfo() {
@@ -1148,59 +1118,7 @@ Page({
     });
   },
 
-  saveBabyInfo() {
-    const { babyForm } = this.data;
-    
-    if (!babyForm.name || !babyForm.birthDate) {
-      wx.showToast({
-        title: '请填写完整信息',
-        icon: 'none'
-      });
-      return;
-    }
 
-    const familyId = app.globalData.familyInfo?.id;
-    if (!familyId) {
-      wx.showToast({ title: '请先创建或加入家庭', icon: 'none' });
-      return;
-    }
-    
-    // 检查是否有有效的token
-    const token = wx.getStorageSync('token');
-    if (!token) {
-      wx.showToast({
-        title: '请重新登录',
-        icon: 'none'
-      });
-      return;
-    }
-
-    const genderMap = { boy: 'BOY', girl: 'GIRL' };
-    const payload = {
-      name: babyForm.name,
-      gender: genderMap[babyForm.gender] || 'UNKNOWN',
-      birthDate: babyForm.birthDate,
-      avatarUrl: babyForm.avatar,
-      birthHeightCm: babyForm.birthHeight ? Number(babyForm.birthHeight) : undefined,
-      birthWeightKg: babyForm.birthWeight ? Number(babyForm.birthWeight) : undefined
-    };
-
-    const isUpdate = babyForm.id; // 如果有ID，说明是更新
-    const requestMethod = isUpdate ? 'put' : 'post';
-    const requestPath = isUpdate ? `/families/${familyId}/babies/${babyForm.id}` : `/families/${familyId}/babies`;
-
-    app.request({ path: requestPath, method: requestMethod, data: payload })
-      .then(b => {
-        const mapped = this.mapBabyInfo(b);
-        app.globalData.babyInfo = mapped;
-        wx.setStorageSync('babyInfo', mapped);
-        this.setData({ babyInfo: mapped, showBabyModal: false });
-        wx.showToast({ title: isUpdate ? '更新成功' : '保存成功', icon: 'success' });
-      })
-      .catch(err => {
-        wx.showToast({ title: err.message || (isUpdate ? '更新失败' : '保存失败'), icon: 'none' });
-      });
-  },
 
   // 设置功能
   goToDataExport() {
@@ -1292,12 +1210,6 @@ Page({
           });
         }
       }
-    });
-  },
-
-  goToDebugPage() {
-    wx.navigateTo({
-      url: '/pages/debug/debug'
     });
   }
 });
