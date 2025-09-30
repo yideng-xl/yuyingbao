@@ -84,11 +84,24 @@
     <!-- 多个宝宝信息列表 -->
     <view class="babies-list" wx:if="{{babies.length > 0}}">
       <view class="baby-info-item" wx:for="{{babies}}" wx:key="id">
-        <view class="baby-avatar-section">
-          <image src="{{item.avatar || '/images/baby-default.png'}}" class="baby-avatar"></image>
-          <view class="baby-details">
-            <text class="baby-name">{{item.name}} (ID : {{item.id}})</text>
-            <text class="baby-age">{{item.age}}</text>
+        <view class="baby-header">
+          <view class="baby-avatar-section">
+            <image src="{{item.avatar || '/images/baby-default.png'}}" class="baby-avatar"></image>
+            <view class="baby-details">
+              <text class="baby-name">{{item.name}} (ID : {{item.id}})</text>
+              <text class="baby-age">{{item.age}}</text>
+            </view>
+          </view>
+          
+          <view class="baby-actions">
+            <view class="action-btn" bindtap="editBabyByIndex" data-index="{{index}}">
+              <text class="action-icon">✏️</text>
+              <text class="action-text">编辑</text>
+            </view>
+            <view class="action-btn delete" bindtap="deleteBabyByIndex" data-index="{{index}}">
+              <text class="action-icon">🗑️</text>
+              <text class="action-text">删除</text>
+            </view>
           </view>
         </view>
         
@@ -105,11 +118,6 @@
             <text class="stat-value">{{item.birthDate || '--'}}</text>
             <text class="stat-label">出生日期</text>
           </view>
-        </view>
-        
-        <view class="baby-actions">
-          <button class="btn btn-compact btn-outline" bindtap="editBabyByIndex" data-index="{{index}}">编辑</button>
-          <button class="btn btn-compact btn-danger" bindtap="deleteBabyByIndex" data-index="{{index}}">删除</button>
         </view>
       </view>
     </view>
@@ -200,51 +208,7 @@
   </view>
 </view>
 
-<!-- 宝宝信息编辑模态框 -->
-<view class="modal-overlay" wx:if="{{showBabyModal}}" bindtap="hideBabyModal">
-  <view class="modal-content" catchtap="stopPropagation">
-    <view class="modal-header">
-      <text class="text-medium text-bold">{{babyForm.id ? '编辑宝宝信息' : '添加宝宝信息'}}</text>
-      <view class="modal-close" bindtap="hideBabyModal">×</view>
-    </view>
-    
-    <view class="modal-body">
-      <view class="form-item">
-        <text class="form-label">宝宝姓名</text>
-        <input type="text" placeholder="请输入宝宝姓名" value="{{babyForm.name}}" bindinput="onBabyNameInput" />
-      </view>
-      
-      <view class="form-item">
-        <text class="form-label">性别</text>
-        <picker range="['男宝', '女宝']" value="{{babyForm.gender === 'BOY' ? 0 : 1}}" bindchange="onBabyGenderChange">
-          <view class="picker">{{babyForm.gender === 'BOY' ? '男宝' : '女宝'}}</view>
-        </picker>
-      </view>
-      
-      <view class="form-item">
-        <text class="form-label">出生日期</text>
-        <picker mode="date" value="{{babyForm.birthDate}}" bindchange="onBabyBirthDateChange">
-          <view class="picker">{{babyForm.birthDate || '请选择日期'}}</view>
-        </picker>
-      </view>
-      
-      <view class="form-item">
-        <text class="form-label">出生身高（cm）</text>
-        <input type="digit" placeholder="请输入身高" value="{{babyForm.birthHeightCm}}" bindinput="onBabyHeightInput" />
-      </view>
-      
-      <view class="form-item">
-        <text class="form-label">出生体重（kg）</text>
-        <input type="digit" placeholder="请输入体重" value="{{babyForm.birthWeightKg}}" bindinput="onBabyWeightInput" />
-      </view>
-    </view>
-    
-    <view class="modal-footer">
-      <button class="btn btn-outline" bindtap="hideBabyModal">取消</button>
-      <button class="btn btn-primary" bindtap="saveBabyInfo">保存</button>
-    </view>
-  </view>
-</view>
+
 
 <!-- 创建家庭弹窗 -->
 <view class="modal-overlay" wx:if="{{showCreateFamilyModal}}" bindtap="hideCreateFamilyModal">
