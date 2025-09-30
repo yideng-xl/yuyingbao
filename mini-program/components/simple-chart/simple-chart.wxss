@@ -1,0 +1,33 @@
+.chart-container {
+  width: 100%;
+  background: #FAFBFC;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  border: 1rpx solid #E9ECEF;
+}
+
+.chart-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #2C3E50;
+  margin-bottom: 24rpx;
+  text-align: center;
+  position: relative;
+}
+
+.chart-title::after {
+  content: '';
+  position: absolute;
+  bottom: -8rpx;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40rpx;
+  height: 3rpx;
+  background: linear-gradient(90deg, #4A90E2, #7ED321);
+  border-radius: 2rpx;
+}
+
+.chart-canvas {
+  width: 100%;
+  background: transparent;
+}

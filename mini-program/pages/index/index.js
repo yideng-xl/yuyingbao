@@ -3,7 +3,10 @@ const app = getApp();
 Page({
   data: {
     userInfo: {},
-    babyInfo: {},
+    babyInfo: {}, // 保留兼容性
+    babies: [], // 所有宝宝列表
+    selectedBaby: {}, // 当前选中的宝宝
+    selectedBabyIndex: 0, // 选中的宝宝索引
     today: '',
     todayStats: {
       feedingTotal: 0,
@@ -38,12 +41,19 @@ Page({
     // 检查用户是否已授权
     const userInfo = app.globalData.userInfo;
     if (userInfo && userInfo.id) {
-      // 更新今天的日期
-      this.setData({
-        today: this.formatDate(new Date())
-      });
-      this.loadTodayStats();
-      this.loadRecentRecords();
+      // 检查是否需要刷新宝宝数据
+      if (app.globalData.needRefreshBabies) {
+        console.log('检测到宝宝数据变更，重新加载');
+        app.globalData.needRefreshBabies = false;
+        this.loadBabies();
+      } else {
+        // 更新今天的日期
+        this.setData({
+          today: this.formatDate(new Date())
+        });
+        this.loadTodayStats();
+        this.loadRecentRecords();
+      }
     }
   },
 
@@ -65,18 +75,111 @@ Page({
       today: this.formatDate(new Date())
     });
     
-    // 如果未有本地宝宝信息且已有家庭，从后端加载宝宝列表
-    if (!app.globalData.babyInfo && app.globalData.familyInfo?.id) {
-      app.get(`/families/${app.globalData.familyInfo.id}/babies`).then(list => {
-        if (Array.isArray(list) && list.length > 0) {
-          const b = list[0];
-          const mapped = this.mapBabyInfo(b);
-          app.globalData.babyInfo = mapped;
-          wx.setStorageSync('babyInfo', mapped);
-          this.setData({ babyInfo: mapped });
-        }
-      }).catch(() => {});
+    // 加载宝宝列表
+    this.loadBabies();
+  },
+
+  // 加载家庭中的所有宝宝
+  loadBabies() {
+    const familyId = app.globalData.familyInfo?.id;
+    if (!familyId) {
+      console.log('No familyId found');
+      return;
     }
+
+    app.get(`/families/${familyId}/babies`).then(list => {
+      if (Array.isArray(list) && list.length > 0) {
+        const babies = list.map(b => this.mapBabyInfo(b));
+        
+        // 选择默认宝宝（优先使用全局数据中的，否则选择第一个）
+        let selectedBaby = babies[0];
+        let selectedBabyIndex = 0;
+        
+        if (app.globalData.babyInfo?.id) {
+          const currentIndex = babies.findIndex(b => b.id === app.globalData.babyInfo.id);
+          if (currentIndex !== -1) {
+            selectedBaby = babies[currentIndex];
+            selectedBabyIndex = currentIndex;
+          } else {
+            // 当前选中的宝宝已被删除，选择第一个宝宝
+            console.log('当前选中的宝宝已被删除，切换到第一个宝宝');
+            selectedBaby = babies[0];
+            selectedBabyIndex = 0;
+          }
+        }
+        
+        this.setData({
+          babies,
+          selectedBaby,
+          selectedBabyIndex,
+          babyInfo: selectedBaby // 保留兼容性
+        });
+        
+        // 更新全局数据
+        app.globalData.babyInfo = selectedBaby;
+        wx.setStorageSync('babyInfo', selectedBaby);
+        
+        console.log('Loaded babies:', babies);
+        console.log('Selected baby:', selectedBaby);
+        
+        // 加载选中宝宝的数据
+        this.loadTodayStats();
+        this.loadRecentRecords();
+      } else {
+        console.log('No babies found');
+        this.setData({
+          babies: [],
+          selectedBaby: {},
+          selectedBabyIndex: 0
+        });
+      }
+    }).catch(err => {
+      console.error('Failed to load babies:', err);
+      this.setData({
+        babies: [],
+        selectedBaby: {},
+        selectedBabyIndex: 0
+      });
+    });
+  },
+
+  // 宝宝选择变化事件（支持点击和picker两种方式）
+  onBabyChange(e) {
+    let index;
+    
+    // 处理不同的事件来源
+    if (e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.index !== undefined) {
+      // 来自点击事件
+      index = parseInt(e.currentTarget.dataset.index);
+    } else if (e.detail && e.detail.value !== undefined) {
+      // 来自picker事件
+      index = parseInt(e.detail.value);
+    } else {
+      console.error('Invalid baby change event:', e);
+      return;
+    }
+    
+    const selectedBaby = this.data.babies[index];
+    if (!selectedBaby) {
+      console.error('Selected baby not found at index:', index);
+      return;
+    }
+    
+    console.log('Baby selection changed:', selectedBaby);
+    
+    this.setData({
+      selectedBaby,
+      selectedBabyIndex: index,
+      babyInfo: selectedBaby // 保留兼容性
+    });
+    
+    // 更新全局数据
+    app.globalData.babyInfo = selectedBaby;
+    wx.setStorageSync('babyInfo', selectedBaby);
+    
+    // 重新加载选中宝宝的数据
+    this.loadTodayStats();
+    this.loadRecentRecords();
   },
 
   // 计算宝宝年龄
@@ -133,8 +236,48 @@ Page({
   },
 
   loadTodayStats() {
-    const familyId = app.globalData.familyInfo?.id;
-    if (!familyId) {
+    const currentBaby = this.data.selectedBaby || app.globalData.babyInfo;
+    if (!currentBaby?.id) {
+      this.setData({
+        todayStats: {
+          feedingTotal: 0,
+          feedingCount: 0,
+          diaperCount: 0
+        }
+      });
+      return;
+    }
+
+    console.log('Loading today stats for baby:', currentBaby.id);
+
+    // 优先尝试使用新的统计接口
+    app.get(`/api/statistics/babies/${currentBaby.id}/today`).then(stats => {
+      console.log('Statistics API response:', stats);
+      
+      // 解析统计数据
+      const feeding = stats.feeding || {};
+      const total = feeding.total || {};
+      const diaper = stats.diaper || {};
+      
+      this.setData({
+        todayStats: {
+          feedingTotal: Math.round(total.amount || 0),
+          feedingCount: total.count || 0,
+          diaperCount: diaper.count || 0
+        },
+        suggestion: (stats.suggestions && stats.suggestions.length > 0) ? stats.suggestions[0] : ''
+      });
+    }).catch(error => {
+      console.log('Statistics API failed, falling back to old method:', error);
+      // 如果统计接口失败，还是回退到原来的方法
+      this.loadTodayStatsLegacy();
+    });
+  },
+
+  // 原来的统计加载方法（保留作为备用）
+  loadTodayStatsLegacy() {
+    const currentBaby = this.data.selectedBaby || app.globalData.babyInfo;
+    if (!currentBaby?.id) {
       this.setData({
         todayStats: {
           feedingTotal: 0,
@@ -151,13 +294,12 @@ Page({
     const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
 
     // 转换为ISO格式，确保包含时区信息
-    // 后端API期望ISO格式的时间，所以我们需要使用toISOString()
     const startISO = startOfDay.toISOString();
     const endISO = endOfDay.toISOString();
 
-    console.log('API Call URL:', `/families/${familyId}/records/filter?start=${startISO}&end=${endISO}`);
+    console.log('API Call URL:', `/babies/${currentBaby.id}/records/filter?start=${startISO}&end=${endISO}`);
 
-    app.get(`/families/${familyId}/records/filter`, {
+    app.get(`/babies/${currentBaby.id}/records/filter`, {
       start: startISO,
       end: endISO
     }).then(records => {
@@ -197,8 +339,8 @@ Page({
   },
 
   loadRecentRecords() {
-    const familyId = app.globalData.familyInfo?.id;
-    if (!familyId) {
+    const currentBaby = this.data.selectedBaby || app.globalData.babyInfo;
+    if (!currentBaby?.id) {
       this.setData({ recentRecords: [] });
       return;
     }
@@ -212,9 +354,9 @@ Page({
     const startISO = startOfDay.toISOString();
     const endISO = endOfDay.toISOString();
 
-    console.log('加载今日记录，时间范围:', startISO, '到', endISO);
+    console.log('加载今日记录，宝宝ID:', currentBaby.id, '时间范围:', startISO, '到', endISO);
 
-    app.get(`/families/${familyId}/records/filter`, {
+    app.get(`/babies/${currentBaby.id}/records/filter`, {
       start: startISO,
       end: endISO
     }).then(records => {
@@ -697,11 +839,12 @@ Page({
       payload.weightKg = Number(recordData.weight) || undefined;
     }
 
-    // 需要 babyId，若暂无选择，默认取全局 babyInfo.id（前端目前未从后端加载宝宝列表，先尝试本地）
-    if (app.globalData.babyInfo?.id) {
-      payload.babyId = app.globalData.babyInfo.id;
+    // 需要 babyId，优先使用当前选中的宝宝
+    const currentBaby = this.data.selectedBaby || app.globalData.babyInfo;
+    if (currentBaby?.id) {
+      payload.babyId = currentBaby.id;
     } else {
-      // 没有 babyId 时暂时不给后端，后端会校验；提示用户维护宝宝信息
+      // 没有 babyId 时提示用户维护宝宝信息
       wx.showToast({ title: '请在个人中心完善宝宝信息', icon: 'none' });
       return;
     }

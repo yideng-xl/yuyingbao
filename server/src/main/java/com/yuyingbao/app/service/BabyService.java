@@ -38,6 +38,17 @@ public class BabyService {
 		return babyRepository.findByIdIn(babyIds);
 	}
 
+	/**
+	 * 根据ID获取宝宝信息
+	 * @param babyId 宝宝ID
+	 * @return 宝宝信息
+	 * @throws RuntimeException 如果宝宝不存在
+	 */
+	public Baby getBabyById(Long babyId) {
+		return babyRepository.findById(babyId)
+				.orElseThrow(() -> new RuntimeException("Baby not found with id: " + babyId));
+	}
+
 	public Baby updateBaby(Long familyId, Long babyId, UpsertBabyRequest req) {
 		Baby baby = babyRepository.findByIdAndFamilyId(babyId, familyId)
 				.orElseThrow(() -> new IllegalArgumentException("宝宝不存在"));
@@ -50,5 +61,18 @@ public class BabyService {
 		baby.setBirthWeightKg(req.getBirthWeightKg());
 		
 		return babyRepository.save(baby);
+	}
+
+	/**
+	 * 删除宝宝
+	 * @param familyId 家庭ID
+	 * @param babyId 宝宝ID
+	 * @throws IllegalArgumentException 如果宝宝不存在或不属于指定家庭
+	 */
+	public void deleteBaby(Long familyId, Long babyId) {
+		Baby baby = babyRepository.findByIdAndFamilyId(babyId, familyId)
+				.orElseThrow(() -> new IllegalArgumentException("宝宝不存在或无权限删除"));
+		
+		babyRepository.delete(baby);
 	}
 }

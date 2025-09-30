@@ -62,6 +62,41 @@ public class RecordService {
 	}
 
 	/**
+	 * 基于babyId查询记录列表
+	 * @param babyId 宝宝ID
+	 * @param start 开始时间
+	 * @param end 结束时间
+	 * @param type 记录类型
+	 * @return 记录列表
+	 */
+	public List<Record> listRecordsByBabyId(Long babyId, OffsetDateTime start, OffsetDateTime end, RecordType type) {
+		try {
+			if (start != null && end != null && type != null) {
+				return recordRepository.findByBabyIdAndTypeAndHappenedAtBetweenOrderByHappenedAtDesc(babyId, type, start, end);
+			}
+			if (start != null && end != null) {
+				return recordRepository.findByBabyIdAndHappenedAtBetweenOrderByHappenedAtDesc(babyId, start, end);
+			}
+			return recordRepository.findByBabyIdOrderByHappenedAtDesc(babyId);
+		} catch (Exception e) {
+			// Log the error and return empty list for now
+			System.err.println("Error fetching records by babyId: " + e.getMessage());
+			return new ArrayList<>();
+		}
+	}
+
+	/**
+	 * 根据ID获取记录
+	 * @param recordId 记录ID
+	 * @return 记录
+	 * @throws RuntimeException 如果记录不存在
+	 */
+	public Record getRecordById(Long recordId) {
+		return recordRepository.findById(recordId)
+				.orElseThrow(() -> new RuntimeException("Record not found with id: " + recordId));
+	}
+
+	/**
 	 * 更新记录
 	 * @param familyId 家庭ID
 	 * @param recordId 记录ID

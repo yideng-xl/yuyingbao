@@ -51,6 +51,25 @@
 
   <view class="card">
     <view class="card-header">
+      <text class="card-title">📈 图表测试</text>
+    </view>
+    
+    <view class="info-item">
+      <text class="label">状态:</text>
+      <text class="value">测试ECharts图表显示功能</text>
+    </view>
+    
+    <view class="chart-test-container" wx:if="{{testChartOption.onInit}}">
+      <text class="chart-title">📈 测试图表</text>
+      <ec-canvas id="test-chart" canvas-id="test-chart" ec="{{ testChartOption }}"></ec-canvas>
+    </view>
+    
+    <button class="btn btn-primary" bindtap="testEChartsChart">测试图表渲染</button>
+    <button class="btn btn-outline" bindtap="clearTestChart">清空图表</button>
+  </view>
+
+  <view class="card">
+    <view class="card-header">
       <text class="card-title">📱 应用状态</text>
     </view>
     

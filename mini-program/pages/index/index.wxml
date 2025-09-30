@@ -6,10 +6,37 @@
       <text class="text-small text-muted">{{today}}</text>
     </view>
     
-    <!-- 宝宝年龄信息 -->
-    <view class="baby-age-info" wx:if="{{babyInfo && babyInfo.name}}">
-      <text class="baby-name">{{babyInfo.name}}</text>
-      <text class="baby-age">{{babyInfo.age}}</text>
+    <!-- 宝宝选择器 -->
+    <view class="baby-selector" wx:if="{{babies && babies.length > 0}}">
+      <!-- 单个宝宝时显示宝宝信息 -->
+      <view class="single-baby-info" wx:if="{{babies.length === 1}}">
+        <image class="baby-avatar" src="{{selectedBaby.avatar}}" mode="aspectFill"></image>
+        <view class="baby-details">
+          <text class="baby-name">{{selectedBaby.name}}</text>
+          <text class="baby-age">{{selectedBaby.age}}</text>
+        </view>
+      </view>
+      
+      <!-- 多个宝宝时显示选择器 -->
+      <view class="multi-baby-selector" wx:else>
+        <view class="selector-header">
+          <text class="form-label">👶 查看宝宝数据：</text>
+        </view>
+        <view class="baby-tabs">
+          <view class="baby-tab {{selectedBabyIndex === index ? 'active' : ''}}" 
+                wx:for="{{babies}}" 
+                wx:key="id" 
+                wx:for-index="index"
+                bindtap="onBabyChange" 
+                data-index="{{index}}">
+            <image class="tab-avatar" src="{{item.avatar}}" mode="aspectFill"></image>
+            <view class="tab-content">
+              <text class="tab-name">{{item.name}}</text>
+              <text class="tab-age">{{item.age}}</text>
+            </view>
+          </view>
+        </view>
+      </view>
     </view>
     
     <view class="overview-stats">

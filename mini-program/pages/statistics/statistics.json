@@ -1,6 +1,6 @@
 {
   "usingComponents": {
-    "ec-canvas": "/components/ec-canvas/ec-canvas"
+    "simple-chart": "/components/simple-chart/simple-chart"
   },
   "navigationBarTitleText": "统计分析",
   "enablePullDownRefresh": true

@@ -8,7 +8,7 @@ import java.time.OffsetDateTime;
 
 @Data
 public class CreateRecordRequest {
-	@NotNull
+	// babyId 在新的 API 中通过路径参数提供，不再需要 @NotNull 验证
 	private Long babyId;
 	@NotNull
 	private RecordType type;

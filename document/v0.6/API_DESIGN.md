@@ -212,7 +212,9 @@ GET /api/families/{id}/members
 }
 ```
 
-## 4. 宝宝管理 API (v0.6新增)
+## 4. 宝宝管理 API (v0.6新增 - 支持多胞胎)
+
+> **重要更新**: v0.6 版本完全支持多胞胎场景，包括宝宝切换、数据隔离和权限控制。
 
 ### 4.1 创建宝宝
 ```
@@ -361,6 +363,36 @@ DELETE /api/babies/{id}
 }
 ```
 
+### 4.6 多胞胎功能说明 (v0.6 重要特性)
+
+**功能概述**
+- 支持一个家庭创建多个宝宝（双胞胎、多胞胎或多个孩子）
+- 每个宝宝的记录数据完全隔离，互不影响
+- 支持灵活切换查看不同宝宝的数据
+- 提供完整的权限控制，确保数据安全
+
+**使用场景**
+```
+1. 双胞胎家庭：同时管理两个宝宝的日常记录
+2. 多孩家庭：管理不同年龄段的多个孩子
+3. 二胎家庭：先有大宝，后添加二宝
+```
+
+**数据隔离原则**
+- 所有记录 API 都基于 `babyId` 进行数据查询和操作
+- 统计数据可按单个宝宝或家庭整体进行计算
+- 宝宝之间的记录不会互相影响
+
+**前端宝宝切换**
+- 首页和记录页面提供直观的宝宝切换界面
+- 单个宝宝时显示简洁信息，多个宝宝时显示切换器
+- 切换后自动更新所有相关数据和统计
+
+**权限控制**
+- 只有家庭成员才能管理家庭中的宝宝
+- 不能访问其他家庭的宝宝数据
+- 所有 API 都做了严格的权限校验
+
 ## 5. 记录管理 API
 
 ### 5.1 创建母乳亲喂记录
@@ -428,9 +460,234 @@ POST /api/records/bottle-feeding
 }
 ```
 
-### 5.3 获取宝宝记录列表
+### 5.3 新增：基于宝宝ID的记录管理 API (v0.6 重要更新)
+
+> **重要更新**: v0.6 版本新增了基于宝宝ID的记录管理API，支持多宝宝场景下的记录管理。
+
+#### 5.3.1 创建宝宝记录
+```
+POST /api/babies/{babyId}/records
+```
+
+**请求参数**
+```json
+{
+  "type": "BREASTFEEDING",
+  "happenedAt": "2024-09-27T10:00:00Z",
+  "durationMin": 15,
+  "breastfeedingSide": "LEFT",
+  "note": "宝宝吃得很好"
+}
+```
+
+**响应示例**
+```json
+{
+  "code": 200,
+  "message": "记录成功",
+  "data": {
+    "id": 1,
+    "familyId": 1,
+    "userId": 1,
+    "babyId": 1,
+    "type": "BREASTFEEDING",
+    "happenedAt": "2024-09-27T10:00:00Z",
+    "durationMin": 15,
+    "breastfeedingSide": "LEFT",
+    "note": "宝宝吃得很好",
+    "createdAt": "2024-09-27T10:15:00Z"
+  }
+}
+```
+
+#### 5.3.2 获取宝宝记录列表
 ```
 GET /api/babies/{babyId}/records
+```
+
+**查询参数**
+```
+?type=BREASTFEEDING,BOTTLE  # 记录类型，可多选
+&start=2024-09-01T00:00:00Z # 开始时间
+&end=2024-09-30T23:59:59Z   # 结束时间
+&page=1                    # 页码
+&size=20                   # 每页大小
+```
+
+**响应示例**
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": [
+    {
+      "id": 1,
+      "type": "BREASTFEEDING",
+      "babyId": 1,
+      "happenedAt": "2024-09-27T10:00:00Z",
+      "durationMin": 15,
+      "breastfeedingSide": "LEFT",
+      "note": "宝宝吃得很好",
+      "createdAt": "2024-09-27T10:15:00Z"
+    },
+    {
+      "id": 2,
+      "type": "BOTTLE",
+      "babyId": 1,
+      "happenedAt": "2024-09-27T11:00:00Z",
+      "amountMl": 120,
+      "note": "配方奶",
+      "createdAt": "2024-09-27T11:00:00Z"
+    }
+  ]
+}
+```
+
+#### 5.3.3 按条件筛选宝宝记录
+```
+GET /api/babies/{babyId}/records/filter
+```
+
+**查询参数**
+```
+?type=BREASTFEEDING        # 记录类型
+&start=2024-09-27T00:00:00Z # 开始时间
+&end=2024-09-27T23:59:59Z   # 结束时间
+```
+
+**响应示例**
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": [
+    {
+      "id": 1,
+      "type": "BREASTFEEDING",
+      "babyId": 1,
+      "happenedAt": "2024-09-27T10:00:00Z",
+      "durationMin": 15,
+      "breastfeedingSide": "LEFT",
+      "note": "宝宝吃得很好"
+    }
+  ]
+}
+```
+
+#### 5.3.4 更新宝宝记录
+```
+PUT /api/babies/{babyId}/records/{recordId}
+```
+
+**请求参数**
+```json
+{
+  "type": "BREASTFEEDING",
+  "happenedAt": "2024-09-27T10:00:00Z",
+  "durationMin": 20,
+  "breastfeedingSide": "RIGHT",
+  "note": "更新后的备注"
+}
+```
+
+**响应示例**
+```json
+{
+  "code": 200,
+  "message": "更新成功",
+  "data": {
+    "id": 1,
+    "type": "BREASTFEEDING",
+    "babyId": 1,
+    "happenedAt": "2024-09-27T10:00:00Z",
+    "durationMin": 20,
+    "breastfeedingSide": "RIGHT",
+    "note": "更新后的备注"
+  }
+}
+```
+
+#### 5.3.5 删除宝宝记录
+```
+DELETE /api/babies/{babyId}/records/{recordId}
+```
+
+**响应示例**
+```json
+{
+  "code": 200,
+  "message": "删除成功",
+  "data": null
+}
+```
+
+### 5.4 原有的基于家庭的记录 API（保留兼容性）
+
+> **注意**: 以下 API 仍然可用，但建议使用上面的基于 babyId 的 API。
+
+**请求参数**
+```json
+{
+  "babyId": 1,
+  "startTime": "2024-09-27T10:00:00Z",
+  "endTime": "2024-09-27T10:15:00Z",
+  "side": "LEFT",
+  "note": "宝宝吃得很好"
+}
+```
+
+**响应示例**
+```json
+{
+  "code": 200,
+  "message": "记录成功",
+  "data": {
+    "id": 1,
+    "babyId": 1,
+    "startTime": "2024-09-27T10:00:00Z",
+    "endTime": "2024-09-27T10:15:00Z",
+    "side": "LEFT",
+    "duration": 900,
+    "note": "宝宝吃得很好",
+    "createdAt": "2024-09-27T10:15:00Z"
+  }
+}
+```
+
+### 5.2 创建瓶喂记录
+```
+POST /api/records/bottle-feeding
+```
+
+**请求参数**
+```json
+{
+  "babyId": 1,
+  "feedingTime": "2024-09-27T11:00:00Z",
+  "amount": 120,
+  "note": "配方奶"
+}
+```
+
+**响应示例**
+```json
+{
+  "code": 200,
+  "message": "记录成功",
+  "data": {
+    "id": 1,
+    "babyId": 1,
+    "feedingTime": "2024-09-27T11:00:00Z",
+    "amount": 120,
+    "note": "配方奶",
+    "createdAt": "2024-09-27T11:00:00Z"
+  }
+}
+```
+
+### 5.5 获取家庭记录列表（兼容 API）
+```
+GET /api/families/{familyId}/records
 ```
 
 **查询参数**
@@ -470,11 +727,13 @@ GET /api/babies/{babyId}/records
 }
 ```
 
-## 6. 数据统计 API
+## 6. 数据统计 API (v0.6 新增 - 支持多宝宝统计)
 
-### 6.1 获取今日统计
+> **重要特性**: v0.6 版本新增了完整的统计功能，支持单个宝宝和家庭整体统计。
+
+### 6.1 获取宝宝今日统计数据
 ```
-GET /api/statistics/today?babyId=1
+GET /api/statistics/babies/{babyId}/today
 ```
 
 **响应示例**
@@ -483,45 +742,57 @@ GET /api/statistics/today?babyId=1
   "code": 200,
   "message": "success",
   "data": {
-    "babyId": 1,
-    "date": "2024-09-27",
-    "statistics": {
-      "breastFeeding": {
-        "count": 3,
-        "totalDuration": 1800
+    "feeding": {
+      "breastfeeding": {
+        "count": 6,
+        "totalDuration": 90
       },
-      "bottleFeeding": {
+      "bottle": {
         "count": 2,
         "totalAmount": 240
       },
-      "formulaFeeding": {
+      "formula": {
         "count": 1,
         "totalAmount": 120
       },
-      "solidFood": {
-        "count": 1
+      "solid": {
+        "count": 2
       },
-      "diaper": {
-        "count": 5
+      "water": {
+        "count": 3,
+        "totalAmount": 150
       },
-      "growth": {
-        "latest": {
-          "height": 52.0,
-          "weight": 3.5
-        }
+      "total": {
+        "count": 14,
+        "amount": 1260
       }
     },
+    "diaper": {
+      "count": 5
+    },
+    "growth": {
+      "count": 1
+    },
     "suggestions": [
-      "宝宝今天喂养次数正常，继续保持",
-      "建议明天上午测量体重"
+      "今日喂养量在正常范围内，宝宝发育良好"
     ]
   }
 }
 ```
 
-### 6.2 获取历史趋势
+### 6.2 获取宝宝指定时间范围统计
 ```
-GET /api/statistics/trend?babyId=1&type=weight&days=30
+GET /api/statistics/babies/{babyId}?startDate=2024-09-01T00:00:00Z&endDate=2024-09-30T23:59:59Z
+```
+
+### 6.3 获取家庭今日统计数据（所有宝宝合计）
+```
+GET /api/statistics/families/{familyId}/today
+```
+
+### 6.4 获取宝宝成长趋势数据
+```
+GET /api/statistics/babies/{babyId}/growth-trend?days=30
 ```
 
 **响应示例**
@@ -531,24 +802,38 @@ GET /api/statistics/trend?babyId=1&type=weight&days=30
   "message": "success",
   "data": {
     "babyId": 1,
-    "type": "weight",
     "days": 30,
-    "trend": [
+    "records": [
       {
-        "date": "2024-09-01",
-        "value": 3.2
+        "id": 1,
+        "happenedAt": "2024-09-01T10:00:00Z",
+        "heightCm": 55.0,
+        "weightKg": 4.2
       },
       {
-        "date": "2024-09-15",
-        "value": 3.4
+        "id": 2,
+        "happenedAt": "2024-09-15T10:00:00Z",
+        "heightCm": 56.5,
+        "weightKg": 4.5
       },
       {
-        "date": "2024-09-27",
-        "value": 3.5
+        "id": 3,
+        "happenedAt": "2024-09-30T10:00:00Z",
+        "heightCm": 58.0,
+        "weightKg": 4.8
       }
     ]
   }
 }
+```
+
+### 6.5 兼容性 API
+
+为了保持与旧版本的兼容性，仍然支持以下 API：
+
+```
+GET /api/statistics/today?babyId=1
+GET /api/statistics/trend?babyId=1&type=weight&days=30
 ```
 
 ## 7. 数据导出 API (v0.6新增)

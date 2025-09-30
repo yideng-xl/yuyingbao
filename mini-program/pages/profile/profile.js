@@ -4,7 +4,10 @@ Page({
   data: {
     userInfo: {},
     familyInfo: {},
-    babyInfo: {},
+    babyInfo: {}, // 保留兼容性
+    babies: [], // 所有宝宝列表
+    selectedBaby: {}, // 当前选中的宝宝
+    selectedBabyIndex: 0,
     isCreator: false,
     showBabyModal: false,
     babyForm: {},
@@ -12,6 +15,7 @@ Page({
     showJoinModal: false,
     showEditRoleModal: false,
     showCreateFamilyModal: false,
+    showBabyListModal: false,
     inviteCode: '',
     joinCode: '',
     familyName: '',
@@ -45,6 +49,11 @@ Page({
 
     this.setData({ userInfo, familyInfo, babyInfo, isCreator });
 
+    // 加载宝宝列表
+    if (familyInfo?.id) {
+      this.loadBabies();
+    }
+
     // 如果有家庭信息，获取最新的家庭成员列表（总是从服务器获取最新数据）
     if (familyInfo?.id) {
       // 不使用缓存数据，直接从服务器获取最新数据
@@ -71,6 +80,7 @@ Page({
             // 获取家庭成员列表
             if (family.id) {
               this.fetchFamilyMembersWithRetry(family.id, 3);
+              this.loadBabies(); // 加载宝宝列表
             }
           } else {
             console.log('用户没有家庭信息');
@@ -294,6 +304,8 @@ Page({
 
 // 映射宝宝信息，包含年龄计算
   mapBabyInfo(baby) {
+    console.log('Mapping baby info for:', baby);
+    
     // 计算月龄和天数
     let ageText = '0个月';
     if (baby.birthDate) {
@@ -313,7 +325,7 @@ Page({
       }
     }
 
-    return {
+    const mappedBaby = {
       id: baby.id,
       name: baby.name,
       gender: (baby.gender || '').toLowerCase(),
@@ -323,6 +335,477 @@ Page({
       weight: baby.birthWeightKg,
       age: ageText
     };
+    
+    console.log('Mapped baby result:', mappedBaby);
+    return mappedBaby;
+  },
+
+  // 加载家庭中的所有宝宝
+  loadBabies() {
+    const familyId = this.data.familyInfo?.id;
+    if (!familyId) {
+      console.log('No familyId found');
+      return;
+    }
+
+    console.log('Loading babies for familyId:', familyId);
+    const apiUrl = `/families/${familyId}/babies`;
+    console.log('API URL:', apiUrl);
+
+    app.get(apiUrl).then(list => {
+      console.log('API response - raw list:', list);
+      console.log('List type:', typeof list);
+      console.log('Is array:', Array.isArray(list));
+      console.log('List length:', list ? list.length : 'null/undefined');
+      
+      if (Array.isArray(list) && list.length > 0) {
+        console.log('Processing babies list:', list);
+        const babies = list.map(b => {
+          console.log('Processing baby:', b);
+          return this.mapBabyInfo(b);
+        });
+        
+        console.log('Mapped babies:', babies);
+        
+        // 选择默认宝宝（优先使用全局数据中的，否则选择第一个）
+        let selectedBaby = babies[0];
+        let selectedBabyIndex = 0;
+        
+        if (app.globalData.babyInfo?.id) {
+          const currentIndex = babies.findIndex(b => b.id === app.globalData.babyInfo.id);
+          if (currentIndex !== -1) {
+            selectedBaby = babies[currentIndex];
+            selectedBabyIndex = currentIndex;
+          }
+        }
+        
+        this.setData({
+          babies,
+          selectedBaby,
+          selectedBabyIndex,
+          babyInfo: selectedBaby // 保留兼容性
+        });
+        
+        // 更新全局数据
+        app.globalData.babyInfo = selectedBaby;
+        wx.setStorageSync('babyInfo', selectedBaby);
+        
+        console.log('Final - Loaded babies:', babies);
+        console.log('Final - Selected baby:', selectedBaby);
+      } else {
+        console.log('No babies found or empty array');
+        this.setData({
+          babies: [],
+          selectedBaby: {},
+          selectedBabyIndex: 0,
+          babyInfo: {} // 保留兼容性
+        });
+      }
+    }).catch(err => {
+      console.error('Failed to load babies:', err);
+      console.error('Error details:', err.message);
+      this.setData({
+        babies: [],
+        selectedBaby: {},
+        selectedBabyIndex: 0,
+        babyInfo: {} // 保留兼容性
+      });
+    });
+  },
+
+  // 显示宝宝列表管理模态框
+  showBabyListModal() {
+    this.setData({
+      showBabyListModal: true
+    });
+  },
+
+  // 隐藏宝宝列表管理模态框
+  hideBabyListModal() {
+    this.setData({
+      showBabyListModal: false
+    });
+  },
+
+  // 选择宝宝
+  selectBaby(e) {
+    const index = parseInt(e.currentTarget.dataset.index);
+    const selectedBaby = this.data.babies[index];
+    
+    this.setData({
+      selectedBaby,
+      selectedBabyIndex: index,
+      babyInfo: selectedBaby // 保留兼容性
+    });
+    
+    // 更新全局数据
+    app.globalData.babyInfo = selectedBaby;
+    wx.setStorageSync('babyInfo', selectedBaby);
+    
+    // 关闭模态框
+    this.hideBabyListModal();
+    
+    wx.showToast({
+      title: `已切换到${selectedBaby.name}`,
+      icon: 'success'
+    });
+  },
+
+  // 添加宝宝
+  addBabyInfo() {
+    console.log('打开添加宝宝模态框');
+    this.setData({
+      showBabyModal: true,
+      babyForm: {
+        name: '',
+        gender: 'BOY',
+        birthDate: '',
+        avatarUrl: '',
+        birthHeightCm: '',
+        birthWeightKg: ''
+      }
+    });
+  },
+
+  // 编辑宝宝信息
+  editBabyInfo() {
+    const { selectedBaby } = this.data;
+    
+    this.setData({
+      showBabyModal: true,
+      babyForm: selectedBaby && selectedBaby.id ? { 
+        id: selectedBaby.id,
+        name: selectedBaby.name,
+        gender: selectedBaby.gender && selectedBaby.gender.toUpperCase ? selectedBaby.gender.toUpperCase() : 'BOY',
+        birthDate: selectedBaby.birthDate,
+        avatarUrl: selectedBaby.avatar,
+        birthHeightCm: selectedBaby.height || '',
+        birthWeightKg: selectedBaby.weight || ''
+      } : {
+        name: '',
+        gender: 'BOY',
+        birthDate: '',
+        avatarUrl: '',
+        birthHeightCm: '',
+        birthWeightKg: ''
+      }
+    });
+  },
+
+  // 通过索引编辑指定宝宝
+  editBabyByIndex(e) {
+    const index = parseInt(e.currentTarget.dataset.index);
+    const baby = this.data.babies[index];
+    
+    console.log('编辑宝宝信息:', baby);
+    
+    this.setData({
+      showBabyModal: true,
+      babyForm: {
+        id: baby.id,
+        name: baby.name,
+        gender: baby.gender ? baby.gender.toUpperCase() : 'BOY',
+        birthDate: baby.birthDate,
+        avatarUrl: baby.avatar,
+        birthHeightCm: baby.height ? baby.height.toString() : '',
+        birthWeightKg: baby.weight ? baby.weight.toString() : ''
+      }
+    });
+    
+    console.log('设置的babyForm:', this.data.babyForm);
+  },
+
+  // 通过索引删除指定宝宝
+  deleteBabyByIndex(e) {
+    const index = parseInt(e.currentTarget.dataset.index);
+    const baby = this.data.babies[index];
+    
+    // 第一次确认
+    wx.showModal({
+      title: '确认删除',
+      content: `确定要删除宝宝"${baby.name}"吗？此操作不可恢复。`,
+      confirmText: '删除',
+      confirmColor: '#ff4444',
+      success: (res) => {
+        if (res.confirm) {
+          // 第二次确认
+          wx.showModal({
+            title: '再次确认',
+            content: `请再次确认删除宝宝"${baby.name}"，删除后所有相关数据将无法恢复！`,
+            confirmText: '确认删除',
+            confirmColor: '#ff4444',
+            success: (res2) => {
+              if (res2.confirm) {
+                this.checkBabyRecordsAndDelete(baby);
+              }
+            }
+          });
+        }
+      }
+    });
+  },
+
+  // 检查宝宝是否有记录数据，然后决定是否可以删除
+  checkBabyRecordsAndDelete(baby) {
+    const familyId = this.data.familyInfo?.id;
+    if (!familyId) {
+      wx.showToast({ title: '家庭信息不存在', icon: 'none' });
+      return;
+    }
+    
+    // 检查是否有有效的token
+    const token = wx.getStorageSync('token');
+    if (!token) {
+      wx.showToast({
+        title: '请重新登录',
+        icon: 'none'
+      });
+      return;
+    }
+    
+    wx.showLoading({ title: '检查中...' });
+    
+    // 使用现有的API获取宝宝的记录列表来检查是否有数据
+    app.get(`/babies/${baby.id}/records`)
+      .then(records => {
+        wx.hideLoading();
+        const recordCount = Array.isArray(records) ? records.length : 0;
+        
+        if (recordCount > 0) {
+          // 有记录数据，不允许删除
+          wx.showModal({
+            title: '无法删除',
+            content: `宝宝"${baby.name}"已有${recordCount}条喂养记录，无法删除。如需删除，请联系管理员处理。`,
+            showCancel: false,
+            confirmText: '知道了'
+          });
+        } else {
+          // 没有记录数据，可以删除
+          this.performDeleteBaby(baby);
+        }
+      })
+      .catch(err => {
+        wx.hideLoading();
+        console.error('检查宝宝记录失败:', err);
+        
+        // 如果检查接口失败，为安全起见，提示联系管理员
+        wx.showModal({
+          title: '删除失败',
+          content: '无法确认宝宝是否有相关记录，为确保数据安全，请联系管理员删除。',
+          showCancel: false,
+          confirmText: '知道了'
+        });
+      });
+  },
+
+  // 编辑单个宝宝
+  editSingleBaby() {
+    const baby = this.data.selectedBaby;
+    this.setData({
+      showBabyModal: true,
+      babyForm: {
+        id: baby.id,
+        name: baby.name,
+        gender: baby.gender.toUpperCase(),
+        birthDate: baby.birthDate,
+        avatarUrl: baby.avatar,
+        birthHeightCm: baby.height || '',
+        birthWeightKg: baby.weight || ''
+      }
+    });
+  },
+
+  // 删除宝宝
+  deleteBaby(e) {
+    const index = parseInt(e.currentTarget.dataset.index);
+    const baby = this.data.babies[index];
+    
+    wx.showModal({
+      title: '确认删除',
+      content: `确定要删除宝宝"${baby.name}"吗？删除后所有相关记录都将被删除。`,
+      confirmText: '删除',
+      confirmColor: '#ff4444',
+      success: (res) => {
+        if (res.confirm) {
+          this.performDeleteBaby(baby);
+        }
+      }
+    });
+  },
+
+  // 执行删除宝宝操作
+  performDeleteBaby(baby) {
+    const familyId = this.data.familyInfo?.id;
+    if (!familyId) {
+      wx.showToast({ title: '家庭信息不存在', icon: 'none' });
+      return;
+    }
+    
+    // 检查是否有有效的token
+    const token = wx.getStorageSync('token');
+    if (!token) {
+      wx.showToast({
+        title: '请重新登录',
+        icon: 'none'
+      });
+      return;
+    }
+    
+    wx.showLoading({ title: '删除中...' });
+    
+    app.delete(`/families/${familyId}/babies/${baby.id}`)
+      .then(() => {
+        wx.hideLoading();
+        wx.showToast({
+          title: '删除成功',
+          icon: 'success'
+        });
+        
+        // 设置全局刷新标记，通知其他页面数据已变更
+        app.globalData.needRefreshBabies = true;
+        
+        // 如果删除的是当前选中的宝宝，清除全局选中状态
+        if (app.globalData.babyInfo?.id === baby.id) {
+          app.globalData.babyInfo = null;
+          wx.removeStorageSync('babyInfo');
+        }
+        
+        // 重新加载宝宝列表
+        this.loadBabies();
+      })
+      .catch(err => {
+        wx.hideLoading();
+        console.error('Delete baby error:', err);
+        wx.showToast({
+          title: err.message || '删除失败',
+          icon: 'none'
+        });
+      });
+  },
+
+  // 隐藏宝宝模态框
+  hideBabyModal() {
+    console.log('关闭宝宝模态框');
+    this.setData({
+      showBabyModal: false,
+      babyForm: {}
+    });
+  },
+
+  // 宝宝表单输入事件
+  onBabyNameInput(e) {
+    this.setData({
+      'babyForm.name': e.detail.value
+    });
+  },
+
+  onBabyGenderChange(e) {
+    const genders = ['BOY', 'GIRL'];
+    this.setData({
+      'babyForm.gender': genders[e.detail.value]
+    });
+  },
+
+  onBabyBirthDateChange(e) {
+    this.setData({
+      'babyForm.birthDate': e.detail.value
+    });
+  },
+
+  onBabyHeightInput(e) {
+    this.setData({
+      'babyForm.birthHeightCm': e.detail.value
+    });
+  },
+
+  onBabyWeightInput(e) {
+    this.setData({
+      'babyForm.birthWeightKg': e.detail.value
+    });
+  },
+
+  // 保存宝宝信息
+  saveBabyInfo() {
+    const { babyForm } = this.data;
+    const familyId = this.data.familyInfo?.id;
+    
+    if (!familyId) {
+      wx.showToast({ title: '家庭信息不存在', icon: 'none' });
+      return;
+    }
+    
+    // 检查是否有有效的token
+    const token = wx.getStorageSync('token');
+    if (!token) {
+      wx.showToast({
+        title: '请重新登录',
+        icon: 'none'
+      });
+      return;
+    }
+    
+    // 表单验证
+    if (!babyForm.name) {
+      wx.showToast({ title: '请输入宝宝姓名', icon: 'none' });
+      return;
+    }
+    
+    if (!babyForm.birthDate) {
+      wx.showToast({ title: '请选择出生日期', icon: 'none' });
+      return;
+    }
+    
+    console.log('开始保存宝宝信息:', babyForm);
+    wx.showLoading({ title: babyForm.id ? '更新中...' : '创建中...' });
+    
+    const payload = {
+      name: babyForm.name,
+      gender: babyForm.gender,
+      birthDate: babyForm.birthDate,
+      avatarUrl: babyForm.avatarUrl,
+      birthHeightCm: babyForm.birthHeightCm ? Number(babyForm.birthHeightCm) : null,
+      birthWeightKg: babyForm.birthWeightKg ? Number(babyForm.birthWeightKg) : null
+    };
+    
+    console.log('提交的数据:', payload);
+    
+    const apiCall = babyForm.id 
+      ? app.put(`/families/${familyId}/babies/${babyForm.id}`, payload)
+      : app.post(`/families/${familyId}/babies`, payload);
+    
+    apiCall
+      .then((newBaby) => {
+        wx.hideLoading();
+        wx.showToast({
+          title: babyForm.id ? '更新成功' : '创建成功',
+          icon: 'success'
+        });
+        
+        // 关闭模态框
+        this.hideBabyModal();
+        
+        // 重新加载数据，等待一个短暂延迟确保模态框完全关闭
+        setTimeout(() => {
+          console.log('宝宝保存成功，重新加载数据');
+          this.loadBabies();
+          
+          // 如果是新增宝宝，更新全局数据
+          if (!babyForm.id && newBaby) {
+            const mappedNewBaby = this.mapBabyInfo(newBaby);
+            app.globalData.babyInfo = mappedNewBaby;
+            wx.setStorageSync('babyInfo', mappedNewBaby);
+            console.log('新增宝宝，更新全局数据:', mappedNewBaby);
+          }
+        }, 100);
+      })
+      .catch(err => {
+        wx.hideLoading();
+        console.error('Save baby error:', err);
+        wx.showToast({
+          title: err.message || '保存失败',
+          icon: 'none'
+        });
+      });
   },
 
   // 显示邀请成员弹窗
@@ -647,6 +1130,7 @@ Page({
 
   selectGender(e) {
     const gender = e.currentTarget.dataset.gender;
+    console.log('选择性别:', gender);
     this.setData({
       'babyForm.gender': gender
     });
@@ -654,13 +1138,13 @@ Page({
 
   onBirthHeightChange(e) {
     this.setData({
-      'babyForm.birthHeight': e.detail.value
+      'babyForm.birthHeightCm': e.detail.value
     });
   },
 
   onBirthWeightChange(e) {
     this.setData({
-      'babyForm.birthWeight': e.detail.value
+      'babyForm.birthWeightKg': e.detail.value
     });
   },
 

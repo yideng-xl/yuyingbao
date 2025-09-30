@@ -1,6 +1,36 @@
 <view class="container">
   <!-- 筛选栏 -->
   <view class="filter-bar">
+    <!-- 宝宝选择器 -->
+    <view class="baby-selector" wx:if="{{babies && babies.length > 0}}">
+      <!-- 单个宝宝时显示宝宝信息 -->
+      <view class="single-baby-info" wx:if="{{babies.length === 1}}">
+        <image class="baby-avatar-small" src="{{selectedBaby.avatar}}" mode="aspectFill"></image>
+        <view class="baby-details">
+          <text class="baby-name-small">{{selectedBaby.name}}</text>
+          <text class="baby-age-small">{{selectedBaby.age}}</text>
+        </view>
+      </view>
+      
+      <!-- 多个宝宝时显示选择器 -->
+      <view class="multi-baby-selector" wx:else>
+        <view class="selector-header">
+          <text class="form-label">👶 宝宝记录：</text>
+        </view>
+        <view class="baby-mini-tabs">
+          <view class="baby-mini-tab {{selectedBabyIndex === index ? 'active' : ''}}" 
+                wx:for="{{babies}}" 
+                wx:key="id" 
+                wx:for-index="index"
+                bindtap="onBabyChange" 
+                data-index="{{index}}">
+            <image class="mini-tab-avatar" src="{{item.avatar}}" mode="aspectFill"></image>
+            <text class="mini-tab-name">{{item.name}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+    
     <view class="filter-tabs">
       <view class="filter-tab {{currentFilter === 'all' ? 'active' : ''}}" bindtap="setFilter" data-filter="all">
         全部

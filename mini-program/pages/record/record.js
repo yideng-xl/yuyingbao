@@ -6,6 +6,9 @@ Page({
     selectedDate: '',
     allRecords: [], // 存储所有原始记录
     filteredRecords: [], // 存储筛选后的记录
+    babies: [], // 所有宝宝列表
+    selectedBaby: {}, // 当前选中的宝宝
+    selectedBabyIndex: 0, // 选中的宝宝索引
     showEditModal: false,
     editingRecord: {},
     
@@ -25,6 +28,8 @@ Page({
       this.setData({
         selectedDate: this.formatDate(new Date())
       });
+      // 加载宝宝列表
+      this.loadBabies();
     }
   },
 
@@ -32,13 +37,153 @@ Page({
     // 检查用户是否已授权
     const userInfo = app.globalData.userInfo;
     if (userInfo && userInfo.id) {
-      this.loadRecords();
+      // 检查是否需要刷新宝宝数据
+      if (app.globalData.needRefreshBabies) {
+        console.log('检测到宝宝数据变更，重新加载');
+        app.globalData.needRefreshBabies = false;
+        this.loadBabies();
+      } else {
+        // 如果已有选中的宝宝，直接加载记录；否则重新加载宝宝列表
+        if (this.data.selectedBaby?.id) {
+          this.loadRecords();
+        } else {
+          this.loadBabies();
+        }
+      }
     }
   },
 
-  loadRecords() {
+  // 加载家庭中的所有宝宝
+  loadBabies() {
     const familyId = app.globalData.familyInfo?.id;
     if (!familyId) {
+      console.log('No familyId found');
+      return;
+    }
+
+    app.get(`/families/${familyId}/babies`).then(list => {
+      if (Array.isArray(list) && list.length > 0) {
+        const babies = list.map(b => this.mapBabyInfo(b));
+        
+        // 选择默认宝宝（优先使用全局数据中的，否则选择第一个）
+        let selectedBaby = babies[0];
+        let selectedBabyIndex = 0;
+        
+        if (app.globalData.babyInfo?.id) {
+          const currentIndex = babies.findIndex(b => b.id === app.globalData.babyInfo.id);
+          if (currentIndex !== -1) {
+            selectedBaby = babies[currentIndex];
+            selectedBabyIndex = currentIndex;
+          } else {
+            // 当前选中的宝宝已被删除，选择第一个宝宝
+            console.log('当前选中的宝宝已被删除，切换到第一个宝宝');
+            selectedBaby = babies[0];
+            selectedBabyIndex = 0;
+          }
+        }
+        
+        this.setData({
+          babies,
+          selectedBaby,
+          selectedBabyIndex
+        });
+        
+        console.log('Loaded babies:', babies);
+        console.log('Selected baby:', selectedBaby);
+        
+        // 加载选中宝宝的记录
+        this.loadRecords();
+      } else {
+        console.log('No babies found');
+        this.setData({
+          babies: [],
+          selectedBaby: {},
+          selectedBabyIndex: 0,
+          allRecords: [],
+          filteredRecords: []
+        });
+      }
+    }).catch(err => {
+      console.error('Failed to load babies:', err);
+      this.setData({
+        babies: [],
+        selectedBaby: {},
+        selectedBabyIndex: 0,
+        allRecords: [],
+        filteredRecords: []
+      });
+    });
+  },
+
+  // 宝宝选择变化事件（支持点击和picker两种方式）
+  onBabyChange(e) {
+    let index;
+    
+    // 处理不同的事件来源
+    if (e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.index !== undefined) {
+      // 来自点击事件
+      index = parseInt(e.currentTarget.dataset.index);
+    } else if (e.detail && e.detail.value !== undefined) {
+      // 来自picker事件
+      index = parseInt(e.detail.value);
+    } else {
+      console.error('Invalid baby change event:', e);
+      return;
+    }
+    
+    const selectedBaby = this.data.babies[index];
+    if (!selectedBaby) {
+      console.error('Selected baby not found at index:', index);
+      return;
+    }
+    
+    console.log('Baby selection changed:', selectedBaby);
+    
+    this.setData({
+      selectedBaby,
+      selectedBabyIndex: index
+    });
+    
+    // 重新加载选中宝宝的记录
+    this.loadRecords();
+  },
+
+  // 映射宝宝信息，包含年龄计算
+  mapBabyInfo(baby) {
+    // 计算月龄和天数
+    let ageText = '0个月';
+    if (baby.birthDate) {
+      const birthDate = new Date(baby.birthDate);
+      const now = new Date();
+      const diffTime = Math.abs(now - birthDate);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      const months = Math.floor(diffDays / 30.44); // 平均每月 30.44 天
+      const remainingDays = Math.floor(diffDays % 30.44);
+      
+      if (months === 0) {
+        ageText = `${remainingDays}天`;
+      } else if (remainingDays === 0) {
+        ageText = `${months}个月`;
+      } else {
+        ageText = `${months}个月零${remainingDays}天`;
+      }
+    }
+
+    return {
+      id: baby.id,
+      name: baby.name,
+      gender: (baby.gender || '').toLowerCase(),
+      birthDate: baby.birthDate,
+      avatar: baby.avatarUrl || (baby.gender === 'BOY' ? '/images/baby-boy.png' : '/images/baby-girl.png'),
+      height: baby.birthHeightCm,
+      weight: baby.birthWeightKg,
+      age: ageText
+    };
+  },
+
+  loadRecords() {
+    const currentBaby = this.data.selectedBaby;
+    if (!currentBaby?.id) {
       this.setData({ 
         allRecords: [],
         filteredRecords: [] 
@@ -46,7 +191,9 @@ Page({
       return;
     }
     
-    app.get(`/families/${familyId}/records`)
+    console.log('Loading records for baby:', currentBaby.id);
+    
+    app.get(`/babies/${currentBaby.id}/records`)
       .then(list => {
         console.log('Records from backend:', list);
         
@@ -651,14 +798,14 @@ Page({
       }
     }
 
-    const familyId = app.globalData.familyInfo?.id;
-    if (!familyId) {
-      wx.showToast({ title: '请先创建或加入家庭', icon: 'none' });
+    const babyId = this.data.selectedBaby?.id;
+    if (!babyId) {
+      wx.showToast({ title: '请先选择宝宝', icon: 'none' });
       return;
     }
 
     // 调用PUT API
-    app.put(`/families/${familyId}/records/${editingRecord.id}`, updateData)
+    app.put(`/babies/${babyId}/records/${editingRecord.id}`, updateData)
       .then(() => {
         this.hideEditModal();
         this.loadRecords(); // 重新加载记录
@@ -726,14 +873,14 @@ Page({
       content: '确定要删除这条记录吗？',
       success: (res) => {
         if (res.confirm) {
-          const familyId = app.globalData.familyInfo?.id;
-          if (!familyId) {
-            wx.showToast({ title: '请先创建或加入家庭', icon: 'none' });
+          const babyId = this.data.selectedBaby?.id;
+          if (!babyId) {
+            wx.showToast({ title: '请先选择宝宝', icon: 'none' });
             return;
           }
 
           // 调用DELETE API
-          app.delete(`/families/${familyId}/records/${id}`)
+          app.delete(`/babies/${babyId}/records/${id}`)
             .then(() => {
               this.loadRecords(); // 重新加载记录
               wx.showToast({ title: '删除成功', icon: 'success' });
