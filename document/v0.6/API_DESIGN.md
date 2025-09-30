@@ -4,9 +4,19 @@
 
 - **文档版本**: v0.6.0
 - **创建日期**: 2024年9月27日
+- **更新日期**: 2024年9月30日
 - **API设计师**: westxixia
 - **目标版本**: v0.6
-- **文档状态**: 开发中
+- **文档状态**: 已完成
+
+## 更新日志
+
+### v0.6.0 (2024-09-30)
+- ✅ 新增多胞胎支持功能API
+- ✅ 新增统计数据API
+- ✅ 新增权限控制服务API
+- ✅ 完善宝宝管理API
+- ✅ 新增跨页面数据同步机制
 
 ## 1. 概述
 
@@ -1038,7 +1048,182 @@ DELETE /api/reminders/{id}
 }
 ```
 
-## 9. 错误码定义
+## 9. 统计数据API
+
+### 9.1 获取宝宝今日统计
+```
+GET /api/statistics/babies/{babyId}/today
+```
+
+**路径参数**
+- `babyId`: 宝宝ID
+
+**响应示例**
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "feeding": {
+      "total": {
+        "breastfeeding": 180.5,
+        "formula": 120.0,
+        "water": 50.0
+      },
+      "count": {
+        "breastfeeding": 6,
+        "formula": 3,
+        "water": 2,
+        "solid": 2
+      }
+    },
+    "diaper": {
+      "wet": 8,
+      "dirty": 3,
+      "total": 11
+    },
+    "growth": {
+      "weight": 5.2,
+      "height": 65.0,
+      "head": 42.5
+    }
+  }
+}
+```
+
+### 9.2 获取宝宝历史统计
+```
+GET /api/statistics/babies/{babyId}
+```
+
+**路径参数**
+- `babyId`: 宝宝ID
+
+**查询参数**
+- `startDate`: 开始日期 (YYYY-MM-DD)
+- `endDate`: 结束日期 (YYYY-MM-DD)
+- `type`: 统计类型 (feeding/diaper/growth)
+
+**响应示例**
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "period": {
+      "start": "2024-09-01",
+      "end": "2024-09-30"
+    },
+    "feeding": {
+      "totalVolume": 3500.5,
+      "averagePerDay": 116.7,
+      "maxPerDay": 180.5,
+      "minPerDay": 95.2
+    },
+    "diaper": {
+      "totalCount": 240,
+      "averagePerDay": 8.0,
+      "wetRatio": 0.7,
+      "dirtyRatio": 0.3
+    },
+    "growth": {
+      "weightGain": 0.8,
+      "heightGain": 3.2
+    }
+  }
+}
+```
+
+### 9.3 获取家庭今日统计
+```
+GET /api/statistics/families/{familyId}/today
+```
+
+**路径参数**
+- `familyId`: 家庭 ID
+
+**响应示例**
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "familyStats": {
+      "totalBabies": 2,
+      "totalRecords": 24,
+      "totalFeeding": 360.5,
+      "totalDiapers": 16
+    },
+    "babyStats": [
+      {
+        "babyId": 1,
+        "babyName": "大宝",
+        "feeding": 180.5,
+        "diapers": 8
+      },
+      {
+        "babyId": 2,
+        "babyName": "二宝",
+        "feeding": 180.0,
+        "diapers": 8
+      }
+    ]
+  }
+}
+```
+
+## 10. 权限控制API
+
+### 10.1 验证宝宝访问权限
+```
+POST /api/permissions/validate-baby-access
+```
+
+**请求参数**
+```json
+{
+  "babyId": 1
+}
+```
+
+**响应示例**
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "hasAccess": true,
+    "permissions": ["read", "write", "delete"]
+  }
+}
+```
+
+### 10.2 验证家庭访问权限
+```
+POST /api/permissions/validate-family-access
+```
+
+**请求参数**
+```json
+{
+  "familyId": 1
+}
+```
+
+**响应示例**
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "hasAccess": true,
+    "role": "CREATOR",
+    "permissions": ["read", "write", "delete", "manage_members"]
+  }
+}
+```
+
+## 11. 错误码定义
 
 ### 9.1 通用错误码
 | 错误码 | 描述 | 说明 |
