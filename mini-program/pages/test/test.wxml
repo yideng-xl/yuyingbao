@@ -1,0 +1,5 @@
+<view class="container">
+  <view class="chart-container">
+    <ec-canvas id="mychart-dom" canvas-id="mychart" ec="{{ ec }}"></ec-canvas>
+  </view>
+</view>

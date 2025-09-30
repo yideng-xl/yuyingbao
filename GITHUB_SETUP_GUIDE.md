@@ -23,7 +23,7 @@ GitHub 现在要求使用 Personal Access Token (PAT) 进行身份验证，而�
 ```bash
 # 推送时会自动弹出认证窗口
 git push -u origin main
-# 用户名：westxixia
+# 用户名：yideng-xl
 # 密码：粘贴您的 Personal Access Token
 ```
 
@@ -83,6 +83,34 @@ git commit -m "feat: 添加新功能"
 
 # 3. 推送到 GitHub
 git push origin main
+```
+
+### Git 用户信息配置
+
+如果您需要更新 Git 的全局用户名和邮箱配置，请使用以下命令：
+
+```bash
+# 设置全局用户名和邮箱（适用于所有 Git 项目）
+git config --global user.name "yideng-xl"
+git config --global user.email "your-email@example.com"
+
+# 查看当前全局配置
+git config --global --list
+
+# 查看特定配置项
+git config --global user.name
+git config --global user.email
+```
+
+如果您只想为当前项目设置用户名和邮箱，请在项目目录中使用：
+
+```bash
+# 设置当前项目的用户名和邮箱（仅适用于当前 Git 项目）
+git config user.name "yideng-xl"
+git config user.email "your-email@example.com"
+
+# 查看当前项目配置
+git config --list
 ```
 
 ### 版本管理流程

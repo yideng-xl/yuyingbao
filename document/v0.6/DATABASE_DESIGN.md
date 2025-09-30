@@ -1,89 +1,101 @@
-# 育婴宝数据库设计文档 v0.6
+# 数据库设计文档 v0.6
 
-## 文档信息
+## 概述
 
-- **文档版本**: v0.6.0
-- **创建日期**: 2024年9月27日
-- **数据库设计师**: westxixia
-- **目标版本**: v0.6
-- **文档状态**: 开发中
+本文档描述了育婴宝系统v0.6版本的数据库设计，包括表结构、索引、约束和数据字典。
 
-## 1. 概述
+## 技术选型
 
-### 1.1 设计目标
+- **数据库**: PostgreSQL 16
+- **字符集**: UTF-8
+- **时区**: UTC
+- **连接池**: HikariCP
 
-育婴宝v0.6版本数据库设计在v0.5的基础上，增加了对多宝宝支持、数据导出、智能提醒等功能的支持，同时优化了数据结构以提升查询性能。
+## 数据库架构
 
-### 1.2 设计原则
+### 核心业务表
+- `users` - 用户信息表
+- `families` - 家庭信息表
+- `family_members` - 家庭成员关系表
+- `babies` - 宝宝信息表
+- `records` - 记录信息表
 
-- **数据一致性**: 确保数据的完整性和一致性
-- **性能优化**: 通过索引和查询优化提升性能
-- **可扩展性**: 支持未来功能扩展
-- **安全性**: 保护用户隐私和数据安全
-- **标准化**: 遵循数据库设计最佳实践
+### 配置和扩展表
+- 未来版本将包括知识库、通知等扩展表
 
-## 2. 表结构设计
+## 表结构设计
 
-### 2.1 核心表结构
+### 1. 用户表 (users)
 
-#### 用户表 (users)
+存储用户基本信息和微信授权信息。
+
 ```sql
 CREATE TABLE users (
     id BIGSERIAL PRIMARY KEY,
-    openid VARCHAR(64) NOT NULL UNIQUE,
-    nickname VARCHAR(64) NOT NULL,
-    avatar TEXT,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    openid VARCHAR(128) UNIQUE NOT NULL,
+    nickname VARCHAR(100),
+    avatar_url VARCHAR(500),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 索引
 CREATE INDEX idx_users_openid ON users(openid);
-CREATE INDEX idx_users_nickname ON users(nickname);
+CREATE INDEX idx_users_created_at ON users(created_at);
+
+-- 注释
+COMMENT ON TABLE users IS '用户信息表';
+COMMENT ON COLUMN users.id IS '用户ID';
+COMMENT ON COLUMN users.openid IS '微信OpenID';
+COMMENT ON COLUMN users.nickname IS '用户昵称';
+COMMENT ON COLUMN users.avatar_url IS '头像URL';
+COMMENT ON COLUMN users.created_at IS '创建时间';
+COMMENT ON COLUMN users.updated_at IS '更新时间';
 ```
 
-**字段说明**
-| 字段名 | 类型 | 约束 | 描述 |
-|-------|------|------|------|
-| id | BIGSERIAL | PK | 用户ID |
-| openid | VARCHAR(64) | NOT NULL, UNIQUE | 微信openid |
-| nickname | VARCHAR(64) | NOT NULL | 用户昵称 |
-| avatar | TEXT | - | 用户头像URL |
-| created_at | TIMESTAMP | NOT NULL | 创建时间 |
-| updated_at | TIMESTAMP | NOT NULL | 更新时间 |
+### 2. 家庭表 (families)
 
-#### 家庭表 (families)
+存储家庭基本信息和邀请码。
+
 ```sql
 CREATE TABLE families (
     id BIGSERIAL PRIMARY KEY,
-    name VARCHAR(64) NOT NULL,
-    invite_code VARCHAR(8) NOT NULL UNIQUE,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    name VARCHAR(100) NOT NULL,
+    invite_code VARCHAR(20) UNIQUE NOT NULL,
+    created_by BIGINT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (created_by) REFERENCES users(id)
 );
 
 -- 索引
-CREATE INDEX idx_families_invite_code ON families(invite_code);
+CREATE UNIQUE INDEX idx_families_invite_code ON families(invite_code);
+CREATE INDEX idx_families_created_by ON families(created_by);
+CREATE INDEX idx_families_created_at ON families(created_at);
+
+-- 注释
+COMMENT ON TABLE families IS '家庭信息表';
+COMMENT ON COLUMN families.id IS '家庭ID';
+COMMENT ON COLUMN families.name IS '家庭名称';
+COMMENT ON COLUMN families.invite_code IS '邀请码';
+COMMENT ON COLUMN families.created_by IS '创建者用户ID';
+COMMENT ON COLUMN families.created_at IS '创建时间';
 ```
 
-**字段说明**
-| 字段名 | 类型 | 约束 | 描述 |
-|-------|------|------|------|
-| id | BIGSERIAL | PK | 家庭ID |
-| name | VARCHAR(64) | NOT NULL | 家庭名称 |
-| invite_code | VARCHAR(8) | NOT NULL, UNIQUE | 邀请码 |
-| created_at | TIMESTAMP | NOT NULL | 创建时间 |
-| updated_at | TIMESTAMP | NOT NULL | 更新时间 |
+### 3. 家庭成员表 (family_members)
 
-#### 家庭成员表 (family_members)
+存储家庭成员关系和角色权限。
+
 ```sql
+CREATE TYPE family_role AS ENUM ('ADMIN', 'MEMBER');
+
 CREATE TABLE family_members (
     id BIGSERIAL PRIMARY KEY,
-    family_id BIGINT NOT NULL REFERENCES families(id) ON DELETE CASCADE,
-    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    role VARCHAR(16) NOT NULL DEFAULT 'MEMBER' CHECK (role IN ('ADMIN', 'MEMBER')),
-    joined_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    status VARCHAR(16) NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE', 'INACTIVE')),
+    family_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    role family_role NOT NULL DEFAULT 'MEMBER',
+    joined_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (family_id) REFERENCES families(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     UNIQUE(family_id, user_id)
 );
 
@@ -91,650 +103,365 @@ CREATE TABLE family_members (
 CREATE INDEX idx_family_members_family_id ON family_members(family_id);
 CREATE INDEX idx_family_members_user_id ON family_members(user_id);
 CREATE INDEX idx_family_members_role ON family_members(role);
+
+-- 注释
+COMMENT ON TABLE family_members IS '家庭成员关系表';
+COMMENT ON COLUMN family_members.id IS '关系ID';
+COMMENT ON COLUMN family_members.family_id IS '家庭ID';
+COMMENT ON COLUMN family_members.user_id IS '用户ID';
+COMMENT ON COLUMN family_members.role IS '角色 (ADMIN/MEMBER)';
+COMMENT ON COLUMN family_members.joined_at IS '加入时间';
 ```
 
-**字段说明**
-| 字段名 | 类型 | 约束 | 描述 |
-|-------|------|------|------|
-| id | BIGSERIAL | PK | 成员ID |
-| family_id | BIGINT | NOT NULL, FK | 家庭ID |
-| user_id | BIGINT | NOT NULL, FK | 用户ID |
-| role | VARCHAR(16) | NOT NULL, CHECK | 角色(ADMIN/MEMBER) |
-| joined_at | TIMESTAMP | NOT NULL | 加入时间 |
-| status | VARCHAR(16) | NOT NULL, CHECK | 状态(ACTIVE/INACTIVE) |
+### 4. 宝宝表 (babies)
 
-#### 宝宝表 (babies) - v0.6新增
+存储宝宝基本信息和出生数据。
+
 ```sql
+CREATE TYPE gender AS ENUM ('BOY', 'GIRL');
+
 CREATE TABLE babies (
     id BIGSERIAL PRIMARY KEY,
-    family_id BIGINT NOT NULL REFERENCES families(id) ON DELETE CASCADE,
-    name VARCHAR(64) NOT NULL,
-    gender VARCHAR(8) NOT NULL CHECK (gender IN ('MALE', 'FEMALE')),
+    family_id BIGINT NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    gender gender NOT NULL,
     birth_date DATE NOT NULL,
-    avatar TEXT,
-    height DECIMAL(5,2),
-    weight DECIMAL(5,2),
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    avatar_url VARCHAR(500),
+    birth_height_cm DECIMAL(5,2),
+    birth_weight_kg DECIMAL(4,2),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (family_id) REFERENCES families(id) ON DELETE CASCADE
 );
 
 -- 索引
 CREATE INDEX idx_babies_family_id ON babies(family_id);
 CREATE INDEX idx_babies_birth_date ON babies(birth_date);
+CREATE INDEX idx_babies_created_at ON babies(created_at);
+
+-- 注释
+COMMENT ON TABLE babies IS '宝宝信息表';
+COMMENT ON COLUMN babies.id IS '宝宝ID';
+COMMENT ON COLUMN babies.family_id IS '家庭ID';
+COMMENT ON COLUMN babies.name IS '宝宝姓名';
+COMMENT ON COLUMN babies.gender IS '性别 (BOY/GIRL)';
+COMMENT ON COLUMN babies.birth_date IS '出生日期';
+COMMENT ON COLUMN babies.avatar_url IS '头像URL';
+COMMENT ON COLUMN babies.birth_height_cm IS '出生身高(cm)';
+COMMENT ON COLUMN babies.birth_weight_kg IS '出生体重(kg)';
+COMMENT ON COLUMN babies.created_at IS '创建时间';
 ```
 
-**字段说明**
-| 字段名 | 类型 | 约束 | 描述 |
-|-------|------|------|------|
-| id | BIGSERIAL | PK | 宝宝ID |
-| family_id | BIGINT | NOT NULL, FK | 家庭ID |
-| name | VARCHAR(64) | NOT NULL | 宝宝姓名 |
-| gender | VARCHAR(8) | NOT NULL, CHECK | 性别(MALE/FEMALE) |
-| birth_date | DATE | NOT NULL | 出生日期 |
-| avatar | TEXT | - | 宝宝头像URL |
-| height | DECIMAL(5,2) | - | 出生身高(cm) |
-| weight | DECIMAL(5,2) | - | 出生体重(kg) |
-| created_at | TIMESTAMP | NOT NULL | 创建时间 |
-| updated_at | TIMESTAMP | NOT NULL | 更新时间 |
+### 5. 记录表 (records)
 
-#### 母乳亲喂记录表 (breast_feeding_records)
+存储所有类型的宝宝记录信息。
+
 ```sql
-CREATE TABLE breast_feeding_records (
-    id BIGSERIAL PRIMARY KEY,
-    baby_id BIGINT NOT NULL REFERENCES babies(id) ON DELETE CASCADE,
-    start_time TIMESTAMP NOT NULL,
-    end_time TIMESTAMP NOT NULL,
-    side VARCHAR(8) CHECK (side IN ('LEFT', 'RIGHT', 'BOTH')),
-    duration INTEGER NOT NULL,
-    note TEXT,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+CREATE TYPE record_type AS ENUM (
+    'BREASTFEEDING',  -- 母乳亲喂
+    'BOTTLE',         -- 瓶喂
+    'FORMULA',        -- 配方奶
+    'SOLID',          -- 辅食
+    'DIAPER',         -- 大便
+    'GROWTH',         -- 成长
+    'WATER'           -- 喂水
 );
 
--- 索引
-CREATE INDEX idx_breast_feeding_baby_id ON breast_feeding_records(baby_id);
-CREATE INDEX idx_breast_feeding_time ON breast_feeding_records(start_time, end_time);
-```
-
-**字段说明**
-| 字段名 | 类型 | 约束 | 描述 |
-|-------|------|------|------|
-| id | BIGSERIAL | PK | 记录ID |
-| baby_id | BIGINT | NOT NULL, FK | 宝宝ID |
-| start_time | TIMESTAMP | NOT NULL | 开始时间 |
-| end_time | TIMESTAMP | NOT NULL | 结束时间 |
-| side | VARCHAR(8) | CHECK | 喂养侧(LEFT/RIGHT/BOTH) |
-| duration | INTEGER | NOT NULL | 持续时间(秒) |
-| note | TEXT | - | 备注 |
-| created_at | TIMESTAMP | NOT NULL | 创建时间 |
-| updated_at | TIMESTAMP | NOT NULL | 更新时间 |
-
-#### 瓶喂记录表 (bottle_feeding_records)
-```sql
-CREATE TABLE bottle_feeding_records (
-    id BIGSERIAL PRIMARY KEY,
-    baby_id BIGINT NOT NULL REFERENCES babies(id) ON DELETE CASCADE,
-    feeding_time TIMESTAMP NOT NULL,
-    amount INTEGER NOT NULL,
-    note TEXT,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+CREATE TYPE solid_type AS ENUM (
+    'RICE_CEREAL',    -- 米糊
+    'VEGETABLE_PUREE',-- 蔬菜泥
+    'FRUIT_PUREE',    -- 水果泥
+    'MEAT_PUREE',     -- 肉泥
+    'EGG_YOLK',       -- 蛋黄
+    'OTHER'           -- 其他
 );
 
--- 索引
-CREATE INDEX idx_bottle_feeding_baby_id ON bottle_feeding_records(baby_id);
-CREATE INDEX idx_bottle_feeding_time ON bottle_feeding_records(feeding_time);
-```
-
-**字段说明**
-| 字段名 | 类型 | 约束 | 描述 |
-|-------|------|------|------|
-| id | BIGSERIAL | PK | 记录ID |
-| baby_id | BIGINT | NOT NULL, FK | 宝宝ID |
-| feeding_time | TIMESTAMP | NOT NULL | 喂养时间 |
-| amount | INTEGER | NOT NULL | 奶量(ml) |
-| note | TEXT | - | 备注 |
-| created_at | TIMESTAMP | NOT NULL | 创建时间 |
-| updated_at | TIMESTAMP | NOT NULL | 更新时间 |
-
-#### 配方奶记录表 (formula_feeding_records)
-```sql
-CREATE TABLE formula_feeding_records (
-    id BIGSERIAL PRIMARY KEY,
-    baby_id BIGINT NOT NULL REFERENCES babies(id) ON DELETE CASCADE,
-    feeding_time TIMESTAMP NOT NULL,
-    amount INTEGER NOT NULL,
-    note TEXT,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+CREATE TYPE diaper_texture AS ENUM (
+    'WATERY',         -- 稀
+    'SOFT',           -- 软
+    'NORMAL',         -- 成形
+    'HARD'            -- 干硬
 );
 
--- 索引
-CREATE INDEX idx_formula_feeding_baby_id ON formula_feeding_records(baby_id);
-CREATE INDEX idx_formula_feeding_time ON formula_feeding_records(feeding_time);
-```
-
-**字段说明**
-| 字段名 | 类型 | 约束 | 描述 |
-|-------|------|------|------|
-| id | BIGSERIAL | PK | 记录ID |
-| baby_id | BIGINT | NOT NULL, FK | 宝宝ID |
-| feeding_time | TIMESTAMP | NOT NULL | 喂养时间 |
-| amount | INTEGER | NOT NULL | 奶量(ml) |
-| note | TEXT | - | 备注 |
-| created_at | TIMESTAMP | NOT NULL | 创建时间 |
-| updated_at | TIMESTAMP | NOT NULL | 更新时间 |
-
-#### 辅食记录表 (solid_food_records)
-```sql
-CREATE TABLE solid_food_records (
-    id BIGSERIAL PRIMARY KEY,
-    baby_id BIGINT NOT NULL REFERENCES babies(id) ON DELETE CASCADE,
-    feeding_time TIMESTAMP NOT NULL,
-    food_type VARCHAR(64) NOT NULL,
-    amount DECIMAL(6,2),
-    note TEXT,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+CREATE TYPE diaper_color AS ENUM (
+    'YELLOW',         -- 黄色
+    'GREEN',          -- 绿色
+    'BROWN',          -- 棕色
+    'BLACK'           -- 黑色
 );
 
--- 索引
-CREATE INDEX idx_solid_food_baby_id ON solid_food_records(baby_id);
-CREATE INDEX idx_solid_food_time ON solid_food_records(feeding_time);
-CREATE INDEX idx_solid_food_type ON solid_food_records(food_type);
-```
-
-**字段说明**
-| 字段名 | 类型 | 约束 | 描述 |
-|-------|------|------|------|
-| id | BIGSERIAL | PK | 记录ID |
-| baby_id | BIGINT | NOT NULL, FK | 宝宝ID |
-| feeding_time | TIMESTAMP | NOT NULL | 喂养时间 |
-| food_type | VARCHAR(64) | NOT NULL | 辅食类型 |
-| amount | DECIMAL(6,2) | - | 分量(g) |
-| note | TEXT | - | 备注 |
-| created_at | TIMESTAMP | NOT NULL | 创建时间 |
-| updated_at | TIMESTAMP | NOT NULL | 更新时间 |
-
-#### 大便记录表 (diaper_records)
-```sql
-CREATE TABLE diaper_records (
+CREATE TABLE records (
     id BIGSERIAL PRIMARY KEY,
-    baby_id BIGINT NOT NULL REFERENCES babies(id) ON DELETE CASCADE,
-    record_time TIMESTAMP NOT NULL,
-    consistency VARCHAR(16) CHECK (consistency IN ('HARD', 'NORMAL', 'SOFT', 'WATERY')),
-    color VARCHAR(16) CHECK (color IN ('YELLOW', 'GREEN', 'BROWN', 'BLACK')),
-    urine BOOLEAN,
-    note TEXT,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
--- 索引
-CREATE INDEX idx_diaper_baby_id ON diaper_records(baby_id);
-CREATE INDEX idx_diaper_time ON diaper_records(record_time);
-```
-
-**字段说明**
-| 字段名 | 类型 | 约束 | 描述 |
-|-------|------|------|------|
-| id | BIGSERIAL | PK | 记录ID |
-| baby_id | BIGINT | NOT NULL, FK | 宝宝ID |
-| record_time | TIMESTAMP | NOT NULL | 记录时间 |
-| consistency | VARCHAR(16) | CHECK | 质地(HARD/NORMAL/SOFT/WATERY) |
-| color | VARCHAR(16) | CHECK | 颜色(YELLOW/GREEN/BROWN/BLACK) |
-| urine | BOOLEAN | - | 是否有尿液 |
-| note | TEXT | - | 备注 |
-| created_at | TIMESTAMP | NOT NULL | 创建时间 |
-| updated_at | TIMESTAMP | NOT NULL | 更新时间 |
-
-#### 成长记录表 (growth_records)
-```sql
-CREATE TABLE growth_records (
-    id BIGSERIAL PRIMARY KEY,
-    baby_id BIGINT NOT NULL REFERENCES babies(id) ON DELETE CASCADE,
-    record_time TIMESTAMP NOT NULL,
-    height DECIMAL(5,2) NOT NULL,
-    weight DECIMAL(5,2) NOT NULL,
-    note TEXT,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
--- 索引
-CREATE INDEX idx_growth_baby_id ON growth_records(baby_id);
-CREATE INDEX idx_growth_time ON growth_records(record_time);
-```
-
-**字段说明**
-| 字段名 | 类型 | 约束 | 描述 |
-|-------|------|------|------|
-| id | BIGSERIAL | PK | 记录ID |
-| baby_id | BIGINT | NOT NULL, FK | 宝宝ID |
-| record_time | TIMESTAMP | NOT NULL | 记录时间 |
-| height | DECIMAL(5,2) | NOT NULL | 身高(cm) |
-| weight | DECIMAL(5,2) | NOT NULL | 体重(kg) |
-| note | TEXT | - | 备注 |
-| created_at | TIMESTAMP | NOT NULL | 创建时间 |
-| updated_at | TIMESTAMP | NOT NULL | 更新时间 |
-
-#### 提醒设置表 (reminders) - v0.6新增
-```sql
-CREATE TABLE reminders (
-    id BIGSERIAL PRIMARY KEY,
-    baby_id BIGINT NOT NULL REFERENCES babies(id) ON DELETE CASCADE,
-    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    type VARCHAR(32) NOT NULL CHECK (type IN ('FEEDING', 'CHECKUP', 'VACCINE', 'CUSTOM')),
-    time TIME NOT NULL,
-    enabled BOOLEAN NOT NULL DEFAULT true,
-    description TEXT,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
--- 索引
-CREATE INDEX idx_reminders_baby_id ON reminders(baby_id);
-CREATE INDEX idx_reminders_user_id ON reminders(user_id);
-CREATE INDEX idx_reminders_type ON reminders(type);
-CREATE INDEX idx_reminders_time ON reminders(time);
-```
-
-**字段说明**
-| 字段名 | 类型 | 约束 | 描述 |
-|-------|------|------|------|
-| id | BIGSERIAL | PK | 提醒ID |
-| baby_id | BIGINT | NOT NULL, FK | 宝宝ID |
-| user_id | BIGINT | NOT NULL, FK | 用户ID |
-| type | VARCHAR(32) | NOT NULL, CHECK | 提醒类型 |
-| time | TIME | NOT NULL | 提醒时间 |
-| enabled | BOOLEAN | NOT NULL | 是否启用 |
-| description | TEXT | - | 描述 |
-| created_at | TIMESTAMP | NOT NULL | 创建时间 |
-| updated_at | TIMESTAMP | NOT NULL | 更新时间 |
-
-#### 导出记录表 (export_records) - v0.6新增
-```sql
-CREATE TABLE export_records (
-    id BIGSERIAL PRIMARY KEY,
-    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    baby_id BIGINT REFERENCES babies(id) ON DELETE SET NULL,
-    format VARCHAR(16) NOT NULL CHECK (format IN ('PDF', 'EXCEL')),
-    start_date DATE NOT NULL,
-    end_date DATE NOT NULL,
-    file_path TEXT,
-    status VARCHAR(16) NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'PROCESSING', 'COMPLETED', 'FAILED')),
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    completed_at TIMESTAMP
-);
-
--- 索引
-CREATE INDEX idx_export_user_id ON export_records(user_id);
-CREATE INDEX idx_export_baby_id ON export_records(baby_id);
-CREATE INDEX idx_export_status ON export_records(status);
-CREATE INDEX idx_export_created_at ON export_records(created_at);
-```
-
-**字段说明**
-| 字段名 | 类型 | 约束 | 描述 |
-|-------|------|------|------|
-| id | BIGSERIAL | PK | 导出记录ID |
-| user_id | BIGINT | NOT NULL, FK | 用户ID |
-| baby_id | BIGINT | FK | 宝宝ID |
-| format | VARCHAR(16) | NOT NULL, CHECK | 导出格式(PDF/EXCEL) |
-| start_date | DATE | NOT NULL | 开始日期 |
-| end_date | DATE | NOT NULL | 结束日期 |
-| file_path | TEXT | - | 文件路径 |
-| status | VARCHAR(16) | NOT NULL, CHECK | 状态 |
-| created_at | TIMESTAMP | NOT NULL | 创建时间 |
-| completed_at | TIMESTAMP | - | 完成时间 |
-
-### 2.2 数据关系
-
-#### 实体关系图
-```
-graph LR
-    A[用户] --> B[家庭成员]
-    C[家庭] --> B
-    C --> D[宝宝]
-    D --> E[母乳亲喂记录]
-    D --> F[瓶喂记录]
-    D --> G[配方奶记录]
-    D --> H[辅食记录]
-    D --> I[大便记录]
-    D --> J[成长记录]
-    D --> K[提醒设置]
-    L[用户] --> M[导出记录]
-    D --> M
+    family_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    baby_id BIGINT NOT NULL,
+    type record_type NOT NULL,
+    happened_at TIMESTAMP WITH TIME ZONE NOT NULL,
     
-    style A fill:#ffe4c4
-    style B fill:#dda0dd
-    style C fill:#87ceeb
-    style D fill:#98fb98
-    style E fill:#ffb6c1
-    style F fill:#ffa07a
-    style G fill:#20b2aa
-    style H fill:#778899
-    style I fill:#d3d3d3
-    style J fill:#f0e68c
-    style K fill:#dda0dd
-    style L fill:#ffe4c4
-    style M fill:#87ceeb
-```
-
-## 3. 性能优化
-
-### 3.1 索引策略
-
-#### 核心查询索引
-```sql
--- 用户相关查询
-CREATE INDEX idx_users_openid ON users(openid);
-CREATE INDEX idx_users_nickname ON users(nickname);
-
--- 家庭相关查询
-CREATE INDEX idx_families_invite_code ON families(invite_code);
-CREATE INDEX idx_family_members_family_id ON family_members(family_id);
-CREATE INDEX idx_family_members_user_id ON family_members(user_id);
-
--- 宝宝相关查询
-CREATE INDEX idx_babies_family_id ON babies(family_id);
-CREATE INDEX idx_babies_birth_date ON babies(birth_date);
-
--- 记录相关查询
-CREATE INDEX idx_breast_feeding_baby_id ON breast_feeding_records(baby_id);
-CREATE INDEX idx_breast_feeding_time ON breast_feeding_records(start_time, end_time);
-CREATE INDEX idx_bottle_feeding_baby_id ON bottle_feeding_records(baby_id);
-CREATE INDEX idx_bottle_feeding_time ON bottle_feeding_records(feeding_time);
-CREATE INDEX idx_formula_feeding_baby_id ON formula_feeding_records(baby_id);
-CREATE INDEX idx_formula_feeding_time ON formula_feeding_records(feeding_time);
-CREATE INDEX idx_solid_food_baby_id ON solid_food_records(baby_id);
-CREATE INDEX idx_solid_food_time ON solid_food_records(feeding_time);
-CREATE INDEX idx_diaper_baby_id ON diaper_records(baby_id);
-CREATE INDEX idx_diaper_time ON diaper_records(record_time);
-CREATE INDEX idx_growth_baby_id ON growth_records(baby_id);
-CREATE INDEX idx_growth_time ON growth_records(record_time);
-
--- 提醒相关查询
-CREATE INDEX idx_reminders_baby_id ON reminders(baby_id);
-CREATE INDEX idx_reminders_user_id ON reminders(user_id);
-CREATE INDEX idx_reminders_time ON reminders(time);
-
--- 导出相关查询
-CREATE INDEX idx_export_user_id ON export_records(user_id);
-CREATE INDEX idx_export_status ON export_records(status);
-CREATE INDEX idx_export_created_at ON export_records(created_at);
-```
-
-### 3.2 查询优化
-
-#### 常用查询优化示例
-
-##### 获取宝宝今日统计
-```sql
--- 优化前
-SELECT COUNT(*) as count, SUM(duration) as total_duration 
-FROM breast_feeding_records 
-WHERE baby_id = 1 
-AND DATE(start_time) = CURRENT_DATE;
-
--- 优化后
-SELECT COUNT(*) as count, SUM(duration) as total_duration 
-FROM breast_feeding_records 
-WHERE baby_id = 1 
-AND start_time >= CURRENT_DATE 
-AND start_time < CURRENT_DATE + INTERVAL '1 day';
-```
-
-##### 获取宝宝历史趋势
-```sql
--- 按月统计体重变化
-SELECT 
-    DATE_TRUNC('month', record_time) as month,
-    AVG(weight) as avg_weight
-FROM growth_records 
-WHERE baby_id = 1 
-AND record_time >= CURRENT_DATE - INTERVAL '1 year'
-GROUP BY DATE_TRUNC('month', record_time)
-ORDER BY month;
-```
-
-## 4. 数据安全
-
-### 4.1 数据加密
-
-#### 敏感数据加密存储
-```sql
--- 用户头像URL加密存储（示例）
-ALTER TABLE users ADD COLUMN avatar_encrypted BYTEA;
-ALTER TABLE babies ADD COLUMN avatar_encrypted BYTEA;
-```
-
-### 4.2 访问控制
-
-#### 行级安全策略
-```sql
--- 启用行级安全
-ALTER TABLE babies ENABLE ROW LEVEL SECURITY;
-ALTER TABLE breast_feeding_records ENABLE ROW LEVEL SECURITY;
-ALTER TABLE bottle_feeding_records ENABLE ROW LEVEL SECURITY;
-ALTER TABLE formula_feeding_records ENABLE ROW LEVEL SECURITY;
-ALTER TABLE solid_food_records ENABLE ROW LEVEL SECURITY;
-ALTER TABLE diaper_records ENABLE ROW LEVEL SECURITY;
-ALTER TABLE growth_records ENABLE ROW LEVEL SECURITY;
-
--- 创建策略函数
-CREATE OR REPLACE FUNCTION family_member_check(family_id BIGINT)
-RETURNS BOOLEAN AS $$
-BEGIN
-    RETURN EXISTS (
-        SELECT 1 FROM family_members fm
-        JOIN users u ON fm.user_id = u.id
-        WHERE fm.family_id = family_member_check.family_id
-        AND u.openid = current_setting('app.current_user_openid')
-        AND fm.status = 'ACTIVE'
-    );
-END;
-$$ LANGUAGE plpgsql;
-
--- 创建行级安全策略
-CREATE POLICY babies_policy ON babies
-    FOR ALL TO PUBLIC
-    USING (family_member_check(family_id));
-
-CREATE POLICY breast_feeding_records_policy ON breast_feeding_records
-    FOR ALL TO PUBLIC
-    USING (EXISTS (
-        SELECT 1 FROM babies b
-        WHERE b.id = breast_feeding_records.baby_id
-        AND family_member_check(b.family_id)
-    ));
-```
-
-### 4.3 数据备份
-
-#### 备份策略
-```bash
-# 每日全量备份
-pg_dump -h localhost -U yuyingbao -d yuyingbao > backup_$(date +%Y%m%d).sql
-
-# 每小时增量备份
-pg_dump -h localhost -U yuyingbao -d yuyingbao --table=breast_feeding_records --table=bottle_feeding_records > incremental_$(date +%Y%m%d_%H).sql
-```
-
-## 5. 运维管理
-
-### 5.1 监控指标
-
-#### 数据库性能监控
-```sql
--- 慢查询监控
-SELECT query, calls, total_time, mean_time
-FROM pg_stat_statements
-ORDER BY total_time DESC
-LIMIT 10;
-
--- 连接数监控
-SELECT count(*) as connections FROM pg_stat_activity;
-
--- 表大小监控
-SELECT 
-    schemaname,
-    tablename,
-    pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as size
-FROM pg_tables
-WHERE schemaname = 'public'
-ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;
-```
-
-### 5.2 维护脚本
-
-#### 定期清理脚本
-```sql
--- 清理30天前的日志记录
-DELETE FROM audit_logs WHERE created_at < CURRENT_DATE - INTERVAL '30 days';
-
--- 更新宝宝年龄缓存
-UPDATE babies 
-SET updated_at = CURRENT_TIMESTAMP
-WHERE DATE_PART('day', CURRENT_DATE - birth_date) % 7 = 0;
-```
-
-## 6. 版本迁移
-
-### 6.1 v0.5到v0.6迁移脚本
-
-#### 新增表结构
-```sql
--- 创建宝宝表
-CREATE TABLE babies (
-    id BIGSERIAL PRIMARY KEY,
-    family_id BIGINT NOT NULL REFERENCES families(id) ON DELETE CASCADE,
-    name VARCHAR(64) NOT NULL,
-    gender VARCHAR(8) NOT NULL CHECK (gender IN ('MALE', 'FEMALE')),
-    birth_date DATE NOT NULL,
-    avatar TEXT,
-    height DECIMAL(5,2),
-    weight DECIMAL(5,2),
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    -- 喂养相关字段
+    amount_ml DECIMAL(6,2),                    -- 奶量(ml)
+    duration_min INTEGER,                      -- 持续时间(分钟)
+    breastfeeding_side VARCHAR(16),            -- 母乳喂养侧 (LEFT/RIGHT/BOTH)
+    solid_type solid_type,                     -- 辅食类型
+    
+    -- 新增：辅食增强字段 (v0.6)
+    solid_ingredients TEXT,                    -- 多种食材信息
+    solid_brand VARCHAR(100),                  -- 食材品牌
+    solid_origin VARCHAR(100),                 -- 食材产地
+    
+    -- 大便相关字段
+    diaper_texture diaper_texture,             -- 大便质地
+    diaper_color diaper_color,                 -- 大便颜色
+    has_urine BOOLEAN,                         -- 是否有尿
+    
+    -- 成长相关字段
+    height_cm DECIMAL(5,2),                    -- 身高(cm)
+    weight_kg DECIMAL(4,2),                    -- 体重(kg)
+    
+    -- 通用字段
+    note VARCHAR(255),                         -- 备注
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    
+    FOREIGN KEY (family_id) REFERENCES families(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (baby_id) REFERENCES babies(id) ON DELETE CASCADE
 );
 
--- 创建提醒设置表
-CREATE TABLE reminders (
-    id BIGSERIAL PRIMARY KEY,
-    baby_id BIGINT NOT NULL REFERENCES babies(id) ON DELETE CASCADE,
-    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    type VARCHAR(32) NOT NULL CHECK (type IN ('FEEDING', 'CHECKUP', 'VACCINE', 'CUSTOM')),
-    time TIME NOT NULL,
-    enabled BOOLEAN NOT NULL DEFAULT true,
-    description TEXT,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
+-- 索引
+CREATE INDEX idx_records_family_id ON records(family_id);
+CREATE INDEX idx_records_baby_id ON records(baby_id);
+CREATE INDEX idx_records_user_id ON records(user_id);
+CREATE INDEX idx_records_type ON records(type);
+CREATE INDEX idx_records_happened_at ON records(happened_at);
+CREATE INDEX idx_records_created_at ON records(created_at);
 
--- 创建导出记录表
-CREATE TABLE export_records (
-    id BIGSERIAL PRIMARY KEY,
-    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    baby_id BIGINT REFERENCES babies(id) ON DELETE SET NULL,
-    format VARCHAR(16) NOT NULL CHECK (format IN ('PDF', 'EXCEL')),
-    start_date DATE NOT NULL,
-    end_date DATE NOT NULL,
-    file_path TEXT,
-    status VARCHAR(16) NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'PROCESSING', 'COMPLETED', 'FAILED')),
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    completed_at TIMESTAMP
-);
+-- 复合索引（用于查询优化）
+CREATE INDEX idx_records_family_baby_time ON records(family_id, baby_id, happened_at DESC);
+CREATE INDEX idx_records_family_type_time ON records(family_id, type, happened_at DESC);
 
--- 添加索引
-CREATE INDEX idx_babies_family_id ON babies(family_id);
-CREATE INDEX idx_babies_birth_date ON babies(birth_date);
-CREATE INDEX idx_reminders_baby_id ON reminders(baby_id);
-CREATE INDEX idx_reminders_user_id ON reminders(user_id);
-CREATE INDEX idx_reminders_time ON reminders(time);
-CREATE INDEX idx_export_user_id ON export_records(user_id);
-CREATE INDEX idx_export_status ON export_records(status);
+-- 注释
+COMMENT ON TABLE records IS '记录信息表';
+COMMENT ON COLUMN records.id IS '记录ID';
+COMMENT ON COLUMN records.family_id IS '家庭ID';
+COMMENT ON COLUMN records.user_id IS '创建者用户ID';
+COMMENT ON COLUMN records.baby_id IS '宝宝ID';
+COMMENT ON COLUMN records.type IS '记录类型';
+COMMENT ON COLUMN records.happened_at IS '发生时间';
+COMMENT ON COLUMN records.amount_ml IS '奶量(ml)';
+COMMENT ON COLUMN records.duration_min IS '持续时间(分钟)';
+COMMENT ON COLUMN records.breastfeeding_side IS '母乳喂养侧';
+COMMENT ON COLUMN records.solid_type IS '辅食类型';
+COMMENT ON COLUMN records.solid_ingredients IS '辅食多种食材信息';
+COMMENT ON COLUMN records.solid_brand IS '辅食品牌';
+COMMENT ON COLUMN records.solid_origin IS '辅食产地';
+COMMENT ON COLUMN records.diaper_texture IS '大便质地';
+COMMENT ON COLUMN records.diaper_color IS '大便颜色';
+COMMENT ON COLUMN records.has_urine IS '是否有尿';
+COMMENT ON COLUMN records.height_cm IS '身高(cm)';
+COMMENT ON COLUMN records.weight_kg IS '体重(kg)';
+COMMENT ON COLUMN records.note IS '备注';
+COMMENT ON COLUMN records.created_at IS '创建时间';
 ```
 
-#### 数据迁移
+## 数据约束和验证
+
+### 业务约束
+
+1. **用户约束**
+   - OpenID 必须唯一
+   - 昵称长度限制 1-100 字符
+
+2. **家庭约束**
+   - 邀请码必须唯一，6位随机字符串
+   - 家庭名称不能为空
+
+3. **宝宝约束**
+   - 出生日期不能晚于当前日期
+   - 身高范围：20-200 cm
+   - 体重范围：0.5-50 kg
+
+4. **记录约束**
+   - 发生时间不能晚于当前时间
+   - 奶量范围：1-1000 ml
+   - 持续时间范围：1-180 分钟
+
+### 数据完整性约束
+
 ```sql
--- 为现有家庭创建默认宝宝（假设每个家庭只有一个宝宝）
-INSERT INTO babies (family_id, name, gender, birth_date, created_at, updated_at)
-SELECT 
-    f.id,
-    '宝宝',
-    'MALE',
-    CURRENT_DATE - INTERVAL '3 months',
-    CURRENT_TIMESTAMP,
-    CURRENT_TIMESTAMP
-FROM families f
-WHERE NOT EXISTS (
-    SELECT 1 FROM babies b WHERE b.family_id = f.id
-);
-
--- 更新现有记录关联到宝宝
-UPDATE breast_feeding_records SET baby_id = (
-    SELECT b.id FROM babies b 
-    WHERE b.family_id = (
-        SELECT fm.family_id FROM family_members fm 
-        WHERE fm.user_id = (
-            SELECT id FROM users WHERE openid = 'default_user'
-        )
-    )
-    LIMIT 1
-) WHERE baby_id IS NULL;
-
--- 为其他记录表执行类似更新...
-```
-
-## 7. 最佳实践
-
-### 7.1 命名规范
-
-#### 表名规范
-- 使用复数形式命名表（如：users, families）
-- 使用下划线分隔单词（如：breast_feeding_records）
-- 表名简洁明了，能准确表达含义
-
-#### 字段名规范
-- 使用下划线分隔单词（如：created_at, family_id）
-- 主键统一使用id
-- 外键使用关联表名+id的形式（如：user_id, family_id）
-- 时间字段使用_timestamp后缀（如：created_at, updated_at）
-
-### 7.2 约束规范
-
-#### 数据完整性约束
-```sql
--- 非空约束
-ALTER TABLE users ALTER COLUMN openid SET NOT NULL;
-ALTER TABLE users ALTER COLUMN nickname SET NOT NULL;
-
--- 唯一约束
-ALTER TABLE users ADD CONSTRAINT uk_users_openid UNIQUE (openid);
-ALTER TABLE families ADD CONSTRAINT uk_families_invite_code UNIQUE (invite_code);
-
 -- 检查约束
-ALTER TABLE users ADD CONSTRAINT ck_users_nickname_length CHECK (LENGTH(nickname) > 0);
-ALTER TABLE babies ADD CONSTRAINT ck_babies_gender CHECK (gender IN ('MALE', 'FEMALE'));
+ALTER TABLE babies ADD CONSTRAINT chk_babies_birth_height 
+    CHECK (birth_height_cm IS NULL OR (birth_height_cm >= 20 AND birth_height_cm <= 200));
+
+ALTER TABLE babies ADD CONSTRAINT chk_babies_birth_weight 
+    CHECK (birth_weight_kg IS NULL OR (birth_weight_kg >= 0.5 AND birth_weight_kg <= 50));
+
+ALTER TABLE babies ADD CONSTRAINT chk_babies_birth_date 
+    CHECK (birth_date <= CURRENT_DATE);
+
+ALTER TABLE records ADD CONSTRAINT chk_records_amount_ml 
+    CHECK (amount_ml IS NULL OR (amount_ml > 0 AND amount_ml <= 1000));
+
+ALTER TABLE records ADD CONSTRAINT chk_records_duration_min 
+    CHECK (duration_min IS NULL OR (duration_min > 0 AND duration_min <= 180));
+
+ALTER TABLE records ADD CONSTRAINT chk_records_height_cm 
+    CHECK (height_cm IS NULL OR (height_cm >= 20 AND height_cm <= 200));
+
+ALTER TABLE records ADD CONSTRAINT chk_records_weight_kg 
+    CHECK (weight_kg IS NULL OR (weight_kg >= 0.5 AND weight_kg <= 50));
 ```
 
-### 7.3 性能优化建议
+## 初始化数据
 
-#### 查询优化
-1. 避免SELECT *，只查询需要的字段
-2. 合理使用索引，避免过多索引影响写入性能
-3. 使用LIMIT限制结果集大小
-4. 避免在WHERE子句中使用函数
+### 系统默认数据
 
-#### 存储优化
-1. 定期清理无用数据
-2. 使用合适的数据类型
-3. 对大字段考虑分离存储
-4. 合理设置表空间
+```sql
+-- 插入测试用户（开发环境）
+INSERT INTO users (openid, nickname, avatar_url) VALUES 
+('test_openid_001', '测试用户1', 'https://example.com/avatar1.jpg'),
+('test_openid_002', '测试用户2', 'https://example.com/avatar2.jpg');
+
+-- 创建测试家庭
+INSERT INTO families (name, invite_code, created_by) VALUES 
+('测试家庭', 'TEST01', 1);
+
+-- 添加家庭成员
+INSERT INTO family_members (family_id, user_id, role) VALUES 
+(1, 1, 'ADMIN'),
+(1, 2, 'MEMBER');
+
+-- 添加测试宝宝
+INSERT INTO babies (family_id, name, gender, birth_date, birth_height_cm, birth_weight_kg) VALUES 
+(1, '小测试', 'BOY', '2024-01-15', 50.0, 3.2);
+```
+
+## 数据库配置
+
+### 连接配置
+
+```yaml
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/yuyingbao
+    username: ${DB_USERNAME:yuyingbao}
+    password: ${DB_PASSWORD:password}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+```
+
+### JPA 配置
+
+```yaml
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        jdbc:
+          time_zone: UTC
+```
+
+## 性能优化
+
+### 索引策略
+
+1. **主键索引**: 所有表都有主键自动索引
+2. **外键索引**: 所有外键字段都建立索引
+3. **查询索引**: 根据常用查询模式建立复合索引
+4. **时间索引**: 按时间查询的字段建立索引
+
+### 分页查询优化
+
+```sql
+-- 使用索引优化的分页查询
+SELECT * FROM records 
+WHERE family_id = ? AND baby_id = ?
+ORDER BY happened_at DESC 
+LIMIT 20 OFFSET ?;
+```
+
+### 统计查询优化
+
+```sql
+-- 今日统计查询（使用索引）
+SELECT 
+    type,
+    COUNT(*) as count,
+    SUM(amount_ml) as total_amount
+FROM records 
+WHERE family_id = ? 
+    AND happened_at >= CURRENT_DATE 
+    AND happened_at < CURRENT_DATE + INTERVAL '1 day'
+GROUP BY type;
+```
+
+## 备份和恢复
+
+### 备份策略
+
+1. **全量备份**: 每日凌晨进行全量备份
+2. **增量备份**: 每小时进行增量备份
+3. **WAL归档**: 启用WAL日志归档
+4. **跨区域备份**: 备份文件同步到多个区域
+
+### 备份命令
+
+```bash
+# 全量备份
+pg_dump -h localhost -U yuyingbao -d yuyingbao > backup_$(date +%Y%m%d_%H%M%S).sql
+
+# 恢复数据库
+psql -h localhost -U yuyingbao -d yuyingbao < backup_20240829_100000.sql
+```
+
+## 监控和维护
+
+### 性能监控
+
+1. **慢查询监控**: 记录执行时间超过1秒的查询
+2. **连接池监控**: 监控连接池使用情况
+3. **磁盘空间监控**: 监控数据库文件大小
+4. **索引使用监控**: 检查未使用的索引
+
+### 定期维护
+
+```sql
+-- 更新表统计信息
+ANALYZE;
+
+-- 清理死元组
+VACUUM;
+
+-- 重建索引（必要时）
+REINDEX INDEX idx_records_family_baby_time;
+```
+
+## 版本管理
+
+### 数据库版本控制
+
+使用Flyway进行数据库版本管理：
+
+- `V1__init.sql` - 初始化表结构
+- `V2__add_solid_ingredients_fields.sql` - 添加辅食增强字段
+
+### 升级策略
+
+1. **测试环境验证**: 所有变更先在测试环境验证
+2. **备份数据**: 升级前进行完整备份
+3. **滚动升级**: 逐步升级，保证服务可用性
+4. **回滚准备**: 准备回滚脚本和流程
 
 ---
 
-*文档版本: v0.6.0*  
+*文档版本: v0.6*  
 *更新时间: 2024年9月27日*  
-*文档维护: westxixia*
+*维护人员: yideng-xl*

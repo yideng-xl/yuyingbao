@@ -1,75 +1,81 @@
 <view class="container">
   <!-- 用户信息卡片 -->
   <view class="user-card">
-    <!-- 需要授权提示 -->
-    <view class="auth-notice" wx:if="{{needUserAuth}}">
-      <view class="auth-icon">🔐</view>
-      <view class="auth-content">
-        <text class="auth-title">完善用户信息</text>
-        <text class="auth-desc">获取您的微信昵称和头像，提供更好的服务</text>
-      </view>
-      <button class="btn btn-primary btn-small" bindtap="authorizeUserInfo">立即授权</button>
+    <!-- 未授权用户显示立即授权按钮 -->
+    <view wx:if="{{!userInfo || !userInfo.id}}" class="unauthorized-section">
+      <view class="unauthorized-icon">👤</view>
+      <text class="unauthorized-text">未授权用户</text>
+      <button class="btn btn-primary" bindtap="authorizeUserInfo">立即授权</button>
     </view>
     
-    <view class="user-info">
+    <!-- 已授权用户显示用户信息 -->
+    <view wx:else class="user-info">
       <image src="{{userInfo.avatarUrl || '/images/default-avatar.svg'}}" class="user-avatar"></image>
       <view class="user-details">
-        <text class="user-name">{{userInfo.nickname || '用户'}}</text>
+        <text class="user-name">{{userInfo.nickname || '未知用户'}}</text>
         <text class="user-role">{{isCreator ? '家庭创建者' : '家庭成员'}}</text>
       </view>
-      <!-- 如果用户信息不完整，显示编辑按钮 -->
-      <button wx:if="{{!needUserAuth && userInfo.nickname === '育婴宝用户'}}" 
-              class="btn btn-outline btn-small" 
-              bindtap="authorizeUserInfo">
-        完善信息
-      </button>
     </view>
     
+    <!-- 家庭信息 -->
     <view class="family-info" wx:if="{{familyInfo}}">
       <text class="family-name">{{familyInfo.name}}</text>
       <text class="member-count">{{familyInfo.members ? familyInfo.members.length : 1}}位成员</text>
     </view>
+    
+    <!-- 未授权用户显示未授权家庭信息 -->
+    <view class="family-info" wx:elif="{{!userInfo || !userInfo.id}}">
+      <text class="family-name">未授权用户的家庭</text>
+      <text class="member-count">1位成员</text>
+    </view>
+    
+    <!-- 如果没有家庭信息但已授权，显示创建家庭和加入家庭按钮 -->
+    <view class="empty-family" wx:if="{{userInfo && userInfo.id && !familyInfo}}">
+      <text class="empty-text">待创建/加入的家庭</text>
+      <view class="family-actions">
+        <button class="btn btn-primary" bindtap="showCreateFamilyModal">创建家庭</button>
+        <button class="btn btn-outline" bindtap="showJoinModal">加入家庭</button>
+      </view>
+    </view>
   </view>
 
-  <!-- 家庭管理 -->
-  <view class="card family-card">
+  <!-- 家庭成员列表 -->
+  <view class="card family-members-card" wx:if="{{familyInfo && familyInfo.members}}">
     <view class="card-header">
-      <text class="card-title">家庭管理</text>
+      <text class="card-title">家庭成员</text>
+      <button class="btn btn-small" bindtap="showInviteModal">邀请成员</button>
     </view>
     
-    <!-- 邀请码 -->
-    <view class="invite-section" wx:if="{{isCreator}}">
-      <view class="invite-code">
-        <text class="invite-label">邀请码</text>
-        <text class="invite-value">{{familyInfo.inviteCode}}</text>
-        <button class="btn btn-small" bindtap="copyInviteCode">复制</button>
-      </view>
-      <view class="invite-actions">
-        <button class="btn btn-outline" bindtap="shareInvite">分享邀请</button>
-        <button class="btn btn-outline" bindtap="generateNewCode">重新生成</button>
-      </view>
-    </view>
-    
-    <!-- 成员列表 -->
-    <view class="members-section">
-      <view class="section-title">家庭成员</view>
-      <view class="members-list">
-        <view class="member-item" wx:for="{{familyInfo.members}}" wx:key="id">
-          <image src="{{item.avatarUrl || '/images/default-avatar.png'}}" class="member-avatar"></image>
-          <view class="member-info">
-            <text class="member-name">{{item.nickName}}</text>
-            <text class="member-role">{{item.id === familyInfo.creator.id ? '创建者' : '成员'}}</text>
-          </view>
-          <view class="member-actions" wx:if="{{isCreator && item.id !== userInfo.id}}">
-            <button class="btn btn-small danger" bindtap="removeMember" data-id="{{item.id}}">移除</button>
+    <view class="members-list">
+      <view class="member-item" wx:for="{{familyInfo.members}}" wx:key="id">
+        <image src="{{item.avatarUrl || '/images/default-avatar.svg'}}" class="member-avatar"></image>
+        <view class="member-info">
+          <text class="member-name">{{item.nickName}}</text>
+          <view class="member-roles-container">
+            <!-- 显示创建者身份和角色 -->
+            <view class="member-roles">
+              <!-- 显示创建者身份标识 -->
+              <text wx:if="{{item.role === 'CREATOR'}}" class="member-role creator">创建者</text>
+              <!-- 显示具体角色，创建者也可以有具体角色（如爸爸、妈妈等） -->
+              <text wx:if="{{item.memberRoleDisplayName && item.memberRoleDisplayName !== '创建者'}}" class="member-role">{{item.memberRoleDisplayName}}</text>
+              <!-- 如果是普通成员且没有设置具体角色，则显示"成员" -->
+              <text wx:if="{{item.role === 'MEMBER' && !item.memberRoleDisplayName}}" class="member-role">成员</text>
+            </view>
           </view>
         </view>
+        <!-- 创建者可以编辑自己的角色 -->
+        <button wx:if="{{item.role === 'CREATOR'}}" 
+                class="btn btn-compact btn-outline" 
+                bindtap="editMemberRole" 
+                data-member-id="{{item.id}}">
+          编辑角色
+        </button>
       </view>
     </view>
   </view>
 
   <!-- 宝宝信息 -->
-  <view class="card baby-card">
+  <view class="card baby-card" wx:if="{{familyInfo}}">
     <view class="card-header">
       <text class="card-title">宝宝信息</text>
       <button class="btn btn-small" bindtap="editBabyInfo">编辑</button>
@@ -81,6 +87,8 @@
         <view class="baby-details">
           <text class="baby-name">{{babyInfo.name}}</text>
           <text class="baby-age">{{babyInfo.age}}</text>
+          <!-- 新增：展示宝宝ID -->
+          <text class="baby-id">ID: {{babyInfo.id}}</text>
         </view>
       </view>
       
@@ -141,8 +149,139 @@
   </view>
 
   <!-- 退出登录 -->
-  <view class="logout-section">
+  <view class="logout-section" wx:if="{{userInfo && userInfo.id}}">
     <button class="btn btn-outline danger" bindtap="logout">退出登录</button>
+  </view>
+</view>
+
+<!-- 测试按钮 - 用于跳转到debug页面 -->
+<view class="card debug-card" wx:if="{{userInfo && userInfo.id}}">
+  <button class="btn btn-primary" bindtap="goToDebugPage">调试页面</button>
+</view>
+
+<!-- 创建家庭弹窗 -->
+<view class="modal-overlay" wx:if="{{showCreateFamilyModal}}" bindtap="hideCreateFamilyModal">
+  <view class="modal-content" catchtap="stopPropagation">
+    <view class="modal-header">
+      <text class="text-medium text-bold">创建家庭</text>
+      <view class="modal-close" bindtap="hideCreateFamilyModal">×</view>
+    </view>
+    
+    <view class="modal-body">
+      <view class="form-item">
+        <text class="form-label">家庭名称</text>
+        <input type="text" placeholder="请输入家庭名称" value="{{familyName}}" bindinput="onFamilyNameInput" />
+      </view>
+    </view>
+    
+    <view class="modal-footer">
+      <button class="btn btn-outline" bindtap="hideCreateFamilyModal">取消</button>
+      <button class="btn btn-primary" bindtap="createFamily">创建</button>
+    </view>
+  </view>
+</view>
+
+<!-- 邀请成员弹窗 -->
+<view class="modal-overlay" wx:if="{{showInviteModal}}" bindtap="hideInviteModal">
+  <view class="modal-content" catchtap="stopPropagation">
+    <view class="modal-header">
+      <text class="text-medium text-bold">邀请成员</text>
+      <view class="modal-close" bindtap="hideInviteModal">×</view>
+    </view>
+    
+    <view class="modal-body">
+      <view class="invite-instructions">
+        <text>请将以下邀请码分享给要邀请的成员：</text>
+      </view>
+      
+      <view class="invite-code-display">
+        <text class="invite-code-text">{{inviteCode}}</text>
+        <button class="btn btn-small" bindtap="copyInviteCode">复制</button>
+      </view>
+      
+      <view class="invite-actions">
+        <button class="btn btn-outline" bindtap="regenerateInviteCode">重新生成</button>
+      </view>
+    </view>
+    
+    <view class="modal-footer">
+      <button class="btn btn-primary" bindtap="hideInviteModal">完成</button>
+    </view>
+  </view>
+</view>
+
+<!-- 加入家庭弹窗 -->
+<view class="modal-overlay" wx:if="{{showJoinModal}}" bindtap="hideJoinModal">
+  <view class="modal-content" catchtap="stopPropagation">
+    <view class="modal-header">
+      <text class="text-medium text-bold">加入家庭</text>
+      <view class="modal-close" bindtap="hideJoinModal">×</view>
+    </view>
+    
+    <view class="modal-body">
+      <view class="form-item">
+        <text class="form-label">请输入6位邀请码</text>
+        <input type="text" placeholder="请输入邀请码" value="{{joinCode}}" bindinput="onJoinCodeInput" maxlength="6" />
+      </view>
+      
+      <!-- 显示匹配的家庭信息 -->
+      <view class="family-match-info" wx:if="{{matchedFamily}}">
+        <text class="match-title">找到以下家庭：</text>
+        <view class="match-family-card">
+          <text class="match-family-name">{{matchedFamily.name}}</text>
+          <text class="match-member-count">{{matchedFamily.memberCount}}位成员</text>
+        </view>
+      </view>
+    </view>
+    
+    <view class="modal-footer">
+      <button class="btn btn-outline" bindtap="hideJoinModal">取消</button>
+      <button class="btn btn-primary" bindtap="joinFamily" wx:if="{{matchedFamily}}">确认加入</button>
+    </view>
+  </view>
+</view>
+
+<!-- 编辑成员角色弹窗 -->
+<view class="modal-overlay" wx:if="{{showEditRoleModal}}" bindtap="hideEditRoleModal">
+  <view class="modal-content" catchtap="stopPropagation">
+    <view class="modal-header">
+      <text class="text-medium text-bold">编辑成员角色</text>
+      <view class="modal-close" bindtap="hideEditRoleModal">×</view>
+    </view>
+    
+    <view class="modal-body">
+      <view class="form-item">
+        <text class="form-label">请选择成员角色</text>
+        <view class="role-options">
+          <view class="role-option {{selectedRole === 'FATHER' ? 'active' : ''}}" bindtap="selectRole" data-role="FATHER">
+            爸爸
+          </view>
+          <view class="role-option {{selectedRole === 'MOTHER' ? 'active' : ''}}" bindtap="selectRole" data-role="MOTHER">
+            妈妈
+          </view>
+          <view class="role-option {{selectedRole === 'GRANDFATHER' ? 'active' : ''}}" bindtap="selectRole" data-role="GRANDFATHER">
+            爷爷
+          </view>
+          <view class="role-option {{selectedRole === 'GRANDMOTHER' ? 'active' : ''}}" bindtap="selectRole" data-role="GRANDMOTHER">
+            奶奶
+          </view>
+          <view class="role-option {{selectedRole === 'MATERNAL_GRANDFATHER' ? 'active' : ''}}" bindtap="selectRole" data-role="MATERNAL_GRANDFATHER">
+            外公
+          </view>
+          <view class="role-option {{selectedRole === 'MATERNAL_GRANDMOTHER' ? 'active' : ''}}" bindtap="selectRole" data-role="MATERNAL_GRANDMOTHER">
+            外婆
+          </view>
+          <view class="role-option {{selectedRole === 'OTHER' ? 'active' : ''}}" bindtap="selectRole" data-role="OTHER">
+            其他
+          </view>
+        </view>
+      </view>
+    </view>
+    
+    <view class="modal-footer">
+      <button class="btn btn-outline" bindtap="hideEditRoleModal">取消</button>
+      <button class="btn btn-primary" bindtap="saveMemberRole">保存</button>
+    </view>
   </view>
 </view>
 

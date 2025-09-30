@@ -19,11 +19,13 @@ public class CreateRecordRequest {
 	private Integer durationMin;
 	private String breastfeedingSide;
 	private SolidType solidType;
+	// 新增：辅食增强字段
+	private String solidIngredients; // 多种食材信息
+	private String solidBrand; // 食材品牌
+	private String solidOrigin; // 食材产地
 	private DiaperTexture diaperTexture;
 	private DiaperColor diaperColor;
 	private Boolean hasUrine;
 	private Double heightCm;
 	private Double weightKg;
 }
-
-

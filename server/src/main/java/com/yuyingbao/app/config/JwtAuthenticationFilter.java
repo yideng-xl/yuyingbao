@@ -25,19 +25,29 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 	@Override
 	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
 		String authHeader = request.getHeader("Authorization");
+		System.out.println("JWT Filter - Authorization Header: " + authHeader);
+		
 		if (authHeader != null && authHeader.startsWith("Bearer ")) {
 			String token = authHeader.substring(7);
+			System.out.println("JWT Filter - Token: " + token);
+			
 			try {
 				Claims claims = jwtService.parseToken(token);
+				System.out.println("JWT Filter - Claims: " + claims);
+				
 				String subject = claims.getSubject();
 				User principal = new User(subject, "", Collections.emptyList());
 				UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
 				authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 				SecurityContextHolder.getContext().setAuthentication(authentication);
-			} catch (Exception ignored) {
+			} catch (Exception e) {
+				System.out.println("JWT Filter - Token parsing failed: " + e.getMessage());
 				SecurityContextHolder.clearContext();
 			}
+		} else {
+			System.out.println("JWT Filter - No valid Bearer token found");
 		}
+		
 		filterChain.doFilter(request, response);
 	}
 }

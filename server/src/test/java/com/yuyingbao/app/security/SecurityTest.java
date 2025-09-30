@@ -24,6 +24,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.HashMap;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
@@ -68,7 +69,7 @@ class SecurityTest extends BaseIntegrationTest {
                 .createdAt(OffsetDateTime.now())
                 .build();
         anotherUser = userRepository.save(anotherUser);
-        anotherUserToken = jwtService.generateToken(anotherUser.getId());
+        anotherUserToken = jwtService.generateToken(anotherUser.getId(), new HashMap<>());
 
         // 创建测试家庭（当前用户拥有）
         testFamily = Family.builder()

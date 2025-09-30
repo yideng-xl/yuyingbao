@@ -191,7 +191,7 @@ id: BIGINT PRIMARY KEY
 family_id: BIGINT
 user_id: BIGINT
 baby_id: BIGINT
-type: ENUM('BREASTFEEDING', 'BOTTLE', 'FORMULA', 'SOLID', 'DIAPER', 'GROWTH')
+type: ENUM('BREASTFEEDING', 'BOTTLE', 'FORMULA', 'SOLID', 'DIAPER', 'GROWTH', 'WATER')
 happened_at: TIMESTAMP
 -- 喂养相关字段
 amount_ml: DECIMAL(6,2)

@@ -24,44 +24,27 @@ Page({
   },
 
   onLoad() {
-    this.initData();
+    // 检查用户是否已授权
+    const userInfo = app.globalData.userInfo;
+    if (!userInfo || !userInfo.id) {
+      // 未授权用户，显示提示并跳转到profile页面
+      this.showAuthRequiredModal();
+    } else {
+      this.initData();
+    }
   },
 
   onShow() {
-    this.loadTodayStats();
-    this.loadRecentRecords();
-  },
-
-  onTapLogin() {
-    wx.getUserProfile({
-      desc: '用于完善用户资料',
-      success: (userRes) => {
-        const userInfo = userRes.userInfo;
-        app.globalData.userInfo = userInfo;
-        wx.setStorageSync('userInfo', userInfo);
-
-        wx.login({
-          success: (res) => {
-            if (res.code) {
-              app.loginToServer(res.code, userInfo);
-              this.setData({ userInfo });
-              this.initData(); // 重新初始化数据，包括宝宝信息
-              this.loadTodayStats();
-              this.loadRecentRecords();
-              wx.showToast({ title: '登录成功', icon: 'success' });
-            } else {
-              wx.showToast({ title: '登录失败，请重试', icon: 'none' });
-            }
-          },
-          fail: () => {
-            wx.showToast({ title: '登录失败，请检查网络', icon: 'none' });
-          }
-        });
-      },
-      fail: () => {
-        wx.showToast({ title: '需要授权才能使用', icon: 'none' });
-      }
-    });
+    // 检查用户是否已授权
+    const userInfo = app.globalData.userInfo;
+    if (userInfo && userInfo.id) {
+      // 更新今天的日期
+      this.setData({
+        today: this.formatDate(new Date())
+      });
+      this.loadTodayStats();
+      this.loadRecentRecords();
+    }
   },
 
   initData() {
@@ -220,36 +203,53 @@ Page({
       return;
     }
 
-    app.get(`/families/${familyId}/records`)
-      .then(records => {
-        console.log('Raw records from backend:', records);
-        
-        // 确保 records 是数组
-        if (!Array.isArray(records)) {
-          console.error('Records is not an array:', records);
-          this.setData({ recentRecords: [] });
-          return;
-        }
-        
-        const recentRecords = records.slice(0, 5).map(record => {
-          try {
-            console.log('Processing record for recent records:', record.type, record.id);
-            const formatted = this.formatRecordForDisplay(record);
-            console.log('Formatted record result:', formatted);
-            return formatted;
-          } catch (error) {
-            console.error('Error formatting record:', record, error);
-            return null;
-          }
-        }).filter(record => record !== null); // 过滤掉 null 记录
-        
-        console.log('Final recentRecords array:', recentRecords);
-        this.setData({ recentRecords });
-      })
-      .catch((error) => {
-        console.error('Recent Records API Error:', error);
+    // 获取今天的开始和结束时间（使用本地时区）
+    const today = new Date();
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+
+    // 转换为ISO格式，确保包含时区信息
+    const startISO = startOfDay.toISOString();
+    const endISO = endOfDay.toISOString();
+
+    console.log('加载今日记录，时间范围:', startISO, '到', endISO);
+
+    app.get(`/families/${familyId}/records/filter`, {
+      start: startISO,
+      end: endISO
+    }).then(records => {
+      console.log('今日记录数据:', records);
+      
+      // 确保 records 是数组
+      if (!Array.isArray(records)) {
+        console.error('Records is not an array:', records);
         this.setData({ recentRecords: [] });
-      });
+        return;
+      }
+      
+      // 按时间倒序排列，取最新的5条记录
+      const sortedRecords = records
+        .sort((a, b) => new Date(b.happenedAt) - new Date(a.happenedAt))
+        .slice(0, 5);
+      
+      const recentRecords = sortedRecords.map(record => {
+        try {
+          console.log('Processing today record:', record.type, record.id);
+          const formatted = this.formatRecordForDisplay(record);
+          console.log('Formatted today record result:', formatted);
+          return formatted;
+        } catch (error) {
+          console.error('Error formatting today record:', record, error);
+          return null;
+        }
+      }).filter(record => record !== null); // 过滤掉 null 记录
+      
+      console.log('今日最近记录:', recentRecords);
+      this.setData({ recentRecords });
+    }).catch((error) => {
+      console.error('今日记录 API 错误:', error);
+      this.setData({ recentRecords: [] });
+    });
   },
 
   formatRecordForDisplay(record) {
@@ -276,25 +276,66 @@ Page({
       'FORMULA': '🥛',
       'SOLID': '🥣',
       'DIAPER': '💩',
-      'GROWTH': '📏'
+      'GROWTH': '📏',
+      'WATER': '💧'  // 添加喂水记录图标
     };
     
     const titles = {
       'BREASTFEEDING': '母乳亲喂',
       'BOTTLE': '瓶喂',
-      'FORMULA': '配方奶',
+      'FORMULA': '奶粉',
       'SOLID': '辅食',
       'DIAPER': '大便',
-      'GROWTH': '成长记录'
+      'GROWTH': '成长记录',
+      'WATER': '喂水'
     };
     
     let detail = '';
     if (record.type === 'BREASTFEEDING') {
       detail = `${record.durationMin || 0}分钟 ${record.breastfeedingSide === 'LEFT' ? '左侧' : '右侧'}`;
-    } else if (record.type === 'BOTTLE' || record.type === 'FORMULA') {
+    } else if (record.type === 'BOTTLE' || record.type === 'FORMULA' || record.type === 'WATER') {
+      // 喂水记录、瓶喂和奶粉记录使用相同的显示逻辑
       detail = `${record.amountMl || 0}ml`;
     } else if (record.type === 'SOLID') {
-      detail = record.note || '辅食';
+      // 修改：优先显示食材信息，如果有的话
+      if (record.solidIngredients) {
+        // 如果有食材信息，显示食材 + 喂养量 + 勺
+        if (record.note) {
+          const noteTrimmed = record.note.trim();
+          const lastSpaceIndex = noteTrimmed.lastIndexOf(' ');
+          
+          if (lastSpaceIndex > 0) {
+            // 提取喂食量
+            const amountText = noteTrimmed.substring(lastSpaceIndex + 1);
+            // 显示食材 + 喂养量 + 勺
+            detail = `${record.solidIngredients} ${amountText}勺`;
+          } else {
+            // 如果没有空格，只显示食材
+            detail = record.solidIngredients;
+          }
+        } else {
+          // 如果没有note字段，只显示食材
+          detail = record.solidIngredients;
+        }
+      } else if (record.note) {
+        // 如果没有食材信息，回退到原来的逻辑
+        const noteTrimmed = record.note.trim();
+        const lastSpaceIndex = noteTrimmed.lastIndexOf(' ');
+        
+        if (lastSpaceIndex > 0) {
+          // 分离类型和喂食量
+          const typesText = noteTrimmed.substring(0, lastSpaceIndex);
+          const amountText = noteTrimmed.substring(lastSpaceIndex + 1);
+          
+          // 显示类型 + 喂养量 + 勺
+          detail = `${typesText} ${amountText}勺`;
+        } else {
+          // 如果没有空格，整个字符串都是类型信息
+          detail = noteTrimmed;
+        }
+      } else {
+        detail = '辅食';
+      }
     } else if (record.type === 'DIAPER') {
       const textureMap = { 'WATERY': '稀', 'SOFT': '软', 'NORMAL': '成形', 'HARD': '干硬' };
       const colorMap = { 'YELLOW': '黄', 'GREEN': '绿', 'BROWN': '棕', 'BLACK': '黑' };
@@ -354,37 +395,128 @@ Page({
     });
   },
 
+  /**
+   * 显示需要授权的提示
+   */
+  showAuthRequiredModal() {
+    wx.showModal({
+      title: '需要授权',
+      content: '请先到【我的】页面进行授权，授权后才能使用小程序功能',
+      showCancel: true,
+      cancelText: '取消',
+      confirmText: '去授权',
+      success: (res) => {
+        if (res.confirm) {
+          wx.switchTab({
+            url: '/pages/profile/profile'
+          });
+        }
+      }
+    });
+  },
+
+  /**
+   * 显示记录弹窗
+   */
   showRecordModal(e) {
+    // 检查用户是否已授权
+    const userInfo = app.globalData.userInfo;
+    if (!userInfo || !userInfo.id) {
+      this.showAuthRequiredModal();
+      return;
+    }
+    
     const type = e.currentTarget.dataset.type;
     const titles = {
       'breastfeeding': '母乳亲喂',
       'bottle': '瓶喂',
-      'formula': '配方奶',
+      'formula': '奶粉',
       'solid': '辅食',
       'diaper': '大便记录',
-      'growth': '成长记录'
+      'growth': '成长记录',
+      'water': '喂水'
     };
+    
+    // 初始化recordData，根据不同类型设置默认值
+    const recordData = {
+      startTime: this.formatTime(new Date()),
+      date: this.formatDate(new Date()) // 添加默认日期
+    };
+    
+    // 如果是辅食类型，初始化多选相关数据
+    if (type === 'solid') {
+      recordData.selectedSolidTypes = [];
+      recordData.selectedSolidTypeIndices = [];
+      // 为每个辅食类型添加选中状态
+      recordData.solidTypeSelections = {
+        0: false,
+        1: false,
+        2: false,
+        3: false,
+        4: false,
+        5: false
+      };
+      console.log('初始化辅食类型数据');
+    }
     
     this.setData({
       showModal: true,
       recordType: type,
       modalTitle: titles[type],
-      recordData: {
-        startTime: this.formatTime(new Date()),
-        date: this.formatDate(new Date())
-      }
+      recordData: recordData
     });
+    
+    console.log('打开模态框，类型:', type);
   },
 
   hideModal() {
     this.setData({
-      showModal: false,
-      recordData: {}
+      showModal: false
+      // 不再清空recordData，避免丢失已选中的状态
     });
   },
 
   stopPropagation() {
     // 阻止事件冒泡
+  },
+
+  // 切换辅食类型选择
+  toggleSolidType(e) {
+    // 确保索引是数字类型
+    const index = parseInt(e.currentTarget.dataset.index);
+    
+    // 获取当前选中状态
+    const solidTypeSelections = this.data.recordData.solidTypeSelections || {};
+    const isSelected = solidTypeSelections[index] || false;
+    
+    console.log('点击辅食类型，索引:', index, '当前选中状态:', isSelected);
+    
+    // 切换选中状态
+    solidTypeSelections[index] = !isSelected;
+    
+    // 更新选中的索引和类型数组
+    let selectedIndices = [];
+    for (let i = 0; i < 6; i++) {
+      if (solidTypeSelections[i]) {
+        selectedIndices.push(i);
+      }
+    }
+    
+    const selectedTypes = selectedIndices.map(i => this.data.solidTypes[i]);
+    
+    console.log('更新后的选中索引:', selectedIndices);
+    console.log('更新后的选中类型:', selectedTypes);
+    
+    // 更新数据
+    const newRecordData = Object.assign({}, this.data.recordData, {
+      solidTypeSelections: solidTypeSelections,
+      selectedSolidTypeIndices: selectedIndices,
+      selectedSolidTypes: selectedTypes
+    });
+    
+    this.setData({
+      recordData: newRecordData
+    });
   },
 
   // 表单事件处理
@@ -422,6 +554,24 @@ Page({
   onSolidAmountChange(e) {
     this.setData({
       'recordData.solidAmount': e.detail.value
+    });
+  },
+
+  onSolidIngredientsChange(e) {
+    this.setData({
+      'recordData.solidIngredients': e.detail.value
+    });
+  },
+
+  onSolidBrandChange(e) {
+    this.setData({
+      'recordData.solidBrand': e.detail.value
+    });
+  },
+
+  onSolidOriginChange(e) {
+    this.setData({
+      'recordData.solidOrigin': e.detail.value
     });
   },
 
@@ -484,7 +634,8 @@ Page({
       formula: 'FORMULA',
       solid: 'SOLID',
       diaper: 'DIAPER',
-      growth: 'GROWTH'
+      growth: 'GROWTH',
+      water: 'WATER'  // 添加喂水记录类型
     };
 
     const payload = { type: typeMap[recordType] };
@@ -501,13 +652,18 @@ Page({
         payload.happenedAt = new Date().toISOString();
       }
     } else {
-      // 其他记录使用今天日期加上选择的时间
-      if (recordData.startTime) {
-        const today = new Date();
+      // 其他记录使用选择的日期加上选择的时间
+      if (recordData.date && recordData.startTime) {
         const [hours, minutes] = recordData.startTime.split(':');
-        today.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+        const recordDate = new Date(recordData.date);
+        recordDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
         // 使用ISO格式时间以匹配后端期望的格式
-        payload.happenedAt = today.toISOString();
+        payload.happenedAt = recordDate.toISOString();
+      } else if (recordData.date) {
+        // 只选择了日期，使用日期的开始时间
+        const recordDate = new Date(recordData.date);
+        recordDate.setHours(0, 0, 0, 0);
+        payload.happenedAt = recordDate.toISOString();
       } else {
         // 使用ISO格式时间以匹配后端期望的格式
         payload.happenedAt = new Date().toISOString();
@@ -517,11 +673,18 @@ Page({
     if (recordType === 'breastfeeding') {
       payload.durationMin = Number(recordData.duration) || undefined;
       payload.breastfeedingSide = recordData.breast === 'left' ? 'LEFT' : 'RIGHT';
-    } else if (recordType === 'bottle' || recordType === 'formula') {
+    } else if (recordType === 'bottle' || recordType === 'formula' || recordType === 'water') {
+      // 喂水记录和瓶喂、奶粉记录使用相同的字段
       payload.amountMl = Number(recordData.amount) || undefined;
     } else if (recordType === 'solid') {
       payload.solidType = 'OTHER';
-      payload.note = `${recordData.solidType || ''} ${recordData.solidAmount || ''}`.trim();
+      // 使用多选的辅食类型
+      const solidTypeText = (recordData.selectedSolidTypes || []).join(', ');
+      payload.note = `${solidTypeText} ${recordData.solidAmount || ''}`.trim();
+      // 新增：添加辅食增强字段
+      payload.solidIngredients = recordData.solidIngredients || undefined;
+      payload.solidBrand = recordData.solidBrand || undefined;
+      payload.solidOrigin = recordData.solidOrigin || undefined;
     } else if (recordType === 'diaper') {
       const textureMap = { '稀': 'WATERY', '软': 'SOFT', '成形': 'NORMAL', '干硬': 'HARD' };
       const colorMap = { '黄': 'YELLOW', '绿': 'GREEN', '棕': 'BROWN', '黑': 'BLACK' };
@@ -565,7 +728,8 @@ Page({
         });
         return false;
       }
-    } else if (type === 'bottle' || type === 'formula') {
+    } else if (type === 'bottle' || type === 'formula' || type === 'water') {
+      // 喂水记录、瓶喂和奶粉记录使用相同的验证逻辑
       if (!data.startTime || !data.amount) {
         wx.showToast({
           title: '请填写完整信息',
@@ -574,7 +738,8 @@ Page({
         return false;
       }
     } else if (type === 'solid') {
-      if (!data.startTime || !data.solidType || !data.solidAmount) {
+      // 修改验证逻辑以适应多选
+      if (!data.startTime || !data.selectedSolidTypes || data.selectedSolidTypes.length === 0 || !data.solidAmount) {
         wx.showToast({
           title: '请填写完整信息',
           icon: 'none'
@@ -608,20 +773,18 @@ Page({
     });
   },
 
+  // 格式化日期为 YYYY-MM-DD 格式
   formatDate(date) {
+    if (!date) return '';
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
   },
 
+  // 格式化时间为 HH:MM 格式
   formatTime(date) {
-    // 确保 date 是有效的 Date 对象
-    if (!date || typeof date.getHours !== 'function' || isNaN(date.getTime())) {
-      console.error('Invalid date object passed to formatTime:', date);
-      return '--:--';
-    }
-    
+    if (!date) return '';
     const hours = String(date.getHours()).padStart(2, '0');
     const minutes = String(date.getMinutes()).padStart(2, '0');
     return `${hours}:${minutes}`;

@@ -120,6 +120,12 @@
   text-align: center;
 }
 
+.btn-date {
+  font-size: 20rpx;
+  color: #999999;
+  text-align: center;
+}
+
 /* 最近记录 */
 .recent-header {
   display: flex;
@@ -291,6 +297,31 @@ input {
   border-color: #4A90E2;
 }
 
+/* 辅食类型选择器 */
+.solid-type-selector {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20rpx;
+}
+
+.solid-type-option {
+  padding: 20rpx 10rpx;
+  text-align: center;
+  background: #F8F9FA;
+  border: 2rpx solid #E5E5E5;
+  border-radius: 12rpx;
+  font-size: 24rpx;
+  color: #333333;
+  transition: all 0.3s ease;
+  cursor: pointer; /* 添加鼠标指针样式 */
+}
+
+.solid-type-option.active {
+  background: #4A90E2;
+  color: #FFFFFF;
+  border-color: #4A90E2;
+}
+
 /* 宝宝年龄信息 */
 .baby-age-info {
   display: flex;
@@ -315,6 +346,174 @@ input {
   border-radius: 20rpx;
 }
 
+/* 多选器样式 */
+.multi-selector {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20rpx;
+  background: #F8F9FA;
+  border: 2rpx solid #E5E5E5;
+  border-radius: 12rpx;
+  font-size: 28rpx;
+  color: #333333;
+}
+
+.selector-display {
+  flex: 1;
+  color: #333;
+}
+
+.selector-display text:first-child {
+  color: #999;
+}
+
+.arrow {
+  color: #999;
+  font-size: 32rpx;
+}
+
+/* 多选弹窗样式 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.multi-select-modal {
+  width: 90%;
+  max-width: 600rpx;
+  background: #FFFFFF;
+  border-radius: 20rpx;
+  max-height: 80vh;
+  overflow-y: auto;
+  z-index: 1001; /* 确保在主模态框之上 */
+}
+
+.checkbox-group {
+  padding: 24rpx;
+}
+
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #F0F0F0;
+}
+
+.checkbox-item:last-child {
+  border-bottom: none;
+}
+
+.checkbox {
+  width: 40rpx;
+  height: 40rpx;
+  border: 2rpx solid #E5E5E5;
+  border-radius: 8rpx;
+  margin-right: 20rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #FFFFFF;
+}
+
+.checkbox.checked {
+  background: #4A90E2;
+  border-color: #4A90E2;
+}
+
+.checkmark {
+  color: #FFFFFF;
+  font-size: 24rpx;
+  font-weight: bold;
+}
+
+.checkbox-label {
+  font-size: 28rpx;
+  color: #333333;
+  flex: 1;
+}
+
+/* 底部选择器样式 */
+.bottom-sheet {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1001; /* 确保在主模态框之上 */
+}
+
+.sheet-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.sheet-container {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #FFFFFF;
+  border-radius: 20rpx 20rpx 0 0;
+  max-height: 80vh;
+  overflow: hidden;
+  transform: translateY(100%);
+  transition: transform 0.3s ease;
+}
+
+.bottom-sheet.show .sheet-container {
+  transform: translateY(0);
+}
+
+.sheet-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24rpx;
+  border-bottom: 1rpx solid #E5E5E5;
+}
+
+.sheet-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333333;
+}
+
+.sheet-close {
+  width: 40rpx;
+  height: 40rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32rpx;
+  color: #999999;
+  background: #F0F0F0;
+  border-radius: 50%;
+}
+
+.sheet-body {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 24rpx;
+}
+
+.sheet-footer {
+  padding: 24rpx;
+  border-top: 1rpx solid #E5E5E5;
+}
+
 /* 响应式设计 */
 @media (max-width: 750rpx) {
   .record-buttons {
@@ -330,5 +529,10 @@ input {
     display: flex;
     justify-content: space-between;
     align-items: center;
+  }
+  
+  /* 在小屏幕上调整辅食类型选择器 */
+  .solid-type-selector {
+    grid-template-columns: repeat(2, 1fr);
   }
 }

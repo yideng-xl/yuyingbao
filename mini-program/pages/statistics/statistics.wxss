@@ -204,231 +204,30 @@
   border-radius: 2rpx;
 }
 
-/* 柱状图优化 */
-.chart {
-  height: 320rpx;
-  position: relative;
-  background: #FFFFFF;
-  border-radius: 12rpx;
-  padding: 20rpx;
-  overflow: hidden;
-}
-
-.chart-bars {
-  display: flex;
-  align-items: end;
-  justify-content: space-around;
-  height: 100%;
-  padding: 20rpx 10rpx;
-}
-
-.chart-bar {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  flex: 1;
-  height: 100%;
-  position: relative;
-  max-width: 60rpx;
-  margin: 0 4rpx;
-}
-
-.bar {
-  width: 32rpx;
-  background: linear-gradient(180deg, #4A90E2 0%, #7ED321 100%);
-  border-radius: 16rpx 16rpx 4rpx 4rpx;
-  position: relative;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 2rpx 8rpx rgba(74, 144, 226, 0.2);
-}
-
-.bar:hover {
-  transform: scale(1.05);
-  box-shadow: 0 4rpx 16rpx rgba(74, 144, 226, 0.3);
-}
-
-.bar-tooltip {
-  position: absolute;
-  top: -44rpx;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #2C3E50;
-  color: #FFFFFF;
-  padding: 8rpx 12rpx;
-  border-radius: 8rpx;
-  font-size: 22rpx;
-  white-space: nowrap;
-  opacity: 0;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  z-index: 10;
-}
-
-.bar-tooltip::after {
-  content: '';
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  border: 4rpx solid transparent;
-  border-top-color: #2C3E50;
-}
-
-.bar:hover .bar-tooltip {
-  opacity: 1;
-  transform: translateX(-50%) translateY(-4rpx);
-}
-
-.bar-label {
-  margin-top: 16rpx;
-  font-size: 22rpx;
-  color: #7F8C8D;
-  text-align: center;
-  font-weight: 500;
-}
-
-/* 饼图优化 */
-.pie-chart {
-  position: relative;
-  width: 240rpx;
-  height: 240rpx;
-  margin: 0 auto 32rpx;
-  border-radius: 50%;
-  background: #FFFFFF;
-  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.1);
-  overflow: hidden;
-}
-
-.pie-segment {
-  position: absolute;
+/* ECharts图表容器 */
+.ec-canvas {
   width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  clip-path: polygon(50% 50%, 50% 0%, 100% 0%, 100% 100%, 50% 100%);
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  height: 400rpx;
 }
 
-.pie-segment:hover {
-  transform: scale(1.02);
+/* 饼图图表容器 */
+#diaper-chart {
+  height: 500rpx;
 }
 
-.pie-center {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 80rpx;
-  height: 80rpx;
-  background: #FFFFFF;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2rpx 12rpx rgba(74, 144, 226, 0.2);
-  border: 3rpx solid #F8F9FA;
+/* 喂养类型分布图容器 */
+#feeding-type-chart {
+  height: 450rpx;
 }
 
-.pie-total {
-  font-size: 26rpx;
-  font-weight: 700;
-  color: #2C3E50;
+/* 成长图表容器 */
+#growth-chart {
+  height: 500rpx;
 }
 
-.pie-legend {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16rpx;
-  padding: 20rpx;
-  background: #FFFFFF;
-  border-radius: 12rpx;
-  margin-top: 16rpx;
-}
-
-.legend-item {
-  display: flex;
-  align-items: center;
-  font-size: 24rpx;
-  color: #5A6C7D;
-  padding: 8rpx;
-  border-radius: 8rpx;
-  transition: background-color 0.2s ease;
-}
-
-.legend-item:hover {
-  background-color: #F8F9FA;
-}
-
-.legend-color {
-  width: 24rpx;
-  height: 24rpx;
-  border-radius: 6rpx;
-  margin-right: 12rpx;
-  box-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.1);
-}
-
-.legend-text {
-  font-size: 24rpx;
-  font-weight: 500;
-}
-
-/* 成长曲线图 */
-.growth-chart {
-  height: 300rpx;
-  position: relative;
-  background: #F8F9FA;
-  border-radius: 12rpx;
-  overflow: hidden;
-}
-
-.chart-line {
-  position: relative;
-  width: 100%;
-  height: 100%;
-}
-
-.data-point {
-  position: absolute;
-  width: 12rpx;
-  height: 12rpx;
-  background: #4A90E2;
-  border-radius: 50%;
-  border: 3rpx solid #FFFFFF;
-  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.2);
-  transform: translate(-50%, -50%);
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.data-point:hover {
-  transform: translate(-50%, -50%) scale(1.2);
-}
-
-.point-tooltip {
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #333333;
-  color: #FFFFFF;
-  padding: 12rpx;
-  border-radius: 8rpx;
-  font-size: 20rpx;
-  white-space: nowrap;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-  z-index: 10;
-}
-
-.data-point:hover .point-tooltip {
-  opacity: 1;
-}
-
-.point-tooltip text {
-  display: block;
-  margin-bottom: 4rpx;
-}
-
-.point-tooltip text:last-child {
-  margin-bottom: 0;
+/* 时间轴图表容器 */
+#timeline-chart {
+  height: 450rpx;
 }
 
 /* 智能分析 */
@@ -535,58 +334,24 @@
   }
   
   /* 图表优化 - 根据时间范围调整 */
-  .chart {
-    height: 280rpx;
+  .ec-canvas {
+    height: 350rpx;
   }
   
-  .chart[data-range="quarter"] {
-    height: 240rpx; /* 季度数据高度稍小 */
+  #diaper-chart {
+    height: 400rpx;
   }
   
-  .chart-bars {
-    padding: 16rpx 8rpx;
+  #feeding-type-chart {
+    height: 380rpx;
   }
   
-  .chart-bar {
-    margin: 0 2rpx;
-    max-width: 40rpx;
+  #growth-chart {
+    height: 400rpx;
   }
   
-  .chart-bar[data-range="quarter"] {
-    max-width: 80rpx; /* 季度数据柱子可以宽一些 */
-  }
-  
-  .bar {
-    width: 28rpx;
-  }
-  
-  .bar[data-range="quarter"] {
-    width: 48rpx; /* 季度数据柱子更宽 */
-  }
-  
-  .bar-label {
-    font-size: 20rpx;
-    margin-top: 12rpx;
-  }
-  
-  .bar-label[data-range="quarter"] {
-    font-size: 22rpx; /* 季度标签稍大 */
-  }
-  
-  /* 饼图优化 */
-  .pie-chart {
-    width: 200rpx;
-    height: 200rpx;
-  }
-  
-  .pie-legend {
-    grid-template-columns: 1fr;
-    gap: 12rpx;
-    padding: 16rpx;
-  }
-  
-  .legend-item {
-    padding: 12rpx;
+  #timeline-chart {
+    height: 380rpx;
   }
   
   /* 卡片优化 */
@@ -652,54 +417,36 @@
     font-size: 24rpx;
   }
   
-  .chart {
-    height: 240rpx;
+  .ec-canvas {
+    height: 300rpx;
   }
   
-  .bar {
-    width: 24rpx;
+  #diaper-chart {
+    height: 350rpx;
+  }
+  
+  #feeding-type-chart {
+    height: 330rpx;
+  }
+  
+  #growth-chart {
+    height: 350rpx;
+  }
+  
+  #timeline-chart {
+    height: 330rpx;
   }
 }
 
 /* 动画效果 */
-.chart-bar {
-  animation: slideUp 0.6s ease-out;
-}
-
-.pie-segment {
-  animation: rotateIn 0.8s ease-out;
-}
-
-.data-point {
-  animation: fadeIn 0.4s ease-out;
-}
-
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(20rpx);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes rotateIn {
-  from {
-    opacity: 0;
-    transform: rotate(-180deg);
-  }
-  to {
-    opacity: 1;
-    transform: rotate(0deg);
-  }
+.chart-container {
+  animation: fadeIn 0.6s ease-out;
 }
 
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: scale(0.8);
+    transform: scale(0.95);
   }
   to {
     opacity: 1;

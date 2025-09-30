@@ -7,7 +7,17 @@ Page({
     babyInfo: {},
     isCreator: false,
     showBabyModal: false,
-    babyForm: {}
+    babyForm: {},
+    showInviteModal: false,
+    showJoinModal: false,
+    showEditRoleModal: false,
+    showCreateFamilyModal: false,
+    inviteCode: '',
+    joinCode: '',
+    familyName: '',
+    matchedFamily: null,
+    selectedRole: '',
+    editingMemberId: null
   },
 
   onLoad() {
@@ -23,59 +33,266 @@ Page({
     const familyInfo = app.globalData.familyInfo;
     const babyInfo = app.globalData.babyInfo;
 
-    const isCreator = false; // 无法从后端获取当前用户ID，对比 creatorUserId 暂不可用
+    console.log('加载用户数据:', { userInfo, familyInfo, babyInfo });
+
+    // 检查当前用户是否是家庭创建者
+    let isCreator = false;
+    if (familyInfo && familyInfo.members) {
+      const currentMember = familyInfo.members.find(member => member.userId === userInfo.id);
+      isCreator = currentMember && currentMember.role === 'CREATOR';
+      console.log('当前用户是否为创建者:', isCreator, '当前成员:', currentMember);
+    }
 
     this.setData({ userInfo, familyInfo, babyInfo, isCreator });
 
-    // 如果缺少用户信息，提示用户授权
-    if (!userInfo || !userInfo.nickname || userInfo.nickname === '育婴宝用户') {
-      this.setData({ needUserAuth: true });
+    // 如果有家庭信息，获取最新的家庭成员列表（总是从服务器获取最新数据）
+    if (familyInfo?.id) {
+      // 不使用缓存数据，直接从服务器获取最新数据
+      this.fetchFamilyMembersWithRetry(familyInfo.id, 3);
+    } else if (userInfo && !familyInfo) {
+      // 检查是否有有效的token
+      const token = wx.getStorageSync('token');
+      if (!token) {
+        console.log('未找到有效token，跳过获取家庭信息');
+        return;
+      }
+      
+      // 如果用户已登录但没有家庭信息，尝试获取家庭信息
+      console.log('用户已登录但没有家庭信息，尝试获取家庭信息');
+      app.get('/families/my')
+        .then(families => {
+          console.log('获取我的家庭信息成功:', families);
+          if (Array.isArray(families) && families.length > 0) {
+            const family = families[0];
+            app.globalData.familyInfo = family;
+            wx.setStorageSync('familyInfo', family);
+            this.setData({ familyInfo: family });
+            
+            // 获取家庭成员列表
+            if (family.id) {
+              this.fetchFamilyMembersWithRetry(family.id, 3);
+            }
+          } else {
+            console.log('用户没有家庭信息');
+          }
+        })
+        .catch(err => {
+          console.error('获取我的家庭信息失败:', err);
+        });
     }
+  },
 
-    // 如果未有本地宝宝信息且已有家庭，从后端加载宝宝列表
-    if (!babyInfo && familyInfo?.id) {
-      app.get(`/families/${familyInfo.id}/babies`).then(list => {
-        if (Array.isArray(list) && list.length > 0) {
-          const b = list[0];
-          const mapped = this.mapBabyInfo(b);
-          app.globalData.babyInfo = mapped;
-          wx.setStorageSync('babyInfo', mapped);
-          this.setData({ babyInfo: mapped });
-        }
-      }).catch(() => {});
+  // 带重试机制的获取家庭成员列表
+  fetchFamilyMembersWithRetry(familyId, maxRetries) {
+    // 检查是否有有效的token
+    const token = wx.getStorageSync('token');
+    if (!token) {
+      console.log('未找到有效token，跳过获取家庭成员列表');
+      return;
     }
+    
+    app.get(`/families/${familyId}/members`)
+      .then(members => {
+        console.log('获取家庭成员列表成功:', members);
+        const familyInfo = this.data.familyInfo || app.globalData.familyInfo;
+        
+        // 确保成员列表正确显示
+        if (members && Array.isArray(members)) {
+          console.log('处理后的成员列表:', members);
+          // 更新家庭信息中的成员列表
+          const updatedFamilyInfo = { ...familyInfo, members };
+          app.globalData.familyInfo = updatedFamilyInfo;
+          wx.setStorageSync('familyInfo', updatedFamilyInfo);
+          this.setData({ familyInfo: updatedFamilyInfo });
+        } else {
+          console.warn('成员列表数据格式不正确:', members);
+        }
+      })
+      .catch(err => {
+        console.error('获取家庭成员列表失败:', err);
+        
+        // 如果还有重试次数，进行重试
+        if (maxRetries > 0) {
+          console.log(`重试获取家庭成员列表，剩余次数: ${maxRetries - 1}`);
+          setTimeout(() => {
+            this.fetchFamilyMembersWithRetry(familyId, maxRetries - 1);
+          }, 1000); // 1秒后重试
+        } else {
+          wx.showToast({
+            title: '获取家庭成员失败',
+            icon: 'none'
+          });
+        }
+      });
   },
 
   /**
    * 用户信息授权
    */
   authorizeUserInfo() {
+    // 直接触发授权流程
     app.getUserProfile((success, userInfo) => {
       if (success && userInfo) {
-        // 更新全局用户信息
-        const updatedUserInfo = {
-          ...app.globalData.userInfo,
-          nickname: userInfo.nickName,
-          avatarUrl: userInfo.avatarUrl
-        };
-        
-        app.globalData.userInfo = updatedUserInfo;
-        wx.setStorageSync('userInfo', updatedUserInfo);
-        
-        this.setData({ 
-          userInfo: updatedUserInfo,
-          needUserAuth: false 
-        });
-        
-        wx.showToast({
-          title: '用户信息更新成功',
-          icon: 'success'
+        // 授权成功后先完成登录流程
+        wx.login({
+          success: (loginRes) => {
+            if (loginRes.code) {
+              // 使用授权的用户信息完成登录
+              app.getUserProfileAndLogin(loginRes.code, userInfo)
+                .then(() => {
+                  // 登录成功后更新用户信息
+                  const updatedUserInfo = app.globalData.userInfo;
+                  this.setData({ 
+                    userInfo: updatedUserInfo
+                  });
+                  
+                  wx.showToast({
+                    title: '授权成功',
+                    icon: 'success'
+                  });
+                })
+                .catch((error) => {
+                  console.error('登录失败:', error);
+                  wx.showToast({
+                    title: '登录失败',
+                    icon: 'none'
+                  });
+                });
+            }
+          },
+          fail: (err) => {
+            console.log('微信登录失败', err);
+            wx.showToast({
+              title: '微信登录失败',
+              icon: 'none'
+            });
+          }
         });
       }
     });
   },
 
-  // 映射宝宝信息，包含年龄计算
+  // 显示创建家庭弹窗
+  showCreateFamilyModal() {
+    const userInfo = app.globalData.userInfo;
+    if (!userInfo) {
+      wx.showToast({
+        title: '请先授权',
+        icon: 'none'
+      });
+      return;
+    }
+    
+    // 默认家庭名称为用户昵称 + "的家庭"
+    const defaultFamilyName = (userInfo.nickname || '未知用户') + '的家庭';
+    this.setData({
+      showCreateFamilyModal: true,
+      familyName: defaultFamilyName
+    });
+  },
+
+  // 隐藏创建家庭弹窗
+  hideCreateFamilyModal() {
+    this.setData({
+      showCreateFamilyModal: false,
+      familyName: ''
+    });
+  },
+
+  // 家庭名称输入
+  onFamilyNameInput(e) {
+    this.setData({
+      familyName: e.detail.value
+    });
+  },
+
+  // 创建家庭
+  createFamily() {
+    const { familyName } = this.data;
+    const userInfo = app.globalData.userInfo;
+    
+    if (!familyName) {
+      wx.showToast({
+        title: '请输入家庭名称',
+        icon: 'none'
+      });
+      return;
+    }
+    
+    if (!userInfo) {
+      wx.showToast({
+        title: '请先授权',
+        icon: 'none'
+      });
+      return;
+    }
+    
+    // 检查是否有有效的token
+    const token = wx.getStorageSync('token');
+    console.log('创建家庭时获取到的token:', token);
+    if (!token) {
+      wx.showToast({
+        title: '请重新登录',
+        icon: 'none'
+      });
+      return;
+    }
+    
+    wx.showLoading({ title: '创建中...' });
+    
+    // 先检查家庭名称是否已存在
+    app.post('/families/check-name', { name: familyName })
+      .then(exists => {
+        if (exists) {
+          wx.hideLoading();
+          wx.showToast({
+            title: '家庭名称已存在',
+            icon: 'none'
+          });
+          return;
+        }
+        
+        // 创建家庭
+        return app.post('/families', { name: familyName });
+      })
+      .then(family => {
+        if (!family) return; // 如果前面检查名称存在，这里会是undefined
+        
+        // 获取家庭成员列表
+        return app.get(`/families/${family.id}/members`)
+          .then(members => {
+            // 将成员列表添加到家庭信息中
+            const familyWithMembers = {
+              ...family,
+              members: members
+            };
+            
+            app.globalData.familyInfo = familyWithMembers;
+            wx.setStorageSync('familyInfo', familyWithMembers);
+            this.setData({ 
+              familyInfo: familyWithMembers,
+              showCreateFamilyModal: false,
+              familyName: ''
+            });
+            
+            wx.hideLoading();
+            wx.showToast({
+              title: '家庭创建成功',
+              icon: 'success'
+            });
+          });
+      })
+      .catch(error => {
+        wx.hideLoading();
+        console.error('创建家庭失败:', error);
+        wx.showToast({ 
+          title: '创建家庭失败', 
+          icon: 'none' 
+        });
+      });
+  },
+
+// 映射宝宝信息，包含年龄计算
   mapBabyInfo(baby) {
     // 计算月龄和天数
     let ageText = '0个月';
@@ -108,9 +325,37 @@ Page({
     };
   },
 
-  copyInviteCode() {
-    const { inviteCode } = this.data.familyInfo;
+  // 显示邀请成员弹窗
+  showInviteModal() {
+    // 检查是否有有效的token
+    const token = wx.getStorageSync('token');
+    if (!token) {
+      wx.showToast({
+        title: '请重新登录',
+        icon: 'none'
+      });
+      return;
+    }
     
+    // 生成6位随机邀请码
+    const inviteCode = Math.random().toString().substr(2, 6);
+    this.setData({ 
+      showInviteModal: true, 
+      inviteCode: inviteCode 
+    });
+  },
+
+  // 隐藏邀请成员弹窗
+  hideInviteModal() {
+    this.setData({ 
+      showInviteModal: false, 
+      inviteCode: '' 
+    });
+  },
+
+  // 复制邀请码
+  copyInviteCode() {
+    const { inviteCode } = this.data;
     wx.setClipboardData({
       data: inviteCode,
       success: () => {
@@ -122,64 +367,229 @@ Page({
     });
   },
 
-  shareInvite() {
+  // 重新生成邀请码
+  regenerateInviteCode() {
+    const inviteCode = Math.random().toString().substr(2, 6);
+    this.setData({ inviteCode });
+  },
+
+  // 显示加入家庭弹窗
+  showJoinModal() {
+    this.setData({ 
+      showJoinModal: true,
+      joinCode: '',
+      matchedFamily: null
+    });
+  },
+
+  // 隐藏加入家庭弹窗
+  hideJoinModal() {
+    this.setData({ 
+      showJoinModal: false,
+      joinCode: '',
+      matchedFamily: null
+    });
+  },
+
+  // 输入邀请码
+  onJoinCodeInput(e) {
+    const joinCode = e.detail.value;
+    this.setData({ joinCode });
+    
+    // 如果输入了6位数字，尝试验证邀请码
+    if (joinCode.length === 6 && /^\d+$/.test(joinCode)) {
+      // 检查是否有有效的token
+      const token = wx.getStorageSync('token');
+      if (!token) {
+        wx.showToast({
+          title: '请重新登录',
+          icon: 'none'
+        });
+        return;
+      }
+      
+      // 调用后端API验证邀请码
+      app.get(`/families/validate-invite-code/${joinCode}`)
+        .then(family => {
+          console.log('验证邀请码成功:', family);
+          this.setData({
+            matchedFamily: {
+              name: family.name,
+              memberCount: family.members ? family.members.length : 1
+            }
+          });
+        })
+        .catch(err => {
+          console.error('邀请码验证失败:', err);
+          // 邀请码无效
+          this.setData({ matchedFamily: null });
+          wx.showToast({
+            title: '邀请码无效',
+            icon: 'none'
+          });
+        });
+    } else {
+      this.setData({ matchedFamily: null });
+    }
+  },
+
+  // 加入家庭
+  joinFamily() {
+    const { joinCode } = this.data;
+    
+    if (!joinCode) {
+      wx.showToast({
+        title: '请输入邀请码',
+        icon: 'none'
+      });
+      return;
+    }
+    
+    // 检查是否有有效的token
+    const token = wx.getStorageSync('token');
+    if (!token) {
+      wx.showToast({
+        title: '请重新登录',
+        icon: 'none'
+      });
+      return;
+    }
+    
+    wx.showLoading({ title: '加入中...' });
+    
+    // 调用后端API加入家庭
+    app.post('/families/join', { inviteCode: joinCode })
+      .then(family => {
+        wx.hideLoading();
+        console.log('加入家庭成功:', family);
+        // 更新全局家庭信息
+        app.globalData.familyInfo = family;
+        wx.setStorageSync('familyInfo', family);
+        
+        // 重新加载用户数据
+        this.loadUserData();
+        
+        // 隐藏弹窗
+        this.hideJoinModal();
+        
+        wx.showToast({
+          title: '成功加入家庭',
+          icon: 'success'
+        });
+      })
+      .catch(err => {
+        wx.hideLoading();
+        console.error('加入家庭失败:', err);
+        wx.showToast({
+          title: '加入失败：' + (err.message || '未知错误'),
+          icon: 'none'
+        });
+      });
+  },
+
+  // 显示编辑成员角色弹窗
+  editMemberRole(e) {
+    const memberId = e.currentTarget.dataset.memberId;
     const { familyInfo } = this.data;
     
-    wx.showShareMenu({
-      withShareTicket: true,
-      menus: ['shareAppMessage', 'shareTimeline']
-    });
+    // 找到要编辑的成员
+    const member = familyInfo.members.find(m => m.id === memberId);
     
-    // 生成分享链接
-    const shareUrl = `pages/invite/invite?code=${familyInfo.inviteCode}`;
-    
-    wx.showModal({
-      title: '分享邀请',
-      content: `邀请码：${familyInfo.inviteCode}\n\n您可以分享此邀请码给其他家庭成员，让他们加入您的家庭。`,
-      showCancel: false,
-      confirmText: '知道了'
+    this.setData({
+      showEditRoleModal: true,
+      editingMemberId: memberId,
+      selectedRole: member.memberRole || ''
     });
   },
 
-  generateNewCode() {
-    wx.showModal({
-      title: '重新生成邀请码',
-      content: '确定要重新生成邀请码吗？旧的邀请码将失效。',
-      success: (res) => {
-        if (res.confirm) {
-          const familyId = this.data.familyInfo.id;
-          // 后端未提供更新邀请码接口，这里仅刷新成员列表作为占位
-          app.get(`/families/${familyId}/members`).then(() => {
-            wx.showToast({ title: '操作成功', icon: 'success' });
-          }).catch(() => {
-            wx.showToast({ title: '操作失败', icon: 'none' });
-          });
-        }
-      }
+  // 隐藏编辑成员角色弹窗
+  hideEditRoleModal() {
+    this.setData({
+      showEditRoleModal: false,
+      editingMemberId: null,
+      selectedRole: ''
     });
   },
 
-  removeMember(e) {
-    const memberId = e.currentTarget.dataset.id;
-    const member = this.data.familyInfo.members.find(m => m.id === memberId);
+  // 选择角色
+  selectRole(e) {
+    const role = e.currentTarget.dataset.role;
+    this.setData({ selectedRole: role });
+  },
+
+  // 保存成员角色
+  saveMemberRole() {
+    const { familyInfo, editingMemberId, selectedRole } = this.data;
     
-    wx.showModal({
-      title: '移除成员',
-      content: `确定要移除 ${member.nickName} 吗？`,
-      success: (res) => {
-        if (res.confirm) {
-          // 实际应调用后端移除成员接口，后端暂未提供，此处仅本地刷新列表
-          const familyInfo = { ...this.data.familyInfo };
-          familyInfo.members = familyInfo.members.filter(m => m.id !== memberId);
-          this.setData({ familyInfo });
-          
-          wx.showToast({
-            title: '成员已移除',
-            icon: 'success'
-          });
-        }
-      }
-    });
+    if (!selectedRole) {
+      wx.showToast({
+        title: '请选择角色',
+        icon: 'none'
+      });
+      return;
+    }
+    
+    if (!familyInfo || !editingMemberId) {
+      wx.showToast({
+        title: '数据错误',
+        icon: 'none'
+      });
+      return;
+    }
+    
+    // 检查是否有有效的token
+    const token = wx.getStorageSync('token');
+    if (!token) {
+      wx.showToast({
+        title: '请重新登录',
+        icon: 'none'
+      });
+      return;
+    }
+    
+    wx.showLoading({ title: '保存中...' });
+    
+    // 调用后端API更新成员角色
+    app.put(`/families/${familyInfo.id}/members/${editingMemberId}/role`, { memberRole: selectedRole })
+      .then(updatedMember => {
+        wx.hideLoading();
+        console.log('更新成员角色成功:', updatedMember);
+        // 更新本地数据
+        const updatedMembers = familyInfo.members.map(member => {
+          if (member.id === editingMemberId) {
+            return {
+              ...member,
+              memberRole: updatedMember.memberRole,
+              memberRoleDisplayName: updatedMember.memberRoleDisplayName
+            };
+          }
+          return member;
+        });
+        
+        const updatedFamilyInfo = { ...familyInfo, members: updatedMembers };
+        app.globalData.familyInfo = updatedFamilyInfo;
+        wx.setStorageSync('familyInfo', updatedFamilyInfo);
+        
+        this.setData({
+          familyInfo: updatedFamilyInfo,
+          showEditRoleModal: false,
+          editingMemberId: null,
+          selectedRole: ''
+        });
+        
+        wx.showToast({
+          title: '角色更新成功',
+          icon: 'success'
+        });
+      })
+      .catch(err => {
+        wx.hideLoading();
+        console.error('更新成员角色失败:', err);
+        wx.showToast({
+          title: '更新失败：' + (err.message || '未知错误'),
+          icon: 'none'
+        });
+      });
   },
 
   editBabyInfo() {
@@ -268,6 +678,16 @@ Page({
     const familyId = app.globalData.familyInfo?.id;
     if (!familyId) {
       wx.showToast({ title: '请先创建或加入家庭', icon: 'none' });
+      return;
+    }
+    
+    // 检查是否有有效的token
+    const token = wx.getStorageSync('token');
+    if (!token) {
+      wx.showToast({
+        title: '请重新登录',
+        icon: 'none'
+      });
       return;
     }
 
@@ -359,6 +779,12 @@ Page({
     });
   },
 
+  goToDebugPage() {
+    wx.navigateTo({
+      url: '/pages/debug/debug'
+    });
+  },
+
   logout() {
     wx.showModal({
       title: '退出登录',
@@ -370,23 +796,24 @@ Page({
           wx.removeStorageSync('userInfo');
           wx.removeStorageSync('familyInfo');
           wx.removeStorageSync('babyInfo');
-          wx.removeStorageSync('records');
           
-          // 重置全局数据
+          // 清除全局数据
           app.globalData.userInfo = null;
           app.globalData.familyInfo = null;
           app.globalData.babyInfo = null;
-          app.globalData.records = [];
           
-          // 重新登录
-          app.login();
-          
-          wx.showToast({
-            title: '已退出登录',
-            icon: 'success'
+          // 跳转到我的页面
+          wx.switchTab({
+            url: '/pages/profile/profile'
           });
         }
       }
+    });
+  },
+
+  goToDebugPage() {
+    wx.navigateTo({
+      url: '/pages/debug/debug'
     });
   }
 });

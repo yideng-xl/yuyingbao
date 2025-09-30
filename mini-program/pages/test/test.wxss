@@ -1,0 +1,26 @@
+/* test.wxss */
+.container {
+  padding: 20rpx;
+}
+
+.chart-container {
+  width: 100%;
+  height: 600rpx;
+}
+
+.status {
+  font-size: 24px;
+  font-weight: bold;
+  margin-bottom: 20px;
+}
+
+.details {
+  font-size: 16px;
+  color: #666;
+  margin-bottom: 20px;
+  word-wrap: break-word;
+}
+
+button {
+  margin-top: 20px;
+}

@@ -4,7 +4,9 @@
     "pages/record/record",
     "pages/statistics/statistics",
     "pages/knowledge/knowledge",
-    "pages/profile/profile"
+    "pages/profile/profile",
+    "pages/test/test",
+    "pages/debug/debug"
   ],
   "window": {
     "backgroundTextStyle": "light",
@@ -53,5 +55,8 @@
   },
   "style": "v2",
   "sitemapLocation": "sitemap.json",
-  "lazyCodeLoading": "requiredComponents"
+  "lazyCodeLoading": "requiredComponents",
+  "usingComponents": {
+    "auth-button": "/components/auth-button/auth-button"
+  }
 }

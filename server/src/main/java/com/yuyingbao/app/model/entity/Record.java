@@ -53,6 +53,16 @@ public class Record {
 	@Column(length = 32)
 	private SolidType solidType;
 
+	// 新增：辅食增强字段
+	@Column(length = 1000)
+	private String solidIngredients; // 多种食材信息
+
+	@Column(length = 100)
+	private String solidBrand; // 食材品牌
+
+	@Column(length = 100)
+	private String solidOrigin; // 食材产地
+
 	// Diaper fields
 	@Enumerated(EnumType.STRING)
 	@Column(length = 16)

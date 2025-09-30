@@ -28,6 +28,11 @@ public class BabyController {
 		return ResponseEntity.ok(babyService.listBabies(familyId));
 	}
 
+	@PostMapping("/batch")
+	public ResponseEntity<List<Baby>> batchGet(@PathVariable("familyId") Long familyId, @RequestBody List<Long> babyIds) {
+		return ResponseEntity.ok(babyService.listBabiesByIds(babyIds));
+	}
+
 	@PutMapping("/{babyId}")
 	public ResponseEntity<Baby> update(@PathVariable("familyId") Long familyId, @PathVariable("babyId") Long babyId, @Validated @RequestBody UpsertBabyRequest req) {
 		return ResponseEntity.ok(babyService.updateBaby(familyId, babyId, req));

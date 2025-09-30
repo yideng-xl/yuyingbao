@@ -112,7 +112,7 @@
         </view>
       </view>
       
-      <view wx:if="{{editingRecord.type === 'BOTTLE' || editingRecord.type === 'FORMULA'}}">
+      <view wx:if="{{editingRecord.type === 'BOTTLE' || editingRecord.type === 'FORMULA' || editingRecord.type === 'WATER'}}">
         <view class="form-item">
           <text class="form-label">喂养时间</text>
           <picker mode="time" value="{{editingRecord.startTime}}" bindchange="onEditTimeChange">
@@ -121,7 +121,8 @@
         </view>
         
         <view class="form-item">
-          <text class="form-label">喂奶量（ml）</text>
+          <text class="form-label" wx:if="{{editingRecord.type === 'WATER'}}">喂水量（ml）</text>
+          <text class="form-label" wx:else>喂奶量（ml）</text>
           <input type="number" value="{{editingRecord.amount}}" bindinput="onEditAmountChange" />
         </view>
       </view>
@@ -136,14 +137,50 @@
         
         <view class="form-item">
           <text class="form-label">辅食类型</text>
-          <picker range="{{solidTypes}}" value="{{editingRecord.solidTypeIndex}}" bindchange="onEditSolidTypeChange">
-            <view class="picker">{{solidTypes[editingRecord.solidTypeIndex]}}</view>
-          </picker>
+          <!-- 修改为类似乳房选择的按钮形式，支持多选 -->
+          <view class="solid-type-selector">
+            <view class="solid-type-option {{editingRecord.solidTypeSelections && editingRecord.solidTypeSelections[0] ? 'active' : ''}}" bindtap="toggleEditSolidType" data-index="{{0}}">
+              米糊
+            </view>
+            <view class="solid-type-option {{editingRecord.solidTypeSelections && editingRecord.solidTypeSelections[1] ? 'active' : ''}}" bindtap="toggleEditSolidType" data-index="{{1}}">
+              蔬菜泥
+            </view>
+            <view class="solid-type-option {{editingRecord.solidTypeSelections && editingRecord.solidTypeSelections[2] ? 'active' : ''}}" bindtap="toggleEditSolidType" data-index="{{2}}">
+              水果泥
+            </view>
+            <view class="solid-type-option {{editingRecord.solidTypeSelections && editingRecord.solidTypeSelections[3] ? 'active' : ''}}" bindtap="toggleEditSolidType" data-index="{{3}}">
+              肉泥
+            </view>
+            <view class="solid-type-option {{editingRecord.solidTypeSelections && editingRecord.solidTypeSelections[4] ? 'active' : ''}}" bindtap="toggleEditSolidType" data-index="{{4}}">
+              蛋黄
+            </view>
+            <view class="solid-type-option {{editingRecord.solidTypeSelections && editingRecord.solidTypeSelections[5] ? 'active' : ''}}" bindtap="toggleEditSolidType" data-index="{{5}}">
+              其他
+            </view>
+          </view>
+        </view>
+        
+        <!-- 新增：多种食材输入 -->
+        <view class="form-item">
+          <text class="form-label">食材（多种，用逗号分隔）</text>
+          <input type="text" value="{{editingRecord.solidIngredients}}" bindinput="onEditSolidIngredientsChange" />
+        </view>
+        
+        <!-- 新增：品牌输入 -->
+        <view class="form-item">
+          <text class="form-label">品牌（可选）</text>
+          <input type="text" value="{{editingRecord.solidBrand}}" bindinput="onEditSolidBrandChange" />
+        </view>
+        
+        <!-- 新增：产地输入 -->
+        <view class="form-item">
+          <text class="form-label">产地（可选）</text>
+          <input type="text" value="{{editingRecord.solidOrigin}}" bindinput="onEditSolidOriginChange" />
         </view>
         
         <view class="form-item">
-          <text class="form-label">喂食量</text>
-          <input type="text" value="{{editingRecord.solidAmount}}" bindinput="onEditSolidAmountChange" />
+          <text class="form-label">喂食量(米粉几勺)</text>
+          <input type="number" value="{{editingRecord.solidAmount}}" bindinput="onEditSolidAmountChange" />
         </view>
       </view>
       

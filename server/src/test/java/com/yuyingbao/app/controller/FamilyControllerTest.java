@@ -17,6 +17,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.OffsetDateTime;
+import java.util.HashMap;
 import java.util.List;
 
 import static org.hamcrest.Matchers.*;
@@ -130,7 +131,7 @@ class FamilyControllerTest extends BaseIntegrationTest {
                 .createdAt(OffsetDateTime.now())
                 .build();
         anotherUser = userRepository.save(anotherUser);
-        String anotherUserToken = jwtService.generateToken(anotherUser.getId());
+        String anotherUserToken = jwtService.generateToken(anotherUser.getId(), new HashMap<>());
 
         JoinFamilyRequest request = new JoinFamilyRequest();
         request.setInviteCode("TEST123");

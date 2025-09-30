@@ -365,6 +365,31 @@ input {
   border-color: #4A90E2;
 }
 
+/* 辅食类型选择器 */
+.solid-type-selector {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20rpx;
+}
+
+.solid-type-option {
+  padding: 20rpx 10rpx;
+  text-align: center;
+  background: #F8F9FA;
+  border: 2rpx solid #E5E5E5;
+  border-radius: 12rpx;
+  font-size: 24rpx;
+  color: #333333;
+  transition: all 0.3s ease;
+  cursor: pointer; /* 添加鼠标指针样式 */
+}
+
+.solid-type-option.active {
+  background: #4A90E2;
+  color: #FFFFFF;
+  border-color: #4A90E2;
+}
+
 /* 响应式设计 */
 @media (max-width: 750rpx) {
   .filter-tabs {
@@ -381,5 +406,10 @@ input {
   
   .action-btn {
     justify-content: center;
+  }
+  
+  /* 在小屏幕上调整辅食类型选择器 */
+  .solid-type-selector {
+    grid-template-columns: repeat(2, 1fr);
   }
 }

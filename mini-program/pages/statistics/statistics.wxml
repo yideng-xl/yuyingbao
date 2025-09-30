@@ -25,7 +25,7 @@
   <!-- 喂养统计 -->
   <view class="card feeding-stats">
     <view class="card-header">
-      <text class="card-title">喂养统计</text>
+      <text class="card-title">🍼 喂养统计</text>
       <text class="card-subtitle">{{feedingStats.totalAmount}}ml / {{feedingStats.totalCount}}次</text>
     </view>
     
@@ -47,23 +47,20 @@
     <!-- 喂养趋势图 -->
     <view class="chart-container">
       <view class="chart-title">喂养趋势</view>
-      <view class="chart">
-        <view class="chart-bars">
-          <view class="chart-bar" wx:for="{{feedingChart}}" wx:key="date">
-            <view class="bar" style="height: {{item.height}}%">
-              <view class="bar-tooltip">{{item.amount}}ml</view>
-            </view>
-            <view class="bar-label">{{item.label}}</view>
-          </view>
-        </view>
-      </view>
+      <ec-canvas id="feeding-chart" canvas-id="feeding-chart" ec="{{ feedingChartOption }}"></ec-canvas>
+    </view>
+    
+    <!-- 喂养类型分布图 -->
+    <view class="chart-container">
+      <view class="chart-title">喂养类型分布</view>
+      <ec-canvas id="feeding-type-chart" canvas-id="feeding-type-chart" ec="{{ feedingTypeChartOption }}"></ec-canvas>
     </view>
   </view>
 
   <!-- 大便统计 -->
   <view class="card diaper-stats">
     <view class="card-header">
-      <text class="card-title">大便统计</text>
+      <text class="card-title">💩 大便统计</text>
       <text class="card-subtitle">{{diaperStats.totalCount}}次</text>
     </view>
     
@@ -81,26 +78,14 @@
     <!-- 大便性状分布 -->
     <view class="chart-container">
       <view class="chart-title">性状分布</view>
-      <view class="pie-chart">
-        <view class="pie-segment" wx:for="{{diaperPieChart}}" wx:key="type" style="transform: rotate({{item.startAngle}}deg); background: conic-gradient({{item.color}} 0deg {{item.angle}}deg, transparent {{item.angle}}deg);">
-        </view>
-        <view class="pie-center">
-          <text class="pie-total">{{diaperStats.totalCount}}</text>
-        </view>
-      </view>
-      <view class="pie-legend">
-        <view class="legend-item" wx:for="{{diaperPieChart}}" wx:key="type">
-          <view class="legend-color" style="background: {{item.color}}"></view>
-          <text class="legend-text">{{item.type}} ({{item.count}})</text>
-        </view>
-      </view>
+      <ec-canvas id="diaper-chart" canvas-id="diaper-chart" ec="{{ diaperChartOption }}"></ec-canvas>
     </view>
   </view>
 
   <!-- 成长统计 -->
   <view class="card growth-stats" wx:if="{{growthStats.hasData}}">
     <view class="card-header">
-      <text class="card-title">成长统计</text>
+      <text class="card-title">📏 成长统计</text>
       <text class="card-subtitle">身高{{growthStats.latestHeight}}cm / 体重{{growthStats.latestWeight}}kg</text>
     </view>
     
@@ -122,24 +107,28 @@
     <!-- 成长曲线图 -->
     <view class="chart-container">
       <view class="chart-title">成长曲线</view>
-      <view class="growth-chart">
-        <view class="chart-line">
-          <view class="data-point" wx:for="{{growthChart}}" wx:key="date" style="left: {{item.x}}%; top: {{item.y}}%">
-            <view class="point-tooltip">
-              <text>{{item.date}}</text>
-              <text>身高: {{item.height}}cm</text>
-              <text>体重: {{item.weight}}kg</text>
-            </view>
-          </view>
-        </view>
-      </view>
+      <ec-canvas id="growth-chart" canvas-id="growth-chart" ec="{{ growthChartOption }}"></ec-canvas>
+    </view>
+  </view>
+
+  <!-- 时间轴统计 -->
+  <view class="card timeline-stats">
+    <view class="card-header">
+      <text class="card-title">📅 记录时间轴</text>
+      <text class="card-subtitle">每日记录次数统计</text>
+    </view>
+    
+    <!-- 时间轴图表 -->
+    <view class="chart-container">
+      <view class="chart-title">记录趋势</view>
+      <ec-canvas id="timeline-chart" canvas-id="timeline-chart" ec="{{ timelineChartOption }}"></ec-canvas>
     </view>
   </view>
 
   <!-- 智能分析 -->
   <view class="card analysis">
     <view class="card-header">
-      <text class="card-title">智能分析</text>
+      <text class="card-title">💡 智能分析</text>
     </view>
     
     <view class="analysis-items">

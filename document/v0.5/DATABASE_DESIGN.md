@@ -162,7 +162,8 @@ CREATE TYPE record_type AS ENUM (
     'FORMULA',        -- 配方奶
     'SOLID',          -- 辅食
     'DIAPER',         -- 大便
-    'GROWTH'          -- 成长
+    'GROWTH',         -- 成长
+    'WATER'           -- 喂水
 );
 
 CREATE TYPE solid_type AS ENUM (

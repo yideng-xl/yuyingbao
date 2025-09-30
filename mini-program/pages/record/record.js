@@ -16,13 +16,24 @@ Page({
   },
 
   onLoad() {
-    this.setData({
-      selectedDate: this.formatDate(new Date())
-    });
+    // 检查用户是否已授权
+    const userInfo = app.globalData.userInfo;
+    if (!userInfo || !userInfo.id) {
+      // 未授权用户，显示提示并跳转到profile页面
+      this.showAuthRequiredModal();
+    } else {
+      this.setData({
+        selectedDate: this.formatDate(new Date())
+      });
+    }
   },
 
   onShow() {
-    this.loadRecords();
+    // 检查用户是否已授权
+    const userInfo = app.globalData.userInfo;
+    if (userInfo && userInfo.id) {
+      this.loadRecords();
+    }
   },
 
   loadRecords() {
@@ -94,16 +105,18 @@ Page({
       'FORMULA': '🥛',
       'SOLID': '🥣',
       'DIAPER': '💩',
-      'GROWTH': '📏'
+      'GROWTH': '📏',
+      'WATER': '💧'
     };
     
     const titles = {
       'BREASTFEEDING': '母乳亲喂',
       'BOTTLE': '瓶喂',
-      'FORMULA': '配方奶',
+      'FORMULA': '奶粉',
       'SOLID': '辅食',
       'DIAPER': '大便',
-      'GROWTH': '成长记录'
+      'GROWTH': '成长记录',
+      'WATER': '喂水'
     };
     
     let details = [];
@@ -112,23 +125,61 @@ Page({
         { label: '时长', value: `${record.durationMin || 0}分钟` },
         { label: '乳房', value: record.breastfeedingSide === 'LEFT' ? '左侧' : (record.breastfeedingSide === 'RIGHT' ? '右侧' : '未知') }
       ];
-    } else if (record.type === 'BOTTLE' || record.type === 'FORMULA') {
+    } else if (record.type === 'BOTTLE' || record.type === 'FORMULA' || record.type === 'WATER') {
+      // 喂水记录、瓶喂和奶粉记录使用相同的显示逻辑
       details = [
-        { label: '喂奶量', value: `${record.amountMl || 0}ml` }
+        { label: '喂水量', value: `${record.amountMl || 0}ml` }
       ];
     } else if (record.type === 'SOLID') {
-      const solidTypeMap = {
-        'RICE_CEREAL': '米糊',
-        'VEGETABLE_PUREE': '蔬菜泥',
-        'FRUIT_PUREE': '水果泥',
-        'MEAT_PUREE': '肉泥',
-        'EGG_YOLK': '蛋黄',
-        'OTHER': '其他'
-      };
-      details = [
-        { label: '类型', value: solidTypeMap[record.solidType] || record.solidType || '辅食' },
-        { label: '备注', value: record.note || '--' }
-      ];
+      // 构建辅食详情
+      const solidDetails = [];
+      
+      // 添加辅食类型信息（从note字段中提取，分离类型和喂食量）
+      if (record.note) {
+        const noteTrimmed = record.note.trim();
+        const lastSpaceIndex = noteTrimmed.lastIndexOf(' ');
+        
+        if (lastSpaceIndex > 0) {
+          // 分离类型和喂食量
+          const typesText = noteTrimmed.substring(0, lastSpaceIndex);
+          const amountText = noteTrimmed.substring(lastSpaceIndex + 1);
+          
+          solidDetails.push({ label: '辅食类型', value: typesText });
+        } else {
+          // 如果没有空格，整个字符串都是类型信息
+          solidDetails.push({ label: '辅食类型', value: noteTrimmed });
+        }
+      }
+      
+      // 添加食材信息
+      if (record.solidIngredients) {
+        solidDetails.push({ label: '食材', value: record.solidIngredients });
+      }
+      
+      // 添加喂食量信息
+      if (record.note) {
+        const noteTrimmed = record.note.trim();
+        const lastSpaceIndex = noteTrimmed.lastIndexOf(' ');
+        
+        if (lastSpaceIndex > 0) {
+          // 提取喂食量
+          const amountText = noteTrimmed.substring(lastSpaceIndex + 1);
+          // 修复：为喂食量添加单位"勺"
+          solidDetails.push({ label: '喂食量', value: amountText ? `${amountText}勺` : '' });
+        }
+      }
+      
+      // 添加品牌信息
+      if (record.solidBrand) {
+        solidDetails.push({ label: '品牌', value: record.solidBrand });
+      }
+      
+      // 添加产地信息
+      if (record.solidOrigin) {
+        solidDetails.push({ label: '产地', value: record.solidOrigin });
+      }
+      
+      details = solidDetails;
     } else if (record.type === 'DIAPER') {
       const textureMap = { 'WATERY': '稀', 'SOFT': '软', 'NORMAL': '成形', 'HARD': '干硬' };
       const colorMap = { 'YELLOW': '黄', 'GREEN': '绿', 'BROWN': '棕', 'BLACK': '黑', 'RED': '红', 'WHITE': '白' };
@@ -172,7 +223,19 @@ Page({
       date: dateStr,
       details,
       happenedAt: record.happenedAt, // 保留原始时间用于排序和筛选
-      ...record // 保留原始数据用于编辑
+      // 保留原始数据用于编辑
+      durationMin: record.durationMin,
+      breastfeedingSide: record.breastfeedingSide,
+      amountMl: record.amountMl,
+      solidType: record.solidType,
+      solidIngredients: record.solidIngredients,
+      solidBrand: record.solidBrand,
+      solidOrigin: record.solidOrigin,
+      diaperTexture: record.diaperTexture,
+      diaperColor: record.diaperColor,
+      note: record.note,
+      heightCm: record.heightCm,
+      weightKg: record.weightKg
     };
     
     console.log('Formatted record result:', result);
@@ -205,7 +268,7 @@ Page({
     if (currentFilter !== 'all') {
       if (currentFilter === 'feeding') {
         filtered = filtered.filter(record => {
-          const isFeedingType = ['BREASTFEEDING', 'BOTTLE', 'FORMULA', 'SOLID'].includes(record.type);
+          const isFeedingType = ['BREASTFEEDING', 'BOTTLE', 'FORMULA', 'SOLID', 'WATER'].includes(record.type);
           console.log(`Record ${record.id} type ${record.type} is feeding:`, isFeedingType);
           return isFeedingType;
         });
@@ -217,7 +280,8 @@ Page({
           'formula': 'FORMULA',
           'solid': 'SOLID',
           'diaper': 'DIAPER',
-          'growth': 'GROWTH'
+          'growth': 'GROWTH',
+          'water': 'WATER'
         };
         const backendType = typeMap[currentFilter];
         filtered = filtered.filter(record => record.type === backendType);
@@ -242,58 +306,114 @@ Page({
 
   editRecord(e) {
     const id = e.currentTarget.dataset.id;
-    const record = this.data.allRecords.find(r => r.id == id); // 从所有记录中查找
+    const record = this.data.allRecords.find(r => r.id === id);
     
-    if (record) {
-      // 设置选项索引
-      if (record.type === 'SOLID') {
-        const solidTypeMap = {
-          'RICE_CEREAL': '米糊',
-          'VEGETABLE_PUREE': '蔬菜泥',
-          'FRUIT_PUREE': '水果泥',
-          'MEAT_PUREE': '肉泥',
-          'EGG_YOLK': '蛋黄',
-          'OTHER': '其他'
-        };
-        const solidTypeName = solidTypeMap[record.solidType] || record.solidType || '其他';
-        record.solidTypeIndex = this.data.solidTypes.indexOf(solidTypeName);
-        record.solidType = solidTypeName;
-        // 辅食记录的note字段包含喂食量信息
-        record.solidAmount = record.note || '';
-      } else if (record.type === 'DIAPER') {
-        const textureMap = { 'WATERY': '稀', 'SOFT': '软', 'NORMAL': '成形', 'HARD': '干硬' };
-        const colorMap = { 'YELLOW': '黄', 'GREEN': '绿', 'BROWN': '棕', 'BLACK': '黑', 'RED': '红', 'WHITE': '白' };
-        const texture = textureMap[record.diaperTexture] || record.diaperTexture || '成形';
-        const color = colorMap[record.diaperColor] || record.diaperColor || '黄';
-        record.textureIndex = this.data.diaperTextures.indexOf(texture);
-        record.colorIndex = this.data.diaperColors.indexOf(color);
-        record.texture = texture;
-        record.color = color;
-      }
-      
-      // 设置时间和日期字段用于编辑
-      if (record.happenedAt) {
-        const date = new Date(record.happenedAt);
-        record.startTime = this.formatTime(date);
-        record.date = this.formatDate(date);
-      }
-      
-      // 设置其他字段
-      if (record.type === 'BREASTFEEDING') {
-        record.duration = record.durationMin;
-        record.breast = record.breastfeedingSide === 'LEFT' ? 'left' : 'right';
-      } else if (record.type === 'BOTTLE' || record.type === 'FORMULA') {
-        record.amount = record.amountMl;
-      } else if (record.type === 'GROWTH') {
-        record.height = record.heightCm;
-        record.weight = record.weightKg;
-      }
-      
-      this.setData({
-        showEditModal: true,
-        editingRecord: { ...record }
-      });
+    if (!record) {
+      wx.showToast({ title: '记录不存在', icon: 'none' });
+      return;
     }
+
+    console.log('Editing record:', record); // 添加调试日志
+
+    // 初始化编辑数据
+    const editingRecord = {
+      id: record.id,
+      type: record.type
+    };
+
+    // 根据记录类型初始化字段
+    if (record.type === 'BREASTFEEDING') {
+      editingRecord.startTime = record.time;
+      editingRecord.duration = record.durationMin || '';
+      editingRecord.breast = record.breastfeedingSide === 'LEFT' ? 'left' : 'right';
+    } else if (record.type === 'BOTTLE' || record.type === 'FORMULA' || record.type === 'WATER') {
+      // 喂水记录、瓶喂和奶粉记录使用相同的字段
+      editingRecord.startTime = record.time;
+      editingRecord.amount = record.amountMl || '';
+      console.log('Setting editingRecord for WATER/BOTTLE/FORMULA:', editingRecord);
+    } else if (record.type === 'SOLID') {
+      editingRecord.startTime = record.time;
+      
+      // 初始化辅食类型多选数据（修复：确保数据结构与首页一致）
+      editingRecord.solidTypeSelections = {
+        0: false,
+        1: false,
+        2: false,
+        3: false,
+        4: false,
+        5: false
+      };
+      editingRecord.selectedSolidTypeIndices = [];
+      editingRecord.selectedSolidTypes = [];
+      
+      // 从note字段中解析出辅食类型和喂食量（修复：正确解析note字段）
+      if (record.note) {
+        // 解析note字段，格式为"类型1, 类型2 喂食量"
+        const noteTrimmed = record.note.trim();
+        const lastSpaceIndex = noteTrimmed.lastIndexOf(' ');
+        
+        let typesText = noteTrimmed;
+        let amountText = '';
+        
+        if (lastSpaceIndex > 0) {
+          // 提取喂食量
+          amountText = noteTrimmed.substring(lastSpaceIndex + 1);
+          // 提取类型部分
+          typesText = noteTrimmed.substring(0, lastSpaceIndex);
+        }
+        
+        // 设置喂食量
+        editingRecord.solidAmount = amountText;
+        
+        // 解析类型（修复：正确处理类型解析）
+        const types = typesText.split(',').map(t => t.trim());
+        types.forEach(type => {
+          const index = this.data.solidTypes.indexOf(type);
+          if (index !== -1) {
+            editingRecord.solidTypeSelections[index] = true;
+            editingRecord.selectedSolidTypeIndices.push(index);
+            editingRecord.selectedSolidTypes.push(type);
+          }
+        });
+        
+        console.log('Parsed solid types:', { typesText, amountText, types }); // 添加调试日志
+      }
+      
+      // 新增：初始化辅食增强字段
+      editingRecord.solidIngredients = record.solidIngredients || '';
+      editingRecord.solidBrand = record.solidBrand || '';
+      editingRecord.solidOrigin = record.solidOrigin || '';
+      
+      console.log('Final editingRecord for SOLID:', editingRecord); // 添加调试日志
+    } else if (record.type === 'DIAPER') {
+      editingRecord.startTime = record.time;
+      editingRecord.texture = record.diaperTexture === 'WATERY' ? '稀' : 
+                             record.diaperTexture === 'SOFT' ? '软' : 
+                             record.diaperTexture === 'NORMAL' ? '成形' : 
+                             record.diaperTexture === 'HARD' ? '干硬' : '未知';
+      editingRecord.textureIndex = this.data.diaperTextures.indexOf(editingRecord.texture);
+      if (editingRecord.textureIndex === -1) editingRecord.textureIndex = 0;
+      
+      editingRecord.color = record.diaperColor === 'YELLOW' ? '黄' : 
+                           record.diaperColor === 'GREEN' ? '绿' : 
+                           record.diaperColor === 'BROWN' ? '棕' : 
+                           record.diaperColor === 'BLACK' ? '黑' : '未知';
+      editingRecord.colorIndex = this.data.diaperColors.indexOf(editingRecord.color);
+      if (editingRecord.colorIndex === -1) editingRecord.colorIndex = 0;
+      
+      editingRecord.note = record.note || '';
+    } else if (record.type === 'GROWTH') {
+      editingRecord.date = record.date;
+      editingRecord.height = record.heightCm || '';
+      editingRecord.weight = record.weightKg || '';
+    }
+
+    this.setData({
+      showEditModal: true,
+      editingRecord
+    }, () => {
+      console.log('editingRecord set in data:', this.data.editingRecord);
+    });
   },
 
   hideEditModal() {
@@ -305,6 +425,55 @@ Page({
 
   stopPropagation() {
     // 阻止事件冒泡
+  },
+
+  selectEditBreast(e) {
+    const breast = e.currentTarget.dataset.breast;
+    this.setData({
+      'editingRecord.breast': breast
+    });
+  },
+
+  // 切换编辑辅食类型选择
+  toggleEditSolidType(e) {
+    console.log('toggleEditSolidType called with:', e); // 添加调试日志
+    
+    // 确保索引是数字类型
+    const index = parseInt(e.currentTarget.dataset.index);
+    
+    // 获取当前选中状态
+    const solidTypeSelections = this.data.editingRecord.solidTypeSelections || {};
+    const isSelected = solidTypeSelections[index] || false;
+    
+    console.log('Current selection state:', { index, isSelected, solidTypeSelections }); // 添加调试日志
+    
+    // 切换选中状态
+    solidTypeSelections[index] = !isSelected;
+    
+    // 更新选中的索引和类型数组
+    let selectedIndices = [];
+    for (let i = 0; i < 6; i++) {
+      if (solidTypeSelections[i]) {
+        selectedIndices.push(i);
+      }
+    }
+    
+    const selectedTypes = selectedIndices.map(i => this.data.solidTypes[i]);
+    
+    console.log('New selection state:', { selectedIndices, selectedTypes, solidTypeSelections }); // 添加调试日志
+    
+    // 更新数据（修复：使用与首页一致的方式更新editingRecord对象）
+    const newEditingRecord = Object.assign({}, this.data.editingRecord, {
+      solidTypeSelections: solidTypeSelections,
+      selectedSolidTypeIndices: selectedIndices,
+      selectedSolidTypes: selectedTypes
+    });
+    
+    this.setData({
+      editingRecord: newEditingRecord
+    }, () => {
+      console.log('Updated editingRecord:', this.data.editingRecord); // 添加调试日志
+    });
   },
 
   // 编辑表单事件处理
@@ -345,6 +514,24 @@ Page({
     });
   },
 
+  onEditSolidIngredientsChange(e) {
+    this.setData({
+      'editingRecord.solidIngredients': e.detail.value
+    });
+  },
+
+  onEditSolidBrandChange(e) {
+    this.setData({
+      'editingRecord.solidBrand': e.detail.value
+    });
+  },
+
+  onEditSolidOriginChange(e) {
+    this.setData({
+      'editingRecord.solidOrigin': e.detail.value
+    });
+  },
+
   onEditTextureChange(e) {
     this.setData({
       'editingRecord.textureIndex': e.detail.value,
@@ -377,62 +564,45 @@ Page({
     });
   },
 
-  selectEditBreast(e) {
-    const breast = e.currentTarget.dataset.breast;
-    this.setData({
-      'editingRecord.breast': breast
-    });
-  },
-
   saveEdit() {
     const { editingRecord } = this.data;
+    const record = this.data.allRecords.find(r => r.id === editingRecord.id);
     
-    if (!this.validateEditRecord(editingRecord)) {
-      return;
-    }
-    
-    const familyId = app.globalData.familyInfo?.id;
-    if (!familyId) {
-      wx.showToast({ title: '请先创建或加入家庭', icon: 'none' });
+    if (!record) {
+      wx.showToast({ title: '记录不存在', icon: 'none' });
       return;
     }
 
-    // 构建更新请求数据
-    const payload = {
-      type: editingRecord.type
+    // 构建更新数据
+    const updateData = {
+      type: record.type,
+      happenedAt: record.happenedAt // 保留原始时间
     };
 
-    // 根据记录类型设置字段和时间
-    if (editingRecord.type === 'BREASTFEEDING') {
-      payload.durationMin = Number(editingRecord.duration) || undefined;
-      payload.breastfeedingSide = editingRecord.breast === 'left' ? 'LEFT' : 'RIGHT';
-      
-      // 使用选择的时间
-      if (editingRecord.startTime) {
-        const today = new Date();
-        const [hours, minutes] = editingRecord.startTime.split(':');
-        today.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-        // 使用ISO格式时间以匹配后端期望的格式
-        payload.happenedAt = today.toISOString();
-      } else {
-        // 使用ISO格式时间以匹配后端期望的格式
-        payload.happenedAt = new Date().toISOString();
+    // 根据记录类型设置字段
+    if (record.type === 'BREASTFEEDING') {
+      if (!editingRecord.startTime || !editingRecord.duration || !editingRecord.breast) {
+        wx.showToast({ title: '请填写完整信息', icon: 'none' });
+        return;
       }
-    } else if (editingRecord.type === 'BOTTLE' || editingRecord.type === 'FORMULA') {
-      payload.amountMl = Number(editingRecord.amount) || undefined;
-      
-      // 使用选择的时间
-      if (editingRecord.startTime) {
-        const today = new Date();
-        const [hours, minutes] = editingRecord.startTime.split(':');
-        today.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-        // 使用ISO格式时间以匹配后端期望的格式
-        payload.happenedAt = today.toISOString();
-      } else {
-        // 使用ISO格式时间以匹配后端期望的格式
-        payload.happenedAt = new Date().toISOString();
+      const [hours, minutes] = editingRecord.startTime.split(':');
+      const happenedAt = new Date(record.happenedAt);
+      happenedAt.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+      updateData.happenedAt = happenedAt.toISOString();
+      updateData.durationMin = Number(editingRecord.duration);
+      updateData.breastfeedingSide = editingRecord.breast === 'left' ? 'LEFT' : 'RIGHT';
+    } else if (record.type === 'BOTTLE' || record.type === 'FORMULA' || record.type === 'WATER') {
+      // 喂水记录、瓶喂和奶粉记录使用相同的验证和更新逻辑
+      if (!editingRecord.startTime || !editingRecord.amount) {
+        wx.showToast({ title: '请填写完整信息', icon: 'none' });
+        return;
       }
-    } else if (editingRecord.type === 'SOLID') {
+      const [hours, minutes] = editingRecord.startTime.split(':');
+      const happenedAt = new Date(record.happenedAt);
+      happenedAt.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+      updateData.happenedAt = happenedAt.toISOString();
+      updateData.amountMl = Number(editingRecord.amount);
+    } else if (record.type === 'SOLID') {
       const solidTypeMap = {
         '米糊': 'RICE_CEREAL',
         '蔬菜泥': 'VEGETABLE_PUREE', 
@@ -441,53 +611,54 @@ Page({
         '蛋黄': 'EGG_YOLK',
         '其他': 'OTHER'
       };
-      payload.solidType = solidTypeMap[editingRecord.solidType] || 'OTHER';
-      payload.note = editingRecord.solidAmount || '';
+      updateData.solidType = 'OTHER'; // 固定为OTHER，因为使用了多选
+      // 使用多选的辅食类型
+      const solidTypeText = (editingRecord.selectedSolidTypes || []).join(', ');
+      updateData.note = `${solidTypeText} ${editingRecord.solidAmount || ''}`.trim();
+      // 新增：添加辅食增强字段
+      updateData.solidIngredients = editingRecord.solidIngredients || undefined;
+      updateData.solidBrand = editingRecord.solidBrand || undefined;
+      updateData.solidOrigin = editingRecord.solidOrigin || undefined;
       
-      // 使用选择的时间
+      // 使用选择的时间（修复：正确处理时间）
       if (editingRecord.startTime) {
-        const today = new Date();
+        const happenedAt = new Date(record.happenedAt);
         const [hours, minutes] = editingRecord.startTime.split(':');
-        today.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-        // 使用ISO格式时间以匹配后端期望的格式
-        payload.happenedAt = today.toISOString();
-      } else {
-        // 使用ISO格式时间以匹配后端期望的格式
-        payload.happenedAt = new Date().toISOString();
+        happenedAt.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+        updateData.happenedAt = happenedAt.toISOString();
       }
-    } else if (editingRecord.type === 'DIAPER') {
+    } else if (record.type === 'DIAPER') {
       const textureMap = { '稀': 'WATERY', '软': 'SOFT', '成形': 'NORMAL', '干硬': 'HARD' };
       const colorMap = { '黄': 'YELLOW', '绿': 'GREEN', '棕': 'BROWN', '黑': 'BLACK' };
-      payload.diaperTexture = textureMap[editingRecord.texture] || undefined;
-      payload.diaperColor = colorMap[editingRecord.color] || undefined;
-      payload.note = editingRecord.note;
+      updateData.diaperTexture = textureMap[editingRecord.texture] || undefined;
+      updateData.diaperColor = colorMap[editingRecord.color] || undefined;
+      updateData.note = editingRecord.note;
       
-      // 使用选择的时间
+      // 使用选择的时间（修复：正确处理时间）
       if (editingRecord.startTime) {
-        const today = new Date();
+        const happenedAt = new Date(record.happenedAt);
         const [hours, minutes] = editingRecord.startTime.split(':');
-        today.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-        // 使用ISO格式时间以匹配后端期望的格式
-        payload.happenedAt = today.toISOString();
-      } else {
-        // 使用ISO格式时间以匹配后端期望的格式
-        payload.happenedAt = new Date().toISOString();
+        happenedAt.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+        updateData.happenedAt = happenedAt.toISOString();
       }
-    } else if (editingRecord.type === 'GROWTH') {
-      payload.heightCm = Number(editingRecord.height) || undefined;
-      payload.weightKg = Number(editingRecord.weight) || undefined;
+    } else if (record.type === 'GROWTH') {
+      updateData.heightCm = Number(editingRecord.height) || undefined;
+      updateData.weightKg = Number(editingRecord.weight) || undefined;
       // 如果有日期字段，使用它
       if (editingRecord.date) {
         // 使用ISO格式时间以匹配后端期望的格式
-        payload.happenedAt = new Date(editingRecord.date).toISOString();
-      } else {
-        // 使用ISO格式时间以匹配后端期望的格式
-        payload.happenedAt = new Date().toISOString();
+        updateData.happenedAt = new Date(editingRecord.date).toISOString();
       }
     }
 
+    const familyId = app.globalData.familyInfo?.id;
+    if (!familyId) {
+      wx.showToast({ title: '请先创建或加入家庭', icon: 'none' });
+      return;
+    }
+
     // 调用PUT API
-    app.put(`/families/${familyId}/records/${editingRecord.id}`, payload)
+    app.put(`/families/${familyId}/records/${editingRecord.id}`, updateData)
       .then(() => {
         this.hideEditModal();
         this.loadRecords(); // 重新加载记录
@@ -509,7 +680,7 @@ Page({
         });
         return false;
       }
-    } else if (record.type === 'BOTTLE' || record.type === 'FORMULA') {
+    } else if (record.type === 'BOTTLE' || record.type === 'FORMULA' || record.type === 'WATER') {
       if (!record.startTime || !record.amount) {
         wx.showToast({
           title: '请填写完整信息',
@@ -518,7 +689,8 @@ Page({
         return false;
       }
     } else if (record.type === 'SOLID') {
-      if (!record.startTime || !record.solidType || !record.solidAmount) {
+      // 修改验证逻辑以适应多选
+      if (!record.startTime || !record.selectedSolidTypes || record.selectedSolidTypes.length === 0 || !record.solidAmount) {
         wx.showToast({
           title: '请填写完整信息',
           icon: 'none'
@@ -586,5 +758,25 @@ Page({
     const hours = String(date.getHours()).padStart(2, '0');
     const minutes = String(date.getMinutes()).padStart(2, '0');
     return `${hours}:${minutes}`;
+  },
+
+  /**
+   * 显示需要授权的提示
+   */
+  showAuthRequiredModal() {
+    wx.showModal({
+      title: '需要授权',
+      content: '请先到【我的】页面进行授权，授权后才能使用小程序功能',
+      showCancel: true,
+      cancelText: '取消',
+      confirmText: '去授权',
+      success: (res) => {
+        if (res.confirm) {
+          wx.switchTab({
+            url: '/pages/profile/profile'
+          });
+        }
+      }
+    });
   }
 });

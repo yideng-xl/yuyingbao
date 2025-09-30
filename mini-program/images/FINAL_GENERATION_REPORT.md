@@ -30,7 +30,7 @@
 | `baby-boy.svg` | 男宝宝头像 | 蓝色主题男性化设计 | ✅ 已生成 |
 | `baby-girl.svg` | 女宝宝头像 | 粉色主题女性化设计 | ✅ 已生成 |
 
-### 3. 📝 记录类型功能图标 (6个文件)
+### 3. 📝 记录类型功能图标 (7个文件)
 
 | 文件名 | 记录类型 | 对应枚举 | 设计描述 | 状态 |
 |--------|---------|---------|----------|------|
@@ -40,6 +40,7 @@
 | `feeding-solid.svg` | 辅食 | SOLID | 婴儿餐具和食物 | ✅ 已生成 |
 | `diaper.svg` | 大便记录 | DIAPER | 专业的尿布图标 | ✅ 已生成 |
 | `growth.svg` | 成长记录 | GROWTH | 身高体重测量工具 | ✅ 新增 |
+| `feeding-water.svg` | 喂水 | WATER | 水杯或水滴图标 | ✅ 新增 |
 
 ### 4. 📚 知识库文章配图 (4个文件)
 
@@ -97,14 +98,14 @@
 ## 🚀 使用建议
 
 ### 小程序集成
-```javascript
+```
 // 在小程序中使用 SVG 图标
 <image src="/images/home.svg" class="nav-icon" />
 <image src="/images/baby-boy.svg" class="avatar" />
 ```
 
 ### 图标引用
-```css
+```
 /* CSS 样式示例 */
 .nav-icon {
   width: 48rpx;

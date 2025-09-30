@@ -38,6 +38,6 @@ management:
 
 app:
   jwt:
-    secret: change-this-super-secret-key-please
+    secret: yuyingbao-jwt-secret-key-change-in-production-environment-2024
     issuer: yuyingbao
     expiration-minutes: 43200 # 30 days

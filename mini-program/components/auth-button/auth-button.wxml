@@ -1,12 +1,7 @@
-<view class="auth-button-container" wx:if="{{needAuth}}">
-  <view class="auth-prompt">
-    <view class="auth-icon">👤</view>
-    <view class="auth-content">
-      <text class="auth-title">{{title || '完善用户信息'}}</text>
-      <text class="auth-desc">{{desc || '获取您的微信昵称和头像，提供更好的服务'}}</text>
-    </view>
-    <button class="auth-btn" bindtap="onAuthTap" open-type="{{useOpenType ? 'getUserInfo' : ''}}" bindgetuserinfo="onGetUserInfo">
-      {{buttonText || '立即授权'}}
-    </button>
+<view class="auth-button-container">
+  <view class="auth-content">
+    <text class="auth-title">{{title}}</text>
+    <text class="auth-desc">{{desc}}</text>
+    <button class="btn btn-primary auth-btn" bindtap="onAuthorize">{{buttonText}}</button>
   </view>
 </view>

@@ -1,0 +1,78 @@
+.container {
+  padding: 20rpx;
+  background-color: #f5f5f5;
+  min-height: 100vh;
+}
+
+.card {
+  background: white;
+  border-radius: 20rpx;
+  padding: 30rpx;
+  margin-bottom: 30rpx;
+  box-shadow: 0 10rpx 30rpx rgba(0, 0, 0, 0.05);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30rpx;
+  padding-bottom: 20rpx;
+  border-bottom: 1rpx solid #eee;
+}
+
+.card-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #333;
+}
+
+.info-item {
+  margin-bottom: 20rpx;
+}
+
+.label {
+  font-weight: bold;
+  display: block;
+  margin-bottom: 10rpx;
+}
+
+.value {
+  display: block;
+  word-break: break-all;
+  font-family: monospace;
+}
+
+.api-url {
+  color: #4A90E2;
+  font-weight: bold;
+  background: #F0F8FF;
+  padding: 8rpx 12rpx;
+  border-radius: 8rpx;
+  border: 1rpx solid #E0E8F0;
+}
+
+.btn {
+  display: inline-block;
+  padding: 20rpx 40rpx;
+  border-radius: 50rpx;
+  font-size: 28rpx;
+  text-align: center;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-right: 20rpx;
+  margin-bottom: 20rpx;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-weight: 500;
+}
+
+.btn-outline {
+  background: transparent;
+  border: 2rpx solid #667eea;
+  color: #667eea;
+}

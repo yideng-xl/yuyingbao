@@ -6,5 +6,6 @@ public enum RecordType {
 	FORMULA,
 	SOLID,
 	DIAPER,
-	GROWTH
+	GROWTH,
+	WATER
 }

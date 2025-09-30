@@ -1,19 +1,4 @@
 <view class="container">
-  <!-- 未登录授权提示 -->
-  <view wx:if="{{!userInfo || !userInfo.nickName}}" style="margin: 20rpx 0;">
-    <button type="primary" bindtap="onTapLogin">授权登录</button>
-  </view>
-  <!-- 顶部欢迎区域 -->
-  <view class="welcome-section">
-    <view class="welcome-text">
-      <text class="text-large text-bold">欢迎回来</text>
-      <text class="text-medium text-muted mt-10">{{userInfo.nickName}}</text>
-    </view>
-    <view class="baby-avatar">
-      <image src="{{babyInfo.avatar || '/images/baby-default.png'}}" class="avatar"></image>
-    </view>
-  </view>
-
   <!-- 今日概览卡片 -->
   <view class="card today-overview">
     <view class="overview-header">
@@ -68,12 +53,17 @@
       
       <view class="record-btn" bindtap="showRecordModal" data-type="formula">
         <view class="btn-icon">🥛</view>
-        <text class="btn-text">配方奶</text>
+        <text class="btn-text">奶粉</text>
       </view>
       
       <view class="record-btn" bindtap="showRecordModal" data-type="solid">
         <view class="btn-icon">🥣</view>
         <text class="btn-text">辅食</text>
+      </view>
+      
+      <view class="record-btn" bindtap="showRecordModal" data-type="water">
+        <view class="btn-icon">💧</view>
+        <text class="btn-text">喂水</text>
       </view>
       
       <view class="record-btn" bindtap="showRecordModal" data-type="diaper">
@@ -88,10 +78,10 @@
     </view>
   </view>
 
-  <!-- 最近记录 -->
+  <!-- 今日最近记录 -->
   <view class="card recent-records">
     <view class="recent-header">
-      <text class="text-medium text-bold">最近记录</text>
+      <text class="text-medium text-bold">今日最近记录</text>
       <text class="text-small text-primary" bindtap="goToRecords">查看全部</text>
     </view>
     
@@ -127,6 +117,13 @@
       <!-- 母乳亲喂 -->
       <view wx:if="{{recordType === 'breastfeeding'}}">
         <view class="form-item">
+          <text class="form-label">日期</text>
+          <picker mode="date" value="{{recordData.date}}" bindchange="onDateChange">
+            <view class="picker">{{recordData.date || '请选择日期'}}</view>
+          </picker>
+        </view>
+        
+        <view class="form-item">
           <text class="form-label">喂养时间</text>
           <picker mode="time" value="{{recordData.startTime}}" bindchange="onTimeChange">
             <view class="picker">{{recordData.startTime || '请选择时间'}}</view>
@@ -154,6 +151,13 @@
       <!-- 瓶喂 -->
       <view wx:if="{{recordType === 'bottle'}}">
         <view class="form-item">
+          <text class="form-label">日期</text>
+          <picker mode="date" value="{{recordData.date}}" bindchange="onDateChange">
+            <view class="picker">{{recordData.date || '请选择日期'}}</view>
+          </picker>
+        </view>
+        
+        <view class="form-item">
           <text class="form-label">喂养时间</text>
           <picker mode="time" value="{{recordData.startTime}}" bindchange="onTimeChange">
             <view class="picker">{{recordData.startTime || '请选择时间'}}</view>
@@ -169,6 +173,13 @@
       <!-- 配方奶 -->
       <view wx:if="{{recordType === 'formula'}}">
         <view class="form-item">
+          <text class="form-label">日期</text>
+          <picker mode="date" value="{{recordData.date}}" bindchange="onDateChange">
+            <view class="picker">{{recordData.date || '请选择日期'}}</view>
+          </picker>
+        </view>
+        
+        <view class="form-item">
           <text class="form-label">喂养时间</text>
           <picker mode="time" value="{{recordData.startTime}}" bindchange="onTimeChange">
             <view class="picker">{{recordData.startTime || '请选择时间'}}</view>
@@ -181,10 +192,39 @@
         </view>
       </view>
       
+      <!-- 喂水 -->
+      <view wx:if="{{recordType === 'water'}}">
+        <view class="form-item">
+          <text class="form-label">日期</text>
+          <picker mode="date" value="{{recordData.date}}" bindchange="onDateChange">
+            <view class="picker">{{recordData.date || '请选择日期'}}</view>
+          </picker>
+        </view>
+        
+        <view class="form-item">
+          <text class="form-label">喂水时间</text>
+          <picker mode="time" value="{{recordData.startTime}}" bindchange="onTimeChange">
+            <view class="picker">{{recordData.startTime || '请选择时间'}}</view>
+          </picker>
+        </view>
+        
+        <view class="form-item">
+          <text class="form-label">喂水量（ml）</text>
+          <input type="number" placeholder="请输入喂水量" value="{{recordData.amount}}" bindinput="onAmountChange" />
+        </view>
+      </view>
+      
       <!-- 辅食 -->
       <view wx:if="{{recordType === 'solid'}}">
         <view class="form-item">
-          <text class="form-label">喂养时间</text>
+          <text class="form-label">日期</text>
+          <picker mode="date" value="{{recordData.date}}" bindchange="onDateChange">
+            <view class="picker">{{recordData.date || '请选择日期'}}</view>
+          </picker>
+        </view>
+        
+        <view class="form-item">
+          <text class="form-label">时间</text>
           <picker mode="time" value="{{recordData.startTime}}" bindchange="onTimeChange">
             <view class="picker">{{recordData.startTime || '请选择时间'}}</view>
           </picker>
@@ -192,19 +232,62 @@
         
         <view class="form-item">
           <text class="form-label">辅食类型</text>
-          <picker range="{{solidTypes}}" value="{{recordData.solidTypeIndex}}" bindchange="onSolidTypeChange">
-            <view class="picker">{{solidTypes[recordData.solidTypeIndex] || '请选择类型'}}</view>
-          </picker>
+          <!-- 修改为类似乳房选择的按钮形式，支持多选 -->
+          <view class="solid-type-selector">
+            <view class="solid-type-option {{recordData.solidTypeSelections && recordData.solidTypeSelections[0] ? 'active' : ''}}" bindtap="toggleSolidType" data-index="{{0}}">
+              米糊
+            </view>
+            <view class="solid-type-option {{recordData.solidTypeSelections && recordData.solidTypeSelections[1] ? 'active' : ''}}" bindtap="toggleSolidType" data-index="{{1}}">
+              蔬菜泥
+            </view>
+            <view class="solid-type-option {{recordData.solidTypeSelections && recordData.solidTypeSelections[2] ? 'active' : ''}}" bindtap="toggleSolidType" data-index="{{2}}">
+              水果泥
+            </view>
+            <view class="solid-type-option {{recordData.solidTypeSelections && recordData.solidTypeSelections[3] ? 'active' : ''}}" bindtap="toggleSolidType" data-index="{{3}}">
+              肉泥
+            </view>
+            <view class="solid-type-option {{recordData.solidTypeSelections && recordData.solidTypeSelections[4] ? 'active' : ''}}" bindtap="toggleSolidType" data-index="{{4}}">
+              蛋黄
+            </view>
+            <view class="solid-type-option {{recordData.solidTypeSelections && recordData.solidTypeSelections[5] ? 'active' : ''}}" bindtap="toggleSolidType" data-index="{{5}}">
+              其他
+            </view>
+          </view>
+        </view>
+        
+        <!-- 新增：多种食材输入 -->
+        <view class="form-item">
+          <text class="form-label">食材（多种，用逗号分隔）</text>
+          <input type="text" placeholder="例如：米粉,胡萝卜泥,苹果泥" value="{{recordData.solidIngredients}}" bindinput="onSolidIngredientsChange" />
+        </view>
+        
+        <!-- 新增：品牌输入 -->
+        <view class="form-item">
+          <text class="form-label">品牌（可选）</text>
+          <input type="text" placeholder="请输入品牌" value="{{recordData.solidBrand}}" bindinput="onSolidBrandChange" />
+        </view>
+        
+        <!-- 新增：产地输入 -->
+        <view class="form-item">
+          <text class="form-label">产地（可选）</text>
+          <input type="text" placeholder="请输入产地" value="{{recordData.solidOrigin}}" bindinput="onSolidOriginChange" />
         </view>
         
         <view class="form-item">
-          <text class="form-label">喂食量</text>
-          <input type="text" placeholder="请输入喂食量" value="{{recordData.solidAmount}}" bindinput="onSolidAmountChange" />
+          <text class="form-label">喂食量(米粉几勺)</text>
+          <input type="number" placeholder="请输入喂食量" value="{{recordData.solidAmount}}" bindinput="onSolidAmountChange" />
         </view>
       </view>
       
       <!-- 大便 -->
       <view wx:if="{{recordType === 'diaper'}}">
+        <view class="form-item">
+          <text class="form-label">日期</text>
+          <picker mode="date" value="{{recordData.date}}" bindchange="onDateChange">
+            <view class="picker">{{recordData.date || '请选择日期'}}</view>
+          </picker>
+        </view>
+        
         <view class="form-item">
           <text class="form-label">时间</text>
           <picker mode="time" value="{{recordData.startTime}}" bindchange="onTimeChange">

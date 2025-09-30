@@ -32,6 +32,10 @@ public class RecordService {
 				.durationMin(req.getDurationMin())
 				.breastfeedingSide(req.getBreastfeedingSide())
 				.solidType(req.getSolidType())
+				// 新增：辅食增强字段
+				.solidIngredients(req.getSolidIngredients())
+				.solidBrand(req.getSolidBrand())
+				.solidOrigin(req.getSolidOrigin())
 				.diaperTexture(req.getDiaperTexture())
 				.diaperColor(req.getDiaperColor())
 				.hasUrine(req.getHasUrine())
@@ -88,6 +92,10 @@ public class RecordService {
 		existingRecord.setDurationMin(req.getDurationMin());
 		existingRecord.setBreastfeedingSide(req.getBreastfeedingSide());
 		existingRecord.setSolidType(req.getSolidType());
+		// 新增：辅食增强字段
+		existingRecord.setSolidIngredients(req.getSolidIngredients());
+		existingRecord.setSolidBrand(req.getSolidBrand());
+		existingRecord.setSolidOrigin(req.getSolidOrigin());
 		existingRecord.setDiaperTexture(req.getDiaperTexture());
 		existingRecord.setDiaperColor(req.getDiaperColor());
 		existingRecord.setHasUrine(req.getHasUrine());

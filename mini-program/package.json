@@ -1,0 +1,27 @@
+{
+  "name": "mini-program",
+  "version": "1.0.0",
+  "description": "育婴宝是一款基于微信小程序的智能育儿工具，专为0-2岁宝宝家庭设计。通过提供喂养、大便、成长等核心数据记录功能，并结合智能化的喂养知识库，旨在帮助父母科学管理宝宝成长数据，缓解育儿焦虑。",
+  "main": "app.js",
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "build": "npm run clean && npm run compile",
+    "clean": "rm -rf dist",
+    "compile": "babel src --out-dir dist"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@babel/runtime": "^7.28.4"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.28.3",
+    "@babel/plugin-transform-runtime": "^7.28.3",
+    "jest": "^29.7.0",
+    "jsonlint-cli": "^1.0.1"
+  }
+}

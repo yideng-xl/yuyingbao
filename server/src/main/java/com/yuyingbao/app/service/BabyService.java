@@ -34,6 +34,10 @@ public class BabyService {
 		return babyRepository.findByFamilyId(familyId);
 	}
 
+	public List<Baby> listBabiesByIds(List<Long> babyIds) {
+		return babyRepository.findByIdIn(babyIds);
+	}
+
 	public Baby updateBaby(Long familyId, Long babyId, UpsertBabyRequest req) {
 		Baby baby = babyRepository.findByIdAndFamilyId(babyId, familyId)
 				.orElseThrow(() -> new IllegalArgumentException("宝宝不存在"));
