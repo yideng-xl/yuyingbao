@@ -89,7 +89,8 @@ Page({
 
     app.get(`/families/${familyId}/babies`).then(list => {
       if (Array.isArray(list) && list.length > 0) {
-        const babies = list.map(b => this.mapBabyInfo(b));
+        const babies = list.map(b => this.mapBabyInfo(b))
+          .sort((a, b) => a.id - b.id); // 按照宝宝ID升序排序
         
         // 选择默认宝宝（优先使用全局数据中的，否则选择第一个）
         let selectedBaby = babies[0];
