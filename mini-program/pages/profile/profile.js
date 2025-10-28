@@ -21,7 +21,10 @@ Page({
     familyName: '',
     matchedFamily: null,
     selectedRole: '',
-    editingMemberId: null
+    editingMemberId: null,
+    // 临时存储用户输入的头像和昵称
+    tempAvatarUrl: '',
+    tempNickname: ''
   },
 
   onLoad() {
@@ -137,46 +140,139 @@ Page({
   },
 
   /**
-   * 用户信息授权
+   * 选择头像
    */
-  authorizeUserInfo() {
-    // 直接触发授权流程
-    app.getUserProfile((success, userInfo) => {
-      if (success && userInfo) {
-        // 授权成功后先完成登录流程
-        wx.login({
-          success: (loginRes) => {
-            if (loginRes.code) {
-              // 使用授权的用户信息完成登录
-              app.getUserProfileAndLogin(loginRes.code, userInfo)
-                .then(() => {
-                  // 登录成功后更新用户信息
-                  const updatedUserInfo = app.globalData.userInfo;
-                  this.setData({ 
-                    userInfo: updatedUserInfo
-                  });
-                  
-                  wx.showToast({
-                    title: '授权成功',
-                    icon: 'success'
-                  });
-                })
-                .catch((error) => {
-                  console.error('登录失败:', error);
-                  wx.showToast({
-                    title: '登录失败',
-                    icon: 'none'
-                  });
-                });
-            }
-          },
-          fail: (err) => {
-            console.log('微信登录失败', err);
-            wx.showToast({
-              title: '微信登录失败',
-              icon: 'none'
-            });
+  onChooseAvatar(e) {
+    const { avatarUrl } = e.detail;
+    console.log('选择头像:', avatarUrl);
+    this.setData({
+      tempAvatarUrl: avatarUrl
+    });
+  },
+
+  /**
+   * 昵称输入
+   */
+  onNicknameInput(e) {
+    const nickname = e.detail.value;
+    this.setData({
+      tempNickname: nickname
+    });
+  },
+
+  /**
+   * 昵称失焦事件
+   */
+  onNicknameBlur(e) {
+    const nickname = e.detail.value;
+    this.setData({
+      tempNickname: nickname
+    });
+  },
+
+  /**
+   * 上传头像文件
+   */
+  uploadAvatar(avatarUrl) {
+    return new Promise((resolve, reject) => {
+      // 由于头像URL是临时路径，需要转换为base64或上传到服务器
+      // 这里我们直接使用临时路径，让服务器后续处理
+      // 如果需要上传文件，可以这样做：
+      wx.uploadFile({
+        url: `${app.globalData.apiBaseUrl}/upload/avatar`,
+        filePath: avatarUrl,
+        name: 'avatar',
+        success: (res) => {
+          try {
+            const data = JSON.parse(res.data);
+            resolve(data.url || avatarUrl);
+          } catch (e) {
+            // 如果上传失败，使用临时路径
+            resolve(avatarUrl);
           }
+        },
+        fail: () => {
+          // 上传失败，使用临时路径
+          resolve(avatarUrl);
+        }
+      });
+    });
+  },
+
+  /**
+   * 完成授权
+   */
+  completeAuth() {
+    const { tempAvatarUrl, tempNickname } = this.data;
+    
+    // 检查是否有昵称
+    if (!tempNickname || tempNickname.trim() === '') {
+      wx.showToast({
+        title: '请输入昵称',
+        icon: 'none'
+      });
+      return;
+    }
+    
+    // 检查是否有头像
+    if (!tempAvatarUrl || tempAvatarUrl.trim() === '') {
+      wx.showToast({
+        title: '请选择头像',
+        icon: 'none'
+      });
+      return;
+    }
+    
+    // 显示加载提示
+    wx.showLoading({ title: '授权中...' });
+    
+    // 先获取微信登录凭证
+    wx.login({
+      success: (loginRes) => {
+        if (loginRes.code) {
+          // 先尝试上传头像（可选，如果服务器不支持就不上传）
+          Promise.resolve(tempAvatarUrl)
+            .then(avatarUrl => {
+              // 构造用户信息
+              const userInfo = {
+                nickName: tempNickname,
+                avatarUrl: avatarUrl
+              };
+              
+              // 调用登录接口
+              return app.getUserProfileAndLogin(loginRes.code, userInfo);
+            })
+            .then(() => {
+              wx.hideLoading();
+              // 登录成功后更新用户信息
+              const updatedUserInfo = app.globalData.userInfo;
+              this.setData({ 
+                userInfo: updatedUserInfo,
+                tempAvatarUrl: '',
+                tempNickname: ''
+              });
+              
+              wx.showToast({
+                title: '授权成功',
+                icon: 'success'
+              });
+            })
+            .catch((error) => {
+              wx.hideLoading();
+              console.error('登录失败:', error);
+              wx.showToast({
+                title: '授权失败: ' + (error.message || '未知错误'),
+                icon: 'none'
+              });
+            });
+        }
+      },
+      fail: (err) => {
+        wx.hideLoading();
+        console.log('微信登录失败', err);
+        wx.showToast({
+          title: '微信登录失败',
+          icon: 'none'
         });
       }
     });
@@ -193,41 +289,21 @@ Page({
       return;
     }
     
-    // 默认家庭名称为用户昵称 + "的家庭"
-    const defaultFamilyName = (userInfo.nickname || '未知用户') + '的家庭';
     this.setData({
-      showCreateFamilyModal: true,
-      familyName: defaultFamilyName
+      showCreateFamilyModal: true
     });
   },
 
   // 隐藏创建家庭弹窗
   hideCreateFamilyModal() {
     this.setData({
-      showCreateFamilyModal: false,
-      familyName: ''
-    });
-  },
-
-  // 家庭名称输入
-  onFamilyNameInput(e) {
-    this.setData({
-      familyName: e.detail.value
+      showCreateFamilyModal: false
     });
   },
 
   // 创建家庭
   createFamily() {
-    const { familyName } = this.data;
     const userInfo = app.globalData.userInfo;
-    
-    if (!familyName) {
-      wx.showToast({
-        title: '请输入家庭名称',
-        icon: 'none'
-      });
-      return;
-    }
     
     if (!userInfo) {
       wx.showToast({
@@ -250,24 +326,9 @@ Page({
     
     wx.showLoading({ title: '创建中...' });
     
-    // 先检查家庭名称是否已存在
-    app.post('/families/check-name', { name: familyName })
-      .then(exists => {
-        if (exists) {
-          wx.hideLoading();
-          wx.showToast({
-            title: '家庭名称已存在',
-            icon: 'none'
-          });
-          return;
-        }
-        
-        // 创建家庭
-        return app.post('/families', { name: familyName });
-      })
+    // 直接创建家庭（后端会自动处理重复名称，添加随机后缀）
+    app.post('/families', {})
       .then(family => {
-        if (!family) return; // 如果前面检查名称存在，这里会是undefined
-        
         // 获取家庭成员列表
         return app.get(`/families/${family.id}/members`)
           .then(members => {
@@ -286,9 +347,11 @@ Page({
             });
             
             wx.hideLoading();
+            // 显示创建成功的家庭名称
             wx.showToast({
-              title: '家庭创建成功',
-              icon: 'success'
+              title: `已创建：${family.name}`,
+              icon: 'success',
+              duration: 2000
             });
           });
       })
@@ -296,7 +359,7 @@ Page({
         wx.hideLoading();
         console.error('创建家庭失败:', error);
         wx.showToast({ 
-          title: '创建家庭失败', 
+          title: error.message || '创建家庭失败', 
           icon: 'none' 
         });
       });
@@ -758,6 +821,9 @@ Page({
         setTimeout(() => {
           console.log('宝宝保存成功，重新加载数据');
           this.loadBabies();
+          
+          // 设置全局刷新标记，通知其他页面数据已变更
+          app.globalData.needRefreshBabies = true;
           
           // 如果是新增宝宝，更新全局数据
           if (!babyForm.id && newBaby) {

@@ -127,3 +127,5 @@ console.log('API 地址:', getApiBaseUrl());
 // 检查调试模式
 console.log('调试模式:', isDebugMode());
 ```
+
+

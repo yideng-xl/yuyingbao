@@ -7,5 +7,6 @@ public enum RecordType {
 	SOLID,
 	DIAPER,
 	GROWTH,
-	WATER
+	WATER,
+	NUTRITION
 }

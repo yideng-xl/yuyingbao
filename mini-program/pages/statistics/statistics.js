@@ -30,6 +30,11 @@ Page({
   onShow() {
     const userInfo = app.globalData.userInfo;
     if (userInfo && userInfo.id) {
+      // 检查是否需要刷新宝宝数据
+      if (app.globalData.needRefreshBabies) {
+        console.log('检测到宝宝数据变更，刷新统计数据');
+        app.globalData.needRefreshBabies = false;
+      }
       this.loadStatistics();
     }
   },
@@ -64,48 +69,48 @@ Page({
 
     console.log('从服务器获取记录数据, familyId:', familyId);
     
-    wx.request({
-      url: `http://localhost:8080/api/families/${familyId}/records`,
-      method: 'GET',
-      header: {
-        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiJ9.eyJvcGVuSWQiOiJtb2NrLTBhMVpoaTJ3MzJQM0c1M2w4eDN3M3pNeE13MlpoaTJLIiwibmlja25hbWUiOiLlvq7kv6HnlKjmiLciLCJzdWIiOiI3NyIsImlzcyI6Inl1eWluZ2JhbyIsImlhdCI6MTc1OTA1OTAwMywiZXhwIjoxNzYxNjUxMDAzfQ.-2fWnR8205BMEjhyhaJZ8fbIjWq3HlHlhloqrDayYgA',
-        'Content-Type': 'application/json'
-      },
-      success: (res) => {
-        console.log('API响应状态:', res.statusCode);
-        console.log('API响应数据:', res.data);
-        
-        if (res.statusCode === 200 && res.data) {
-          let records = res.data;
-          if (res.data.data && Array.isArray(res.data.data)) {
-            records = res.data.data;
-          }
-          
-          console.log('解析后的记录数据:', records);
-          app.globalData.records = records;
-          this.calculateAllStats();
-          wx.hideLoading();
-        } else {
-          this.handleDataLoadError('数据格式错误');
-        }
-      },
-      fail: (error) => {
-        console.error('获取记录数据失败:', error);
-        this.handleDataLoadError(error.errMsg || '网络请求失败');
-      },
-      complete: () => {
-        wx.hideLoading();
-      }
-    });
+    // 获取当前选中的宝宝ID
+    const currentBaby = app.globalData.babyInfo;
+    const babyId = currentBaby?.id;
+    
+    if (!babyId) {
+      wx.showToast({
+        title: '请先选择一个宝宝',
+        icon: 'none'
+      });
+      return;
+    }
     
     wx.showLoading({
       title: '加载统计数据...',
       mask: true
     });
+    
+    // 使用 app.get 方法，会自动添加 token
+    app.get(`/babies/${babyId}/records`)
+      .then(records => {
+        console.log('获取记录成功:', records);
+        
+        if (records && Array.isArray(records)) {
+          app.globalData.records = records;
+          this.calculateAllStats();
+        } else {
+          console.warn('记录数据格式不正确:', records);
+          this.handleDataLoadError('数据格式错误');
+        }
+      })
+      .catch(error => {
+        console.error('获取记录数据失败:', error);
+        this.handleDataLoadError(error.message || '网络请求失败');
+      })
+      .finally(() => {
+        wx.hideLoading();
+      });
   },
 
   handleDataLoadError(errorMsg) {
     console.log('数据加载失败:', errorMsg);
+    wx.hideLoading();
     wx.showToast({
       title: '数据加载失败',
       icon: 'none',

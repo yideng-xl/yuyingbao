@@ -53,7 +53,7 @@
     "disableSWC": true
   },
   "compileType": "miniprogram",
-  "libVersion": "3.9.1",
+  "libVersion": "3.10.1",
   "projectname": "育婴宝",
   "isGameTourist": false,
   "condition": {
@@ -99,5 +99,6 @@
     }
   },
   "simulatorPluginLibVersion": {},
-  "editorSetting": {}
+  "editorSetting": {},
+  "appid": "wx830daa31e0b4a81f"
 }

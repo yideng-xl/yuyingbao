@@ -4,8 +4,21 @@
     <!-- 未授权用户显示立即授权按钮 -->
     <view wx:if="{{!userInfo || !userInfo.id}}" class="unauthorized-section">
       <view class="unauthorized-icon">👤</view>
-      <text class="unauthorized-text">未授权用户</text>
-      <button class="btn btn-primary" bindtap="authorizeUserInfo">立即授权</button>
+      <text class="unauthorized-text">完善个人信息</text>
+      
+      <!-- 头像选择 -->
+      <button class="avatar-btn" open-type="chooseAvatar" bind:chooseavatar="onChooseAvatar">
+        <image class="avatar-preview" src="{{tempAvatarUrl || '/images/default-avatar.svg'}}" mode="aspectFill"></image>
+        <view class="avatar-hint">点击选择头像</view>
+      </button>
+      
+      <!-- 昵称输入 -->
+      <view class="form-item">
+        <text class="form-label">昵称</text>
+        <input type="nickname" class="nickname-input" placeholder="请输入昵称" value="{{tempNickname}}" bindinput="onNicknameInput" bindblur="onNicknameBlur" />
+      </view>
+      
+      <button class="btn btn-primary" bindtap="completeAuth">完成授权</button>
     </view>
     
     <!-- 已授权用户显示用户信息 -->
@@ -163,10 +176,6 @@
     </view>
   </view>
 
-  <!-- 退出登录 -->
-  <view class="logout-section" wx:if="{{userInfo && userInfo.id}}">
-    <button class="btn btn-outline danger" bindtap="logout">退出登录</button>
-  </view>
 </view>
 
 <!-- 测试按钮 - 用于跳转到debug页面（生产环境隐藏）
@@ -220,8 +229,9 @@
     
     <view class="modal-body">
       <view class="form-item">
-        <text class="form-label">家庭名称</text>
-        <input type="text" placeholder="请输入家庭名称" value="{{familyName}}" bindinput="onFamilyNameInput" />
+        <text class="form-label">提示</text>
+        <text class="form-text">系统将自动为您创建家庭，名称格式为：您的昵称的家庭</text>
+        <text class="form-text" style="margin-top: 10rpx;">如果名称重复，将自动添加随机后缀（如：张三的家庭#3456）</text>
       </view>
     </view>
     

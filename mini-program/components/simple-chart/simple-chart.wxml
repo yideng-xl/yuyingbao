@@ -5,6 +5,7 @@
   <canvas 
     class="chart-canvas" 
     canvas-id="{{canvasId}}" 
-    style="width: 100%; height: {{height}}rpx;"
+    style="width: 100%; height: {{height}}rpx; background: #FAFBFC;"
+    disable-scroll="true"
   ></canvas>
 </view>

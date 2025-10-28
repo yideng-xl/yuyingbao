@@ -81,4 +81,8 @@ public class Record {
 
 	@Column
 	private Double weightKg;
+
+	// Nutrition fields (营养素字段)
+	@Column(length = 1000)
+	private String nutritionTypes; // 营养素类型，用逗号分隔，如："AD,D3,CALCIUM,DHA"
 }

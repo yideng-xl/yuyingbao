@@ -23,7 +23,9 @@ Page({
     // 选项数据
     solidTypes: ['米糊', '蔬菜泥', '水果泥', '肉泥', '蛋黄', '其他'],
     diaperTextures: ['稀', '软', '成形', '干硬'],
-    diaperColors: ['黄', '绿', '黑', '棕']
+    diaperColors: ['黄', '绿', '黑', '棕'],
+    nutritionTypes: ['AD', 'D3', '钙', 'DHA', '锌', '铁', '益生菌', '其他'],
+    yesterdayNutritionRecords: [] // 昨天营养素记录
   },
 
   onLoad() {
@@ -41,16 +43,21 @@ Page({
     // 检查用户是否已授权
     const userInfo = app.globalData.userInfo;
     if (userInfo && userInfo.id) {
+      // 更新今天的日期
+      this.setData({
+        today: this.formatDate(new Date())
+      });
+      
       // 检查是否需要刷新宝宝数据
       if (app.globalData.needRefreshBabies) {
         console.log('检测到宝宝数据变更，重新加载');
         app.globalData.needRefreshBabies = false;
-        this.loadBabies();
-      } else {
-        // 更新今天的日期
-        this.setData({
-          today: this.formatDate(new Date())
+        this.loadBabies().then(() => {
+          // 刷新宝宝数据后，重新加载统计和记录
+          this.loadTodayStats();
+          this.loadRecentRecords();
         });
+      } else {
         this.loadTodayStats();
         this.loadRecentRecords();
       }
@@ -84,10 +91,10 @@ Page({
     const familyId = app.globalData.familyInfo?.id;
     if (!familyId) {
       console.log('No familyId found');
-      return;
+      return Promise.resolve();
     }
 
-    app.get(`/families/${familyId}/babies`).then(list => {
+    return app.get(`/families/${familyId}/babies`).then(list => {
       if (Array.isArray(list) && list.length > 0) {
         const babies = list.map(b => this.mapBabyInfo(b))
           .sort((a, b) => a.id - b.id); // 按照宝宝ID升序排序
@@ -123,9 +130,12 @@ Page({
         console.log('Loaded babies:', babies);
         console.log('Selected baby:', selectedBaby);
         
-        // 加载选中宝宝的数据
-        this.loadTodayStats();
-        this.loadRecentRecords();
+        // 如果不是在onShow中调用，则加载选中宝宝的数据
+        // 在onShow中会手动调用这些方法
+        if (!app.globalData.needRefreshBabies) {
+          this.loadTodayStats();
+          this.loadRecentRecords();
+        }
       } else {
         console.log('No babies found');
         this.setData({
@@ -420,7 +430,8 @@ Page({
       'SOLID': '🥣',
       'DIAPER': '💩',
       'GROWTH': '📏',
-      'WATER': '💧'  // 添加喂水记录图标
+      'WATER': '💧',
+      'NUTRITION': '💊'  // 添加营养素图标
     };
     
     const titles = {
@@ -430,7 +441,8 @@ Page({
       'SOLID': '辅食',
       'DIAPER': '大便',
       'GROWTH': '成长记录',
-      'WATER': '喂水'
+      'WATER': '喂水',
+      'NUTRITION': '营养素'
     };
     
     let detail = '';
@@ -488,6 +500,27 @@ Page({
     } else if (record.type === 'GROWTH') {
       detail = `身高${record.heightCm || 0}cm 体重${record.weightKg || 0}kg`;
       console.log('Formatted GROWTH detail:', detail);
+    } else if (record.type === 'NUTRITION') {
+      // 营养素记录显示选中的营养素类型
+      if (record.nutritionTypes) {
+        const nutritionMap = {
+          'AD': 'AD',
+          'D3': 'D3',
+          'CALCIUM': '钙',
+          'DHA': 'DHA',
+          'ZINC': '锌',
+          'IRON': '铁',
+          'PROBIOTIC': '益生菌',
+          'OTHER': '其他'
+        };
+        const types = record.nutritionTypes.split(',').map(t => {
+          const trimmed = t.trim();
+          return nutritionMap[trimmed] || trimmed;
+        }).join(', ');
+        detail = types;
+      } else {
+        detail = '营养素';
+      }
     }
     
     let timeStr = '--:--';
@@ -577,7 +610,8 @@ Page({
       'solid': '辅食',
       'diaper': '大便记录',
       'growth': '成长记录',
-      'water': '喂水'
+      'water': '喂水',
+      'nutrition': '营养素记录'
     };
     
     // 初始化recordData，根据不同类型设置默认值
@@ -602,6 +636,26 @@ Page({
       console.log('初始化辅食类型数据');
     }
     
+    // 如果是营养素类型，初始化多选相关数据，并加载昨天的记录
+    if (type === 'nutrition') {
+      recordData.selectedNutritionTypes = [];
+      recordData.selectedNutritionTypeIndices = [];
+      // 为每个营养素类型添加选中状态
+      recordData.nutritionSelections = {
+        0: false,  // AD
+        1: false,  // D3
+        2: false,  // 钙
+        3: false,  // DHA
+        4: false,  // 锌
+        5: false,  // 铁
+        6: false,  // 益生菌
+        7: false   // 其他
+      };
+      console.log('初始化营养素类型数据');
+      // 加载昨天的营养素记录
+      this.loadYesterdayNutritionRecords();
+    }
+    
     this.setData({
       showModal: true,
       recordType: type,
@@ -621,6 +675,126 @@ Page({
 
   stopPropagation() {
     // 阻止事件冒泡
+  },
+
+  // 加载昨天的营养素记录
+  loadYesterdayNutritionRecords() {
+    const currentBaby = this.data.selectedBaby || app.globalData.babyInfo;
+    if (!currentBaby?.id) {
+      this.setData({ yesterdayNutritionRecords: [] });
+      return;
+    }
+
+    // 获取昨天的开始和结束时间
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const startOfDay = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate());
+    const endOfDay = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 23, 59, 59);
+
+    const startISO = startOfDay.toISOString();
+    const endISO = endOfDay.toISOString();
+
+    app.get(`/babies/${currentBaby.id}/records/filter`, {
+      start: startISO,
+      end: endISO,
+      type: 'NUTRITION'
+    }).then(records => {
+      console.log('昨天的营养素记录:', records);
+      
+      if (!Array.isArray(records) || records.length === 0) {
+        this.setData({ yesterdayNutritionRecords: [] });
+        return;
+      }
+      
+      // 格式化营养素记录
+      const formattedRecords = records.map(record => {
+        // 营养素类型映射：后端枚举值 -> 前端显示名称
+        const nutritionMap = {
+          'AD': 'AD',
+          'D3': 'D3',
+          'CALCIUM': '钙',
+          'DHA': 'DHA',
+          'ZINC': '锌',
+          'IRON': '铁',
+          'PROBIOTIC': '益生菌',
+          'OTHER': '其他'
+        };
+        
+        let types = [];
+        if (record.nutritionTypes) {
+          // 将逗号分隔的字符串拆分成数组，并映射为中文显示
+          const nutritionArray = record.nutritionTypes.split(',').map(t => {
+            const trimmed = t.trim();
+            return nutritionMap[trimmed] || trimmed;
+          });
+          types = nutritionArray;
+        }
+        
+        let timeStr = '--:--';
+        if (record.happenedAt) {
+          try {
+            const dateObj = new Date(record.happenedAt);
+            if (!isNaN(dateObj.getTime())) {
+              timeStr = this.formatTime(dateObj);
+            }
+          } catch (error) {
+            console.error('Error formatting time:', error);
+          }
+        }
+        
+        return {
+          id: record.id,
+          types: types, // 这是一个数组，包含所有营养素类型
+          time: timeStr
+        };
+      });
+      
+      console.log('格式化后的营养素记录:', formattedRecords);
+      this.setData({ yesterdayNutritionRecords: formattedRecords });
+    }).catch(error => {
+      console.error('加载昨天营养素记录失败:', error);
+      this.setData({ yesterdayNutritionRecords: [] });
+    });
+  },
+
+  // 切换营养素类型选择
+  toggleNutritionType(e) {
+    const index = parseInt(e.currentTarget.dataset.index);
+    
+    const nutritionSelections = this.data.recordData.nutritionSelections || {};
+    const isSelected = nutritionSelections[index] || false;
+    
+    console.log('点击营养素类型，索引:', index, '当前选中状态:', isSelected);
+    
+    // 切换选中状态
+    nutritionSelections[index] = !isSelected;
+    
+    // 更新选中的索引和类型数组
+    let selectedIndices = [];
+    for (let i = 0; i < 8; i++) {
+      if (nutritionSelections[i]) {
+        selectedIndices.push(i);
+      }
+    }
+    
+    const selectedTypes = selectedIndices.map(i => {
+      const nutritionTypeMap = ['AD', 'D3', 'CALCIUM', 'DHA', 'ZINC', 'IRON', 'PROBIOTIC', 'OTHER'];
+      return nutritionTypeMap[i];
+    });
+    
+    console.log('更新后的选中索引:', selectedIndices);
+    console.log('更新后的选中类型:', selectedTypes);
+    
+    // 更新数据
+    const newRecordData = Object.assign({}, this.data.recordData, {
+      nutritionSelections: nutritionSelections,
+      selectedNutritionTypeIndices: selectedIndices,
+      selectedNutritionTypes: selectedTypes
+    });
+    
+    this.setData({
+      recordData: newRecordData
+    });
   },
 
   // 切换辅食类型选择
@@ -778,7 +952,8 @@ Page({
       solid: 'SOLID',
       diaper: 'DIAPER',
       growth: 'GROWTH',
-      water: 'WATER'  // 添加喂水记录类型
+      water: 'WATER',
+      nutrition: 'NUTRITION'  // 添加营养素记录类型
     };
 
     const payload = { type: typeMap[recordType] };
@@ -838,6 +1013,10 @@ Page({
     } else if (recordType === 'growth') {
       payload.heightCm = Number(recordData.height) || undefined;
       payload.weightKg = Number(recordData.weight) || undefined;
+    } else if (recordType === 'nutrition') {
+      // 营养素类型，用逗号分隔
+      const nutritionTypes = (recordData.selectedNutritionTypes || []).join(',');
+      payload.nutritionTypes = nutritionTypes || undefined;
     }
 
     // 需要 babyId，优先使用当前选中的宝宝
@@ -856,6 +1035,7 @@ Page({
         // 刷新数据以显示新记录
         this.loadTodayStats();
         this.loadRecentRecords();
+        this.loadYesterdayNutritionRecords();
         wx.showToast({ title: '记录成功', icon: 'success' });
       })
       .catch(err => {
@@ -868,6 +1048,15 @@ Page({
       if (!data.startTime || !data.duration || !data.breast) {
         wx.showToast({
           title: '请填写完整信息',
+          icon: 'none'
+        });
+        return false;
+      }
+    } else if (type === 'nutrition') {
+      // 营养素验证
+      if (!data.startTime || !data.selectedNutritionTypes || data.selectedNutritionTypes.length === 0) {
+        wx.showToast({
+          title: '请选择营养素类型',
           icon: 'none'
         });
         return false;

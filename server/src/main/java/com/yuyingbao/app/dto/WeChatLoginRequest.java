@@ -25,6 +25,25 @@ public class WeChatLoginRequest {
 	
 	// 用户所在城市
 	private String city;
+	
+	// 设备ID（用于追踪用户设备）
+	private String deviceId;
+	
+	// 设备详细信息
+	private DeviceInfo deviceInfo;
+	
+	@Data
+	public static class DeviceInfo {
+		private String system;        // 操作系统
+		private String platform;      // 平台
+		private String brand;         // 手机品牌
+		private String model;         // 手机型号
+		private String version;       // 微信版本
+		private String SDKVersion;    // 基础库版本
+		private Integer screenWidth;  // 屏幕宽度
+		private Integer screenHeight; // 屏幕高度
+		private Double pixelRatio;    // 像素比
+	}
 }
 
 

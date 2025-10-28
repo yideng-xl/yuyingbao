@@ -28,4 +28,5 @@ public class CreateRecordRequest {
 	private Boolean hasUrine;
 	private Double heightCm;
 	private Double weightKg;
+	private String nutritionTypes; // 营养素类型，用逗号分隔
 }
