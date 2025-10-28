@@ -94,7 +94,13 @@ public class AuthService {
 				.openId(openId)
 				.nickname(StringUtils.hasText(request.getNickname()) ? request.getNickname() : "用户")
 				.avatarUrl(request.getAvatarUrl())
+				.deviceId(request.getDeviceId())
+				.deviceBrand(request.getDeviceInfo() != null ? request.getDeviceInfo().getBrand() : null)
+				.deviceModel(request.getDeviceInfo() != null ? request.getDeviceInfo().getModel() : null)
+				.systemVersion(request.getDeviceInfo() != null ? request.getDeviceInfo().getSystem() : null)
+				.wechatVersion(request.getDeviceInfo() != null ? request.getDeviceInfo().getVersion() : null)
 				.createdAt(OffsetDateTime.now())
+				.lastLoginAt(OffsetDateTime.now())
 				.build();
 		return userRepository.save(user);
 	}
@@ -113,6 +119,43 @@ public class AuthService {
 			user.setAvatarUrl(request.getAvatarUrl());
 			needUpdate = true;
 		}
+		
+		// 更新设备信息
+		if (StringUtils.hasText(request.getDeviceId()) && 
+			!request.getDeviceId().equals(user.getDeviceId())) {
+			user.setDeviceId(request.getDeviceId());
+			needUpdate = true;
+		}
+		
+		if (request.getDeviceInfo() != null) {
+			if (StringUtils.hasText(request.getDeviceInfo().getBrand()) && 
+				!request.getDeviceInfo().getBrand().equals(user.getDeviceBrand())) {
+				user.setDeviceBrand(request.getDeviceInfo().getBrand());
+				needUpdate = true;
+			}
+			
+			if (StringUtils.hasText(request.getDeviceInfo().getModel()) && 
+				!request.getDeviceInfo().getModel().equals(user.getDeviceModel())) {
+				user.setDeviceModel(request.getDeviceInfo().getModel());
+				needUpdate = true;
+			}
+			
+			if (StringUtils.hasText(request.getDeviceInfo().getSystem()) && 
+				!request.getDeviceInfo().getSystem().equals(user.getSystemVersion())) {
+				user.setSystemVersion(request.getDeviceInfo().getSystem());
+				needUpdate = true;
+			}
+			
+			if (StringUtils.hasText(request.getDeviceInfo().getVersion()) && 
+				!request.getDeviceInfo().getVersion().equals(user.getWechatVersion())) {
+				user.setWechatVersion(request.getDeviceInfo().getVersion());
+				needUpdate = true;
+			}
+		}
+		
+		// 更新最后登录时间
+		user.setLastLoginAt(OffsetDateTime.now());
+		needUpdate = true;
 		
 		return needUpdate ? userRepository.save(user) : user;
 	}

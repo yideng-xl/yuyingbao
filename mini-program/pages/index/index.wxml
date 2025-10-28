@@ -102,6 +102,11 @@
         <view class="btn-icon">📏</view>
         <text class="btn-text">成长</text>
       </view>
+      
+      <view class="record-btn" bindtap="showRecordModal" data-type="nutrition">
+        <view class="btn-icon">💊</view>
+        <text class="btn-text">营养素</text>
+      </view>
     </view>
   </view>
 
@@ -359,6 +364,72 @@
         <view class="form-item">
           <text class="form-label">体重（kg）</text>
           <input type="digit" placeholder="请输入体重" value="{{recordData.weight}}" bindinput="onWeightChange" />
+        </view>
+      </view>
+      
+      <!-- 营养素 -->
+      <view wx:if="{{recordType === 'nutrition'}}">
+        <!-- 昨天营养素记录 -->
+        <view class="yesterday-nutrition-section" wx:if="{{yesterdayNutritionRecords && yesterdayNutritionRecords.length > 0}}">
+          <text class="yesterday-label">昨天营养素摄入情况</text>
+          <view class="yesterday-nutrition-list">
+            <view class="yesterday-nutrition-item" wx:for="{{yesterdayNutritionRecords}}" wx:key="id">
+              <view class="nutrition-detail-item">
+                <text class="nutrition-icon-small">💊</text>
+                <view class="nutrition-types-wrapper">
+                  <text class="nutrition-type-tag" wx:for="{{item.types}}" wx:for-item="type" wx:key="*this">
+                    {{type}}
+                  </text>
+                </view>
+                <text class="nutrition-detail-time">{{item.time}}</text>
+              </view>
+            </view>
+          </view>
+        </view>
+        
+        <view class="form-item">
+          <text class="form-label">日期</text>
+          <picker mode="date" value="{{recordData.date}}" bindchange="onDateChange">
+            <view class="picker">{{recordData.date || '请选择日期'}}</view>
+          </picker>
+        </view>
+        
+        <view class="form-item">
+          <text class="form-label">时间</text>
+          <picker mode="time" value="{{recordData.startTime}}" bindchange="onTimeChange">
+            <view class="picker">{{recordData.startTime || '请选择时间'}}</view>
+          </picker>
+        </view>
+        
+        <view class="form-item">
+          <text class="form-label">营养素类型</text>
+          <!-- 使用类似辅食的多选按钮 -->
+          <view class="nutrition-type-selector">
+            <view class="nutrition-type-option {{recordData.nutritionSelections && recordData.nutritionSelections[0] ? 'active' : ''}}" bindtap="toggleNutritionType" data-index="{{0}}">
+              AD
+            </view>
+            <view class="nutrition-type-option {{recordData.nutritionSelections && recordData.nutritionSelections[1] ? 'active' : ''}}" bindtap="toggleNutritionType" data-index="{{1}}">
+              D3
+            </view>
+            <view class="nutrition-type-option {{recordData.nutritionSelections && recordData.nutritionSelections[2] ? 'active' : ''}}" bindtap="toggleNutritionType" data-index="{{2}}">
+              钙
+            </view>
+            <view class="nutrition-type-option {{recordData.nutritionSelections && recordData.nutritionSelections[3] ? 'active' : ''}}" bindtap="toggleNutritionType" data-index="{{3}}">
+              DHA
+            </view>
+            <view class="nutrition-type-option {{recordData.nutritionSelections && recordData.nutritionSelections[4] ? 'active' : ''}}" bindtap="toggleNutritionType" data-index="{{4}}">
+              锌
+            </view>
+            <view class="nutrition-type-option {{recordData.nutritionSelections && recordData.nutritionSelections[5] ? 'active' : ''}}" bindtap="toggleNutritionType" data-index="{{5}}">
+              铁
+            </view>
+            <view class="nutrition-type-option {{recordData.nutritionSelections && recordData.nutritionSelections[6] ? 'active' : ''}}" bindtap="toggleNutritionType" data-index="{{6}}">
+              益生菌
+            </view>
+            <view class="nutrition-type-option {{recordData.nutritionSelections && recordData.nutritionSelections[7] ? 'active' : ''}}" bindtap="toggleNutritionType" data-index="{{7}}">
+              其他
+            </view>
+          </view>
         </view>
       </view>
     </view>

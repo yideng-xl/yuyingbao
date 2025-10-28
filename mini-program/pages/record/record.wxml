@@ -76,7 +76,7 @@
             <view class="record-body">
               <view class="record-details">
                 <view class="detail-item" wx:for="{{item.details}}" wx:key="*this" wx:for-item="detail">
-                  <text class="detail-label">{{detail.label}}:</text>
+                  <text class="detail-label" wx:if="{{detail.label}}">{{detail.label}}:</text>
                   <text class="detail-value">{{detail.value}}</text>
                 </view>
               </view>
@@ -258,6 +258,45 @@
         <view class="form-item">
           <text class="form-label">体重（kg）</text>
           <input type="digit" value="{{editingRecord.weight}}" bindinput="onEditWeightChange" />
+        </view>
+      </view>
+      
+      <view wx:if="{{editingRecord.type === 'NUTRITION'}}">
+        <view class="form-item">
+          <text class="form-label">时间</text>
+          <picker mode="time" value="{{editingRecord.startTime}}" bindchange="onEditTimeChange">
+            <view class="picker">{{editingRecord.startTime}}</view>
+          </picker>
+        </view>
+        
+        <view class="form-item">
+          <text class="form-label">营养素类型</text>
+          <view class="nutrition-type-selector">
+            <view class="nutrition-type-option {{editingRecord.nutritionSelections && editingRecord.nutritionSelections[0] ? 'active' : ''}}" bindtap="toggleEditNutritionType" data-index="{{0}}">
+              AD
+            </view>
+            <view class="nutrition-type-option {{editingRecord.nutritionSelections && editingRecord.nutritionSelections[1] ? 'active' : ''}}" bindtap="toggleEditNutritionType" data-index="{{1}}">
+              D3
+            </view>
+            <view class="nutrition-type-option {{editingRecord.nutritionSelections && editingRecord.nutritionSelections[2] ? 'active' : ''}}" bindtap="toggleEditNutritionType" data-index="{{2}}">
+              钙
+            </view>
+            <view class="nutrition-type-option {{editingRecord.nutritionSelections && editingRecord.nutritionSelections[3] ? 'active' : ''}}" bindtap="toggleEditNutritionType" data-index="{{3}}">
+              DHA
+            </view>
+            <view class="nutrition-type-option {{editingRecord.nutritionSelections && editingRecord.nutritionSelections[4] ? 'active' : ''}}" bindtap="toggleEditNutritionType" data-index="{{4}}">
+              锌
+            </view>
+            <view class="nutrition-type-option {{editingRecord.nutritionSelections && editingRecord.nutritionSelections[5] ? 'active' : ''}}" bindtap="toggleEditNutritionType" data-index="{{5}}">
+              铁
+            </view>
+            <view class="nutrition-type-option {{editingRecord.nutritionSelections && editingRecord.nutritionSelections[6] ? 'active' : ''}}" bindtap="toggleEditNutritionType" data-index="{{6}}">
+              益生菌
+            </view>
+            <view class="nutrition-type-option {{editingRecord.nutritionSelections && editingRecord.nutritionSelections[7] ? 'active' : ''}}" bindtap="toggleEditNutritionType" data-index="{{7}}">
+              其他
+            </view>
+          </view>
         </view>
       </view>
     </view>

@@ -33,42 +33,81 @@ Component({
     canvasHeight: 0
   },
 
-  lifetimes: {
+    lifetimes: {
     attached() {
       // 生成唯一的canvas ID
+      const canvasId = `chart-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       this.setData({
-        canvasId: `chart-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+        canvasId
       });
+      
+      // 立即初始化，不需要等待 DOM
+      this.initChart();
     },
 
     ready() {
-      this.initChart();
+      // 备用初始化
+      if (!this.data.canvasWidth || !this.data.canvasHeight) {
+        this.initChart();
+      }
     }
   },
 
   observers: {
     'data, type, config': function() {
       // 数据变化时重新绘制图表
-      if (this.data.canvasWidth > 0) {
-        this.drawChart();
-      }
+      // 延迟执行，确保 canvas 已经完全初始化
+      clearTimeout(this._drawTimer);
+      this._drawTimer = setTimeout(() => {
+        if (this.data.canvasWidth > 0 && this.data.canvasId) {
+          this.drawChart();
+        }
+      }, 50);
     }
   },
 
   methods: {
     initChart() {
-      // 获取canvas尺寸
-      const query = wx.createSelectorQuery().in(this);
-      query.select('.chart-canvas').boundingClientRect((rect) => {
-        if (rect) {
-          this.setData({
-            canvasWidth: rect.width,
-            canvasHeight: rect.height
-          }, () => {
-            this.drawChart();
+      // 确保 canvasId 已经准备好
+      if (!this.data.canvasId) {
+        return;
+      }
+      
+      // 如果已经初始化过，跳过
+      if (this.data.canvasWidth > 0 && this.data.canvasHeight > 0) {
+        this.drawChart();
+        return;
+      }
+      
+      try {
+        // 获取系统信息，计算 canvas 尺寸
+        const systemInfo = wx.getSystemInfoSync();
+        const windowWidth = systemInfo.windowWidth;
+        
+        // 图表高度（从 rpx 转换为 px）
+        const heightInPx = (this.data.height / 750) * windowWidth;
+        
+        // 计算容器宽度（留出左右 padding）
+        const containerWidth = windowWidth - 48; // 24rpx * 2 = 48rpx padding
+        
+        this.setData({
+          canvasWidth: containerWidth,
+          canvasHeight: heightInPx
+        }, () => {
+          console.log('Canvas 初始化完成:', {
+            canvasId: this.data.canvasId,
+            width: this.data.canvasWidth,
+            height: this.data.canvasHeight
           });
-        }
-      }).exec();
+          
+          // 延迟绘制，确保 setData 完成
+          setTimeout(() => {
+            this.drawChart();
+          }, 10);
+        });
+      } catch (error) {
+        console.error('Canvas 初始化失败:', error);
+      }
     },
 
     drawChart() {

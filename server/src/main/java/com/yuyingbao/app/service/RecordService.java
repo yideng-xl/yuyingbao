@@ -41,6 +41,7 @@ public class RecordService {
 				.hasUrine(req.getHasUrine())
 				.heightCm(req.getHeightCm())
 				.weightKg(req.getWeightKg())
+				.nutritionTypes(req.getNutritionTypes())
 				.build();
 		return recordRepository.save(record);
 	}
@@ -136,6 +137,7 @@ public class RecordService {
 		existingRecord.setHasUrine(req.getHasUrine());
 		existingRecord.setHeightCm(req.getHeightCm());
 		existingRecord.setWeightKg(req.getWeightKg());
+		existingRecord.setNutritionTypes(req.getNutritionTypes());
 		
 		return recordRepository.save(existingRecord);
 	}

@@ -98,14 +98,53 @@ App({
    * 获取用户信息并登录
    */
   getUserProfileAndLogin(code, userInfo = null) {
-    // 如果没有用户信息，使用默认信息登录
+    // 获取设备信息
+    const systemInfo = wx.getSystemInfoSync();
+    const deviceId = this.getDeviceId();
+    
+    // 构造登录数据
     const loginData = {
       code: code,
       nickname: userInfo?.nickName || '未知用户',
-      avatarUrl: userInfo?.avatarUrl || ''
+      avatarUrl: userInfo?.avatarUrl || '',
+      deviceId: deviceId,
+      deviceInfo: {
+        system: systemInfo.system,
+        platform: systemInfo.platform,
+        brand: systemInfo.brand,
+        model: systemInfo.model,
+        version: systemInfo.version,
+        SDKVersion: systemInfo.SDKVersion,
+        screenWidth: systemInfo.screenWidth,
+        screenHeight: systemInfo.screenHeight,
+        pixelRatio: systemInfo.pixelRatio
+      }
     };
 
     return this.loginToServer(loginData);
+  },
+
+  /**
+   * 生成设备ID（使用设备唯一标识）
+   */
+  getDeviceId() {
+    let deviceId = wx.getStorageSync('deviceId');
+    
+    if (!deviceId) {
+      // 生成唯一设备ID（基于系统信息）
+      const systemInfo = wx.getSystemInfoSync();
+      const timestamp = Date.now();
+      const random = Math.random().toString(36).substr(2, 9);
+      
+      // 组合生成设备ID
+      deviceId = `${systemInfo.brand || 'unknown'}_${systemInfo.model || 'unknown'}_${timestamp}_${random}`;
+      
+      // 保存到本地存储
+      wx.setStorageSync('deviceId', deviceId);
+      console.log('生成新的设备ID:', deviceId);
+    }
+    
+    return deviceId;
   },
 
   /**
@@ -181,6 +220,7 @@ App({
       
       const fullUrl = `${this.globalData.apiBaseUrl}/auth/wechat/login-complete`;
       console.log('登录请求URL:', fullUrl);
+      console.log('登录数据:', JSON.stringify(loginData));
       
       wx.request({
         url: fullUrl,

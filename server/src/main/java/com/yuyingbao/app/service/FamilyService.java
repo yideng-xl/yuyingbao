@@ -13,7 +13,6 @@ import java.security.SecureRandom;
 import java.time.OffsetDateTime;
 import java.util.HexFormat;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class FamilyService {
@@ -105,21 +104,34 @@ public class FamilyService {
 		String baseName = userNickname + "的家庭";
 		
 		// 检查是否已存在相同名称
-		Optional<Family> existingFamily = familyRepository.findByName(baseName);
-		if (existingFamily.isEmpty()) {
+		if (!familyRepository.findByName(baseName).isPresent()) {
 			// 没有重复，直接返回基础名称
 			return baseName;
-		} else {
-			// 存在重复，添加随机数字后缀
-			String uniqueName;
-			do {
-				// 生成4位随机数字
-				int randomNum = new SecureRandom().nextInt(9000) + 1000; // 1000-9999
-				uniqueName = baseName + "#" + randomNum;
-			} while (familyRepository.findByName(uniqueName).isPresent());
-			
-			return uniqueName;
 		}
+		
+		// 存在重复，添加随机数字后缀
+		// 最多尝试100次，避免无限循环
+		int maxAttempts = 100;
+		String uniqueName = null;
+		
+		for (int i = 0; i < maxAttempts; i++) {
+			// 生成4位随机数字
+			int randomNum = new SecureRandom().nextInt(9000) + 1000; // 1000-9999
+			String candidateName = baseName + "#" + randomNum;
+			
+			if (!familyRepository.findByName(candidateName).isPresent()) {
+				uniqueName = candidateName;
+				break;
+			}
+		}
+		
+		// 如果100次都重复，使用时间戳作为后缀
+		if (uniqueName == null) {
+			long timestamp = System.currentTimeMillis();
+			uniqueName = baseName + "#" + (timestamp % 10000);
+		}
+		
+		return uniqueName;
 	}
 
 	private String generateInviteCode() {
