@@ -315,6 +315,30 @@
   border-bottom: 1rpx solid #E5E5E5;
 }
 
+.modal-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+}
+
+.voice-btn {
+  width: 56rpx;
+  height: 56rpx;
+  background: #4A90E2;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32rpx;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.voice-btn:active {
+  transform: scale(0.95);
+  background: #3A80D2;
+}
+
 .modal-close {
   width: 40rpx;
   height: 40rpx;
