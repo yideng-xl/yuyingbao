@@ -142,8 +142,21 @@
   <view class="modal-content" catchtap="stopPropagation">
     <view class="modal-header">
       <text class="text-medium text-bold">{{modalTitle}}</text>
-      <view class="modal-close" bindtap="hideModal">×</view>
+      <view class="modal-header-actions">
+        <view class="voice-btn" bindtap="showVoiceInput">🎤</view>
+        <view class="modal-close" bindtap="hideModal">×</view>
+      </view>
     </view>
+    
+    <!-- 语音输入组件 -->
+    <voice-input 
+      show="{{showVoiceInputModal}}"
+      record-type="{{recordType}}"
+      bind:parsed="onVoiceParsed"
+      bind:confirm="onVoiceConfirmed"
+      bind:cancel="onVoiceCanceled"
+      bind:close="hideVoiceInput">
+    </voice-input>
     
     <view class="modal-body">
       <!-- 母乳亲喂 -->

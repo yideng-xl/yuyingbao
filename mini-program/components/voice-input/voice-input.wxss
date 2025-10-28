@@ -1,0 +1,165 @@
+/* components/voice-input/voice-input.wxss */
+
+.voice-input-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.voice-input-container {
+  width: 600rpx;
+  background: #FFFFFF;
+  border-radius: 24rpx;
+  padding: 40rpx;
+}
+
+.voice-input-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 40rpx;
+}
+
+.voice-input-title {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #333333;
+}
+
+.voice-input-close {
+  width: 48rpx;
+  height: 48rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40rpx;
+  color: #999999;
+}
+
+.voice-input-content {
+  min-height: 300rpx;
+}
+
+.record-btn-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 40rpx;
+}
+
+.record-button {
+  width: 200rpx;
+  height: 200rpx;
+  background: #4A90E2;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #FFFFFF;
+  transition: all 0.3s ease;
+}
+
+.record-button.recording {
+  background: #E74C3C;
+  transform: scale(1.1);
+}
+
+.record-icon {
+  font-size: 80rpx;
+  margin-bottom: 10rpx;
+}
+
+.record-text {
+  font-size: 24rpx;
+}
+
+.recognized-text {
+  background: #F8F9FA;
+  border-radius: 12rpx;
+  padding: 20rpx;
+  margin-bottom: 20rpx;
+}
+
+.text-label {
+  font-size: 28rpx;
+  color: #666666;
+  margin-right: 10rpx;
+}
+
+.text-content {
+  font-size: 28rpx;
+  color: #333333;
+}
+
+.parse-result {
+  background: #F0F8FF;
+  border-radius: 12rpx;
+  padding: 20rpx;
+  margin-bottom: 20rpx;
+}
+
+.parse-item {
+  display: flex;
+  margin-bottom: 10rpx;
+}
+
+.parse-item:last-child {
+  margin-bottom: 0;
+}
+
+.parse-label {
+  font-size: 26rpx;
+  color: #666666;
+  min-width: 120rpx;
+}
+
+.parse-value {
+  font-size: 26rpx;
+  color: #333333;
+  flex: 1;
+}
+
+.parsing {
+  text-align: center;
+  padding: 40rpx;
+  font-size: 28rpx;
+  color: #999999;
+}
+
+.voice-input-footer {
+  display: flex;
+  gap: 20rpx;
+  margin-top: 40rpx;
+}
+
+.btn {
+  flex: 1;
+  height: 80rpx;
+  border-radius: 12rpx;
+  font-size: 32rpx;
+  border: none;
+}
+
+.btn-cancel {
+  background: #F5F5F5;
+  color: #666666;
+}
+
+.btn-confirm {
+  background: #4A90E2;
+  color: #FFFFFF;
+}
+
+.btn-confirm[disabled] {
+  background: #CCCCCC;
+  color: #999999;
+}
+

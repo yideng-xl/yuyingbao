@@ -25,7 +25,8 @@ Page({
     diaperTextures: ['稀', '软', '成形', '干硬'],
     diaperColors: ['黄', '绿', '黑', '棕'],
     nutritionTypes: ['AD', 'D3', '钙', 'DHA', '锌', '铁', '益生菌', '其他'],
-    yesterdayNutritionRecords: [] // 昨天营养素记录
+    yesterdayNutritionRecords: [], // 昨天营养素记录
+    showVoiceInputModal: false // 语音输入弹窗显示状态
   },
 
   onLoad() {
@@ -1128,4 +1129,78 @@ Page({
     const pad = (n) => n.toString().padStart(2, '0');
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
   },
+
+  // 语音输入相关方法
+  showVoiceInput() {
+    this.setData({ showVoiceInputModal: true });
+  },
+
+  hideVoiceInput() {
+    this.setData({ showVoiceInputModal: false });
+  },
+
+  onVoiceParsed(e) {
+    console.log('语音解析完成', e.detail);
+  },
+
+  onVoiceConfirmed(e) {
+    const { parseResult } = e.detail;
+    console.log('确认使用解析结果', parseResult);
+    
+    // 根据解析结果填充表单
+    if (parseResult) {
+      const { recordType, extractedFields } = parseResult;
+      const now = new Date();
+      
+      // 设置时间
+      let newRecordData = {
+        ...this.data.recordData,
+        startTime: this.formatTime(now),
+        date: this.formatDate(now)
+      };
+      
+      // 根据记录类型填充字段
+      if (recordType === 'BOTTLE' || recordType === 'FORMULA' || recordType === 'WATER') {
+        if (extractedFields.amount) {
+          newRecordData.amount = extractedFields.amount;
+        }
+      } else if (recordType === 'BREASTFEEDING') {
+        if (extractedFields.duration) {
+          newRecordData.duration = extractedFields.duration;
+        }
+        if (extractedFields.side) {
+          newRecordData.side = extractedFields.side;
+        }
+      } else if (recordType === 'NUTRITION') {
+        if (extractedFields.nutritionTypes) {
+          const types = extractedFields.nutritionTypes.split(',');
+          newRecordData.selectedNutritionTypes = types;
+          // 初始化nutritionSelections
+          const nutritionSelections = {};
+          const nutritionTypeMap = ['AD', 'D3', 'CALCIUM', 'DHA', 'ZINC', 'IRON', 'PROBIOTIC', 'OTHER'];
+          types.forEach(type => {
+            const index = nutritionTypeMap.indexOf(type);
+            if (index !== -1) {
+              nutritionSelections[index] = true;
+            }
+          });
+          newRecordData.nutritionSelections = nutritionSelections;
+        }
+      }
+      
+      this.setData({ recordData: newRecordData });
+      wx.showToast({
+        title: '已自动填充，请确认',
+        icon: 'success',
+        duration: 2000
+      });
+    }
+    
+    // 关闭语音输入弹窗
+    this.hideVoiceInput();
+  },
+
+  onVoiceCanceled() {
+    this.hideVoiceInput();
+  }
 });

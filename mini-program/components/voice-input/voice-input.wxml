@@ -1,0 +1,58 @@
+<!--components/voice-input/voice-input.wxml-->
+<view class="voice-input-modal" wx:if="{{show}}" catchtap="onClose">
+  <view class="voice-input-container" catchtap="{{}}">
+    <!-- 标题 -->
+    <view class="voice-input-header">
+      <text class="voice-input-title">语音输入</text>
+      <view class="voice-input-close" catchtap="onClose">✕</view>
+    </view>
+
+    <!-- 录音按钮 -->
+    <view class="voice-input-content">
+      <view class="record-btn-wrapper">
+        <view 
+          class="record-button {{isRecording ? 'recording' : ''}}" 
+          bindtouchstart="onStartRecord"
+          bindtouchend="onStopRecord"
+        >
+          <text class="record-icon">🎤</text>
+          <text class="record-text">{{isRecording ? '录音中...' : '长按录音'}}</text>
+        </view>
+      </view>
+
+      <!-- 识别文本 -->
+      <view class="recognized-text" wx:if="{{recognizedText}}">
+        <text class="text-label">识别内容：</text>
+        <text class="text-content">{{recognizedText}}</text>
+      </view>
+
+      <!-- 解析结果 -->
+      <view class="parse-result" wx:if="{{parseResult}}">
+        <view class="parse-item">
+          <text class="parse-label">类型：</text>
+          <text class="parse-value">{{parseResult.recordType}}</text>
+        </view>
+        <view class="parse-item">
+          <text class="parse-label">置信度：</text>
+          <text class="parse-value">{{parseResult.confidence * 100}}%</text>
+        </view>
+        <view class="parse-item" wx:for="{{parseResult.extractedFields}}" wx:key="index">
+          <text class="parse-label">{{item.key}}：</text>
+          <text class="parse-value">{{item.value}}</text>
+        </view>
+      </view>
+
+      <!-- 解析中 -->
+      <view class="parsing" wx:if="{{isParsing}}">
+        <text>正在解析...</text>
+      </view>
+    </view>
+
+    <!-- 按钮 -->
+    <view class="voice-input-footer">
+      <button class="btn btn-cancel" bindtap="onCancel">取消</button>
+      <button class="btn btn-confirm" bindtap="onConfirm" disabled="{{!parseResult}}">确认</button>
+    </view>
+  </view>
+</view>
+
